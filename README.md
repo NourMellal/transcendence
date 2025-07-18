@@ -45,3 +45,15 @@ Follow the DoD checklist in .github/PULL_REQUEST_TEMPLATE.md
 Run tests & linter: docker compose exec server pnpm test
 
 Open a PR to dev; required reviewers = CODEOWNER + 1 peer
+
+# 🧭 Roadmap (sprints)
+
+| Sprint | Focus                            | Modules delivered   |
+| ------ | -------------------------------- | ------------------- |
+| 0      | Tooling, CI, “Hello World” stack | —                   |
+| 1      | Local & LAN play                 | Remote players + DB |
+| 2      | Accounts, JWT                    | Standard auth       |
+| 3      | 2-FA & Chat                      | 2-FA / JWT          |
+| 4      | Observability                    | ELK + Prometheus    |
+| 5      | Security hardening               | WAF / Vault         |
+| 6      | Mobile polish                    | Responsive UI       |
