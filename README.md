@@ -1,7 +1,7 @@
 # ft_transcendence 🏓
 
-A real-time Pong-style game built by four 42-Network students.  
-**North-star:** *< 30 s from page-load → fair online match.*
+A real-time Pong-style game built by four 42-Network students.
+**North-star:** _< 30 s from page-load → fair online match._
 
 ![Architecture overview](docs/assets/architecture.png)
 
@@ -12,11 +12,23 @@ A real-time Pong-style game built by four 42-Network students.
 ```bash
 git clone https://github.com/42-team/ft_transcendence.git
 cd ft_transcendence
-cp .env.template .env        # fill secrets
-docker compose up --build    # one-command dev env
+```
+
+### VS Code (preferred)
+
+1. Install _Remote – Containers_ extension.
+2. `F1 ▸ Dev Containers: Reopen in Container`
+   → dev env boots with Node 18 + pnpm.
+
+### Without VS Code
+
+```bash
+pnpm install           # workspace deps
+docker compose -f infra/compose.dev.yml up --build
 ```
 
 # 🗂️ Repository layout
+
 | Path              | Purpose                                | CODEOWNER |
 | ----------------- | -------------------------------------- | --------- |
 | `apps/web`        | React SPA (TypeScript + Tailwind)      | @dev2     |
@@ -38,6 +50,7 @@ docker compose up --build    # one-command dev env
 | Build         | Docker Compose + GitHub Actions                    | —                                |
 
 # 🏗️ Contributing workflow
+
 Create a branch: git checkout -b feat/<scope>
 
 Follow the DoD checklist in .github/PULL_REQUEST_TEMPLATE.md
