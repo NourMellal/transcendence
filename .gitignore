@@ -1,8 +1,9 @@
 # dependencies
-node_modules
+node_modules/
+.pnpm-store/
 # IDE
-.vscode
-.idea
+.vscode/
+.idea/
 # build
 dist
 coverage
