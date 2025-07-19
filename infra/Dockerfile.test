@@ -1,25 +1,11 @@
 FROM node:18-alpine
 
-# Install pnpm
+# pnpm
 RUN corepack enable && corepack prepare pnpm@9.1.0 --activate
 
-# Set working directory
 WORKDIR /workspace
-
-# Install system dependencies
-RUN apk add --no-cache git curl
-
-# Install dependencies first for better caching
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/web/package.json ./apps/web/package.json
-COPY apps/server/package.json ./apps/server/package.json
-COPY packages/core/package.json ./packages/core/package.json
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# Copy remaining source code
 COPY . .
 
-# Run tests (the command will be overridden by docker-compose)
+RUN pnpm install --frozen-lockfile
+
 CMD ["pnpm", "test"]

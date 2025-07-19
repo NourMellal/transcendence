@@ -5,15 +5,8 @@ services:
     build:
       context: ..
       dockerfile: infra/Dockerfile.test
-    volumes:
-      - ..:/workspace:cached
-    command: sh -c "cd /workspace && pnpm test"
-    environment:
-      - NODE_ENV=test
-      - CI=true
-    depends_on:
-      - test-db
-      - test-redis
+    working_dir: /workspace
+    command: pnpm test
 
   test-db:
     image: postgres:15-alpine
