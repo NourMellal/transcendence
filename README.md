@@ -3,7 +3,7 @@
 A real-time Pong-style game built by four 42-Network students.
 **North-star:** _< 30 s from page-load → fair online match._
 
-![Architecture overview](docs/assets/architecture.png)
+![Architecture overview](docs/assets/diagram.png)
 
 ---
 
@@ -12,18 +12,10 @@ A real-time Pong-style game built by four 42-Network students.
 ```bash
 git clone https://github.com/42-team/ft_transcendence.git
 cd ft_transcendence
-```
+corepack enable
+corepack prepare pnpm@9.1.0 --activate    # one-time: installs pnpm
+pnpm install --frozen-lockfile            # also installs Husky hooks
 
-### VS Code (preferred)
-
-1. Install _Remote – Containers_ extension.
-2. `F1 ▸ Dev Containers: Reopen in Container`
-   → dev env boots with Node 18 + pnpm.
-
-### Without VS Code
-
-```bash
-pnpm install           # workspace deps
 docker compose -f infra/compose.dev.yml up --build
 ```
 
