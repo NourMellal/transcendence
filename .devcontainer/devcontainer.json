@@ -1,8 +1,0 @@
-{
-  "name": "ft_transcendence",
-  "dockerFile": "Dockerfile",
-  "workspaceFolder": "/workspace",
-  "runArgs": ["--init"],
-  "postCreateCommand": "pnpm install",
-  "customizations": { "vscode": { "settings": { "terminal.integrated.defaultProfile.linux": "bash" } } }
-}
