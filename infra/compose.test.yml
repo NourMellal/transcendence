@@ -1,31 +1,4 @@
-version: '3.8'
-
 services:
   test-runner:
-    build:
-      context: ..
-      dockerfile: infra/Dockerfile.test
-    volumes:
-      - ..:/workspace:cached
-    command: sh -c "cd /workspace && pnpm test"
-    environment:
-      - NODE_ENV=test
-      - CI=true
-    depends_on:
-      - test-db
-      - test-redis
-
-  test-db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: transcendence_test
-      POSTGRES_USER: test
-      POSTGRES_PASSWORD: test123
-    tmpfs:
-      - /var/lib/postgresql/data # Use RAM storage for tests
-
-  test-redis:
-    image: redis:7-alpine
-    command: redis-server --save "" --appendonly no # Disable persistence for tests
-    tmpfs:
-      - /data # Use RAM storage for tests
+    build: { context: .., dockerfile: infra/Dockerfile.test }
+    command: pnpm test
