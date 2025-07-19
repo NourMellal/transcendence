@@ -1,0 +1,47 @@
+{
+  "name": "transcendence",
+  "version": "1.0.0",
+  "description": "A real-time Pong-style game built by four 42-Network students.   **North-star:** *< 30 s from page-load → fair online match.*",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "husky": "^8.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.31.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.3.1",
+    "vitest": "^3.2.4"
+  },
+  "scripts": {
+    "test": "echo 'No tests yet' || vitest run",
+    "lint": "eslint . || echo 'No linting configured yet'",
+    "format": "prettier --check .",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NourMellal/transcendence.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NourMellal/transcendence/issues"
+  },
+  "homepage": "https://github.com/NourMellal/transcendence#readme",
+  "packageManager": "pnpm@9.1.0+sha512.67f5879916a9293e5cf059c23853d571beaf4f753c707f40cb22bed5fb1578c6aad3b6c4107ccb3ba0b35be003eb621a16471ac836c87beb53f9d54bb4612724"
+}

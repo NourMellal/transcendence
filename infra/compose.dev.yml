@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  server:
+    build: ./apps/server
+    command: pnpm dev
+    volumes:
+      - ./apps/server:/usr/src/app
+    ports:
+      - "3000:3000"
+    env_file: .env
+
+  web:
+    build: ./apps/web
+    command: pnpm dev --host
+    volumes:
+      - ./apps/web:/usr/src/app
+    ports:
+      - "5173:5173"
+    env_file: .env
+
+  db:
+    image: sqlite:latest   # tiny wrapper (do NOT use in prod)
+    volumes:
+      - ./data:/data
+    ports:
+      - "9000:9000"        # expose for debugging
+
+  grafana:
+    image: grafana/grafana:10
+    ports:
+      - "3001:3000"

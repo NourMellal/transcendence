@@ -1,0 +1,11 @@
+# dependencies
+node_modules/
+.pnpm-store/
+# IDE
+.vscode/
+.idea/
+# build
+dist
+coverage
+# env
+.env
