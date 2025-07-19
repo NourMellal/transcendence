@@ -1,22 +1,58 @@
 name: CI
 
 on:
+  push:
+    branches: [ dev, main ]
   pull_request:
     branches: [ dev, main ]
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  build:
+  verify:
+    name: Lint and Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
         with:
           version: 9.1.0
-      - uses: actions/setup-node@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm test
-      - run: docker compose -f infra/compose.test.yml up --build --abort-on-container-exit
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Lint code
+        run: pnpm lint
+        
+      - name: Run unit and integration tests
+        run: pnpm test
+  
+  docker-test:
+    name: Docker Integration Tests
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Build and run docker containers
+        run: docker compose -f infra/compose.test.yml up --build --abort-on-container-exit
+        
+      - name: Save logs on failure
+        if: failure()
+        run: docker compose -f infra/compose.test.yml logs > docker-logs.txt
+        
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-logs
+          path: docker-logs.txt
