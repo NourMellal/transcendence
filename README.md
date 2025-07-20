@@ -85,13 +85,34 @@ The project follows a monorepo structure with clear separation of concerns:
 
 # 🏗️ Contributing workflow
 
-Create a branch: git checkout -b feat/<scope>
+## Branch naming convention
 
-Follow the DoD checklist in .github/PULL_REQUEST_TEMPLATE.md
+All branches should follow this naming pattern:
 
-Run tests & linter: docker compose exec server pnpm test
+```
+<type>/<scope>[-<issue-number>]
+```
 
-Open a PR to dev; required reviewers = CODEOWNER + 1 peer
+See [`.github/BRANCH-NAMING.md`](.github/BRANCH-NAMING.md) for detailed guidelines.
+
+Examples:
+
+- `feat/user-auth`
+- `fix/websocket-reconnect-#42`
+- `docs/branching-rules`
+
+## Branch protection rules
+
+- `main`: Production code, protected, merge only from `dev` via PR with multiple approvals
+- `dev`: Development branch, protected, requires PR with code review
+- All other branches: Feature branches that should be merged into `dev` via PR
+
+## Development workflow
+
+1. Create a branch: `git checkout -b feat/<scope>`
+2. Follow the DoD checklist in `.github/PULL_REQUEST_TEMPLATE.md`
+3. Run tests & linter: `docker compose exec server pnpm test`
+4. Open a PR to `dev`; required reviewers = CODEOWNER + 1 peer
 
 # 🧭 Roadmap (sprints)
 
