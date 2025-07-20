@@ -29,6 +29,48 @@ docker compose -f infra/compose.dev.yml up --build
 | `infra/compose.*` | Docker & CI/CD definitions             | @dev4     |
 | `docs/adr`        | Architecture Decision Records          | all       |
 
+## 📂 Project Structure
+
+```
+ft_transcendence/
+├── apps/                      # Application code
+│   ├── server/                # Backend API (Fastify)
+│   └── web/                   # Frontend SPA (React + TypeScript)
+│
+├── packages/                  # Shared libraries
+│   └── core/                  # Shared types and game physics
+│
+├── infra/                     # Infrastructure configuration
+│   ├── compose.dev.yml        # Development environment
+│   ├── compose.test.yml       # Testing environment
+│   └── Dockerfile.test        # Test environment container
+│
+├── docs/                      # Documentation
+│   └── assets/                # Documentation assets (images)
+│
+├── .github/                   # GitHub configuration
+│   ├── workflows/             # GitHub Actions CI/CD workflows
+│   └── pull_request_template.md  # PR template
+│
+├── .husky/                    # Git hooks for code quality
+│
+├── test/                      # Test utilities and integration tests
+│
+├── package.json               # Root package configuration
+├── pnpm-workspace.yaml        # PNPM workspace configuration
+├── eslint.config.cjs          # ESLint configuration
+├── vitest.config.mjs          # Vitest test framework config
+└── README.md                  # Project documentation
+```
+
+The project follows a monorepo structure with clear separation of concerns:
+
+- **Apps**: Contains end-user applications (frontend/backend)
+- **Packages**: Houses shared code and libraries used across apps
+- **Infrastructure**: Defines deployment and environment configurations
+- **Testing**: Centralized test utilities and integration tests
+- **Automation**: CI/CD workflows and Git hooks ensure code quality
+
 # 📡 Tech stack & subject modules
 
 | Area          | Tech                                               | Subject module fulfilled         |
@@ -43,13 +85,34 @@ docker compose -f infra/compose.dev.yml up --build
 
 # 🏗️ Contributing workflow
 
-Create a branch: git checkout -b feat/<scope>
+## Branch naming convention
 
-Follow the DoD checklist in .github/PULL_REQUEST_TEMPLATE.md
+All branches should follow this naming pattern:
 
-Run tests & linter: docker compose exec server pnpm test
+```
+<type>/<scope>[-<issue-number>]
+```
 
-Open a PR to dev; required reviewers = CODEOWNER + 1 peer
+See [`.github/BRANCH-NAMING.md`](.github/BRANCH-NAMING.md) for detailed guidelines.
+
+Examples:
+
+- `feat/user-auth`
+- `fix/websocket-reconnect-#42`
+- `docs/branching-rules`
+
+## Branch protection rules
+
+- `main`: Production code, protected, merge only from `dev` via PR with multiple approvals
+- `dev`: Development branch, protected, requires PR with code review
+- All other branches: Feature branches that should be merged into `dev` via PR
+
+## Development workflow
+
+1. Create a branch: `git checkout -b feat/<scope>`
+2. Follow the DoD checklist in `.github/PULL_REQUEST_TEMPLATE.md`
+3. Run tests & linter: `docker compose exec server pnpm test`
+4. Open a PR to `dev`; required reviewers = CODEOWNER + 1 peer
 
 # 🧭 Roadmap (sprints)
 
