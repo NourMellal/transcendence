@@ -19,7 +19,7 @@
   "scripts": {
     "test": "vitest run --config vitest.config.mjs",
     "lint": "eslint . || echo 'No linting configured yet'",
-    "format": "prettier --check .",
+    "format": "prettier --check . --write",
     "prepare": "husky install"
   },
   "lint-staged": {
