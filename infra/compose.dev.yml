@@ -20,11 +20,11 @@ services:
     env_file: .env
 
   db:
-    image: sqlite:latest   # tiny wrapper (do NOT use in prod)
+    image: sqlite:latest # tiny wrapper (do NOT use in prod)
     volumes:
       - ./data:/data
     ports:
-      - "9000:9000"        # expose for debugging
+      - "9000:9000" # expose for debugging
 
   grafana:
     image: grafana/grafana:10
