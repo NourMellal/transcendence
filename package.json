@@ -29,19 +29,11 @@
     "dev": "tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "vitest run --config vitest.config.mjs",
-    "lint": "eslint . || echo 'No linting configured yet'",
-    "format": "prettier --check . --write",
-    "prepare": "husky install"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.md": [
-      "prettier --write"
-    ]
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "type-check": "tsc --noEmit"
   },
   "repository": {
     "type": "git",

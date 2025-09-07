@@ -1,4 +1,0 @@
-services:
-  test-runner:
-    build: { context: .., dockerfile: infra/Dockerfile.test }
-    command: pnpm test
