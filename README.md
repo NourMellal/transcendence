@@ -24,13 +24,13 @@ pnpm install
 
 # Start development server
 pnpm run dev
+```
 
 # Run tests
 pnpm test
 
 # Lint code
 pnpm run lint
-```
 
 ## 📋 Development
 
