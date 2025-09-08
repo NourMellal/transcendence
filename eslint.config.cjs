@@ -1,4 +1,3 @@
-// eslint.config.cjs  (flat config for ESLint ≥ 9)
 
 module.exports = {
   parser: '@typescript-eslint/parser',
