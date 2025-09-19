@@ -1,0 +1,25 @@
+{
+    "name": "@transcendence/api-gateway",
+    "version": "1.0.0",
+    "description": "API Gateway for Transcendence microservices",
+    "main": "dist/server.js",
+    "type": "module",
+    "scripts": {
+        "dev": "tsx src/server.ts",
+        "build": "tsc",
+        "start": "node dist/server.js"
+    },
+    "dependencies": {
+        "@transcendence/shared-utils": "workspace:*",
+        "fastify": "^4.26.0",
+        "@fastify/http-proxy": "^9.5.0",
+        "@fastify/cors": "^8.5.0",
+        "@fastify/rate-limit": "^9.1.0",
+        "dotenv": "^16.3.1"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.0",
+        "tsx": "^4.20.5",
+        "typescript": "^5.3.3"
+    }
+}

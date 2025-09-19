@@ -1,39 +1,46 @@
 {
-  "name": "transcendence",
+  "name": "@transcendence/root",
   "version": "1.0.0",
-  "description": "A real-time Pong-style game built by four 42-Network students.   **North-star:** *< 30 s from page-load → fair online match.*",
-  "main": "src/server.ts",
+  "description": "Transcendence - Microservices Architecture for Real-time Pong Game",
+  "private": true,
+  "type": "module",
   "directories": {
     "doc": "docs"
   },
   "dependencies": {
-    "husky": "^8.0.3",
-    "fastify": "^4.26.0",
     "@fastify/cookie": "^9.3.1",
     "dotenv": "^16.3.1",
+    "fastify": "^4.26.0",
+    "husky": "^8.0.3",
+    "mysql": "^2.18.1",
     "otplib": "^12.0.1",
     "qrcode": "^1.5.3",
+    "sqlite": "^5.1.1",
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
+    "@types/node": "^20.10.0",
     "eslint": "^9.31.0",
     "husky": "^8.0.3",
     "lint-staged": "^16.1.2",
     "prettier": "^3.3.1",
-    "vitest": "^3.2.4",
-    "@types/node": "^20.10.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.3.3",
-    "tsx": "^4.7.0"
+    "vitest": "^3.2.4"
   },
   "scripts": {
-    "dev": "tsx src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "test": "vitest",
-    "test:watch": "vitest --watch",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "type-check": "tsc --noEmit"
+    "dev:user": "pnpm --filter @transcendence/user-service dev",
+    "dev:game": "pnpm --filter @transcendence/game-service dev",
+    "dev:chat": "pnpm --filter @transcendence/chat-service dev",
+    "dev:tournament": "pnpm --filter @transcendence/tournament-service dev",
+    "dev:gateway": "pnpm --filter @transcendence/api-gateway dev",
+    "dev:all": "pnpm --parallel dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "repository": {
     "type": "git",
@@ -42,7 +49,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "bugs": {
     "url": "https://github.com/NourMellal/transcendence/issues"
   },
