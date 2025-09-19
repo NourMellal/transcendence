@@ -11,7 +11,11 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2020,
     sourceType: 'module',
-    project: './tsconfig.json'
+    project: [
+      './tsconfig.json',
+      './services/*/tsconfig.json',
+      './packages/*/tsconfig.json'
+    ]
   },
   rules: {
     // Enforce import restrictions for Hexagonal Architecture
@@ -19,37 +23,52 @@ module.exports = {
       'error',
       {
         zones: [
-          // Domain cannot import from outer layers
-          {
-            target: './src/domain/**/*',
-            from: './src/application/**/*',
-            message: 'Domain layer cannot import from Application layer'
-          },
-          {
-            target: './src/domain/**/*',
-            from: './src/adapters/**/*',
-            message: 'Domain layer cannot import from Adapters layer'
-          },
-          {
-            target: './src/domain/**/*',
-            from: './src/config/**/*',
-            message: 'Domain layer cannot import from Config'
-          },
-
-          // Application cannot import from adapters
-          {
-            target: './src/application/**/*',
-            from: './src/adapters/**/*',
-            message: 'Application layer cannot import from Adapters layer'
-          },
-
-          // Prevent circular dependencies
-          {
-            target: './src/adapters/**/*',
-            from: './src/adapters/**/*',
-            except: ['./src/adapters/**/*'], // Allow internal adapter imports
-            message: 'Avoid circular dependencies in Adapters layer'
-          }
+            // Domain layers cannot import from outer layers
+            {
+              target: '**/core/domain/**/*',
+              from: [
+                '**/core/use-cases/**/*',
+                '**/application/**/*',
+                '**/adapters/**/*',
+                '**/infrastructure/**/*'
+              ],
+              message: 'Core domain layer cannot import from use-cases, application, adapters, or infrastructure'
+            },
+            {
+              target: '**/domain/**/*',
+              from: [
+                '**/application/**/*',
+                '**/adapters/**/*',
+                '**/infrastructure/**/*'
+              ],
+              message: 'Domain layer cannot import from application, adapters, or infrastructure'
+            },
+            // Use-cases/Application cannot import from adapters or infrastructure
+            {
+              target: '**/core/use-cases/**/*',
+              from: [
+                '**/adapters/**/*',
+                '**/infrastructure/**/*'
+              ],
+              message: 'Core use-cases cannot import from adapters or infrastructure'
+            },
+            {
+              target: '**/application/**/*',
+              from: [
+                '**/adapters/**/*',
+                '**/infrastructure/**/*'
+              ],
+              message: 'Application layer cannot import from adapters or infrastructure'
+            },
+            // Ports cannot import from adapters or infrastructure
+            {
+              target: '**/ports/**/*',
+              from: [
+                '**/adapters/**/*',
+                '**/infrastructure/**/*'
+              ],
+              message: 'Ports cannot import from adapters or infrastructure'
+            }
         ]
       }
     ],
