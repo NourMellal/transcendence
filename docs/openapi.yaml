@@ -2,163 +2,297 @@ openapi: 3.0.3
 info:
   title: Transcendence API
   description: |
-    API for the mighty Pong contest.
-    Auth (42 OAuth), session, 2FA, and profile endpoints.
+    API for the mighty Pong contest - BFF (Backend for Frontend) API Gateway specification.
+    This document defines the Auth and User Profile endpoints for the hexagonal architecture.
   version: 1.0.0
+
 servers:
-  - url: http://localhost:8000/api
-    description: Local development server
+  - url: https://localhost/api
+    description: Local development server (via API Gateway)
+  - url: https://api.transcendence.local
+    description: Production API Gateway
 
 components:
-  securitySchemes:
-    sessionAuth:
-      type: apiKey
-      in: cookie
-      name: session
-
   schemas:
     User:
       type: object
       properties:
-        id: { type: string, format: uuid, example: "123e4567-e89b-12d3-a456-426614174000" }
-        username: { type: string, example: "great_ponger" }
-        email: { type: string, format: email, example: "user@example.com" }
-        avatar: { type: string, format: uri, nullable: true, example: "https://example.com/avatars/user1.png" }
-        is2FAEnabled: { type: boolean, example: false }
-        status: { type: string, enum: [ONLINE, OFFLINE, INGAME], example: ONLINE }
-      required: [id, username, email, is2FAEnabled, status]
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        username:
+          type: string
+          example: "great_ponger"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          example: "/avatars/user1.png"
+        is2FAEnabled:
+          type: boolean
+          example: false
+        status:
+          type: string
+          enum: [ONLINE, OFFLINE, INGAME]
+          example: "ONLINE"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - email
+        - is2FAEnabled
+        - status
+        - createdAt
 
     Enable2FARequest:
       type: object
       properties:
-        code: { type: string, example: "123456", description: TOTP code }
-      required: [code]
+        code:
+          type: string
+          description: The TOTP code from the user's authenticator app
+          example: "123456"
+      required:
+        - code
 
     TwoFactorSecret:
       type: object
       properties:
-        secret: { type: string, example: "JBSWY3DPEHPK3PXP" }
-        qrCode: { type: string, example: "data:image/png;base64,..." }
+        secret:
+          type: string
+          description: The TOTP secret key for manual entry
+          example: "JBSWY3DPEHPK3PXP"
+        qrCode:
+          type: string
+          description: A data URL containing a QR code image
+          example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACt..."
 
     UpdateUserRequest:
       type: object
       properties:
-        username: { type: string, example: "new_username" }
+        username:
+          type: string
+          example: "new_username"
         avatar:
           type: string
           format: binary
-          description: Image file to upload
+          description: An image file to upload as an avatar
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Invalid authentication code"
+        code:
+          type: string
+          example: "2FA_INVALID_CODE"
+        details:
+          type: object
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: Session-based authentication via HTTP-only cookie
+
+# Global security - applied to all endpoints by default
 security:
   - sessionAuth: []
 
 paths:
+  # --- PUBLIC AUTH ENDPOINTS ---
   /auth/42/login:
     get:
-      tags: [Auth]
-      operationId: Auth_start42Login
+      tags: [Authentication]
+      operationId: initiate42OAuth
       summary: Initiate 42 OAuth2 login
+      description: Redirects the user to the 42 authorization endpoint to begin the OAuth2 flow.
+      # Override global security - this endpoint is public
+      security: []
       responses:
         '302':
-          description: Redirect to 42 authorization page.
+          description: Redirect to 42's OAuth2 authorization page.
           headers:
             Location:
-              schema: { type: string }
+              schema:
+                type: string
+              example: "https://api.intra.42.fr/oauth/authorize?client_id=your-client-id&redirect_uri=https%3A%2F%2Fapi.transcendence.local%2Fapi%2Fauth%2F42%2Fcallback&response_type=code"
 
   /auth/42/callback:
     get:
-      tags: [Auth]
-      operationId: Auth_handle42Callback
+      tags: [Authentication]
+      operationId: handle42OAuthCallback
       summary: 42 OAuth2 callback
+      description: |
+        The endpoint that 42 redirects to after authentication. Handles the OAuth flow,
+        creates a session, and redirects to the frontend with a session cookie set.
+      # Override global security - this endpoint is public
+      security: []
       parameters:
         - name: code
           in: query
           required: true
-          schema: { type: string }
+          schema:
+            type: string
+          description: The authorization code returned by 42
+        - name: error
+          in: query
+          schema:
+            type: string
+          description: Error parameter from 42 OAuth
+        - name: error_description
+          in: query
+          schema:
+            type: string
+          description: Error description from 42 OAuth
       responses:
         '302':
-          description: Redirect to the frontend after creating a session.
+          description: |
+            Redirect to the frontend application upon successful authentication.
+            Sets a session cookie via the API Gateway.
           headers:
             Location:
-              schema: { type: string }
-        '401': { description: Invalid authorization code }
-
-  /auth/status:
-    get:
-      tags: [Auth]
-      operationId: Auth_getStatus
-      summary: Get current authentication status
-      responses:
-        '200':
-          description: Authenticated user
+              schema:
+                type: string
+              example: "https://transcendence.local/dashboard"
+            Set-Cookie:
+              schema:
+                type: string
+              example: "session_id=abc123; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600"
+        '400':
+          description: Invalid OAuth parameters
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '401': { description: Not authenticated }
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # --- SESSION MANAGEMENT ---
+  /auth/status:
+    get:
+      tags: [Authentication]
+      operationId: getAuthStatus
+      summary: Get current authentication status
+      description: Returns the currently logged-in user's information based on their session.
+      responses:
+        '200':
+          description: Successfully retrieved the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: User is not authenticated. No valid session found.
 
   /auth/logout:
     post:
-      tags: [Auth]
-      operationId: Auth_logout
-      summary: Log out current user
+      tags: [Authentication]
+      operationId: logoutUser
+      summary: Log out the current user
+      description: Invalidates the user's session and clears the session cookie.
       responses:
-        '204': { description: Logged out }
+        '204':
+          description: Successfully logged out. Session destroyed.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              example: "session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly"
+        '401':
+          description: User is not authenticated.
 
+  # --- 2FA MANAGEMENT ---
   /auth/2fa/generate:
     post:
-      tags: [TwoFA]
-      operationId: Auth_generate2FA
-      summary: Generate 2FA secret & QR
+      tags: [Two-Factor Authentication]
+      operationId: generate2FASecret
+      summary: Generate a new 2FA secret & QR code
+      description: |
+        Generates a new TOTP secret for the authenticated user and returns a QR code 
+        for easy setup with an authenticator app. This does NOT enable 2FA.
       responses:
         '200':
-          description: Generated secret
+          description: Successfully generated 2FA secret.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/TwoFactorSecret' }
-        '401': { description: Not authenticated }
+              schema:
+                $ref: '#/components/schemas/TwoFactorSecret'
+        '401':
+          description: User is not authenticated.
 
   /auth/2fa/enable:
     post:
-      tags: [TwoFA]
-      operationId: Auth_enable2FA
-      summary: Enable 2FA
+      tags: [Two-Factor Authentication]
+      operationId: enable2FA
+      summary: Enable Two-Factor Authentication
+      description: |
+        Verifies the provided TOTP code against the generated secret.
+        If successful, enables 2FA for the user's account.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Enable2FARequest' }
+            schema:
+              $ref: '#/components/schemas/Enable2FARequest'
       responses:
-        '200': { description: 2FA enabled }
-        '400': { description: Invalid TOTP code }
-        '401': { description: Not authenticated }
+        '200':
+          description: 2FA was successfully enabled.
+        '400':
+          description: The provided TOTP code is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User is not authenticated.
 
+  # --- USER PROFILE ---
   /users/me:
     get:
       tags: [Users]
-      operationId: Users_getMe
-      summary: Get current user
+      operationId: getCurrentUser
+      summary: Get current user profile
+      description: Retrieve the complete profile of the currently authenticated user.
       responses:
         '200':
-          description: Current user
+          description: Successfully retrieved user profile.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '401': { description: Not authenticated }
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: User is not authenticated.
 
     patch:
       tags: [Users]
-      operationId: Users_updateMe
-      summary: Update current user
+      operationId: updateCurrentUser
+      summary: Update current user profile
+      description: Update the username or avatar of the currently authenticated user.
       requestBody:
         required: true
         content:
           multipart/form-data:
-            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
       responses:
         '200':
-          description: Updated user
+          description: Successfully updated user profile.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '400': { description: Invalid input }
-        '401': { description: Not authenticated }
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input (e.g., username already taken).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User is not authenticated.

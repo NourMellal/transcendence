@@ -29,9 +29,11 @@
     "prettier": "^3.3.1",
     "tsx": "^4.20.5",
     "typescript": "^5.3.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "openapi-typescript": "^6.7.0"
   },
   "scripts": {
+    "generate:api-types": "openapi-typescript docs/openapi.yaml -o packages/shared-types/src/api-types.ts",
     "dev:user": "pnpm --filter @transcendence/user-service dev",
     "dev:game": "pnpm --filter @transcendence/game-service dev",
     "dev:chat": "pnpm --filter @transcendence/chat-service dev",
