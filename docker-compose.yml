@@ -16,11 +16,15 @@ services:
       - TOURNAMENT_SERVICE_URL=http://tournament-service:3004
       - RATE_LIMIT_MAX=100
       - RATE_LIMIT_WINDOW=1 minute
+      # Vault configuration
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_SKIP_VERIFY=true
     depends_on:
       - user-service
       - game-service
       - chat-service
       - tournament-service
+      - vault
     networks:
       - transcendence-network
 
@@ -36,9 +40,14 @@ services:
       - USER_SERVICE_DB_PATH=/app/data/user-service.db
       - UPLOAD_DIR=/app/uploads
       - LOG_LEVEL=info
+      # Vault configuration
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_SKIP_VERIFY=true
     volumes:
       - user-data:/app/data
       - user-uploads:/app/uploads
+    depends_on:
+      - vault
     networks:
       - transcendence-network
 
@@ -117,18 +126,33 @@ services:
 
   # HashiCorp Vault for secrets management
   vault:
-    image: vault:1.15
+    build:
+      context: infrastructure/vault
+      dockerfile: docker/Dockerfile
+    container_name: transcendence-vault
     ports:
-      - "8200:8200"
+      - "8200:8200"  # Vault API
+      - "8201:8201"  # Vault cluster port
     environment:
-      - VAULT_DEV_ROOT_TOKEN_ID=dev-token-transcendence
-      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://0.0.0.0:8200
+      - VAULT_API_ADDR=http://0.0.0.0:8200
+      - VAULT_CLUSTER_ADDR=http://0.0.0.0:8201
+      - VAULT_LOG_LEVEL=INFO
+      - VAULT_SKIP_VERIFY=true
     cap_add:
       - IPC_LOCK
     volumes:
       - vault-data:/vault/data
+      - vault-logs:/vault/logs
     networks:
       - transcendence-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/vault/health-check.sh"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
 
   # PostgreSQL for production database (optional)
   postgres:
@@ -175,6 +199,7 @@ volumes:
   tournament-data:
   redis-data:
   vault-data:
+  vault-logs:
   postgres-data:
   prometheus-data:
   grafana-data:

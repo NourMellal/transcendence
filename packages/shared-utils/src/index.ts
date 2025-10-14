@@ -100,3 +100,6 @@ export class UnauthorizedError extends AppError {
         this.name = 'UnauthorizedError';
     }
 }
+
+// Vault integration exports
+export * from './vault/index.js';
