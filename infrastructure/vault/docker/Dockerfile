@@ -11,13 +11,17 @@ RUN apk add --no-cache \
 RUN mkdir -p /vault/data \
     /vault/logs \
     /vault/plugins \
-    /vault/config
+    /vault/config \
+    /vault/scripts
 
 # Copy configuration files
 COPY config/ /vault/config/
+COPY policies/ /vault/policies/
+COPY scripts/ /vault/scripts/
 
 # Set proper permissions
-RUN chown -R vault:vault /vault
+RUN chown -R vault:vault /vault && \
+    chmod +x /vault/scripts/*.sh
 
 # Create health check script
 RUN echo '#!/bin/sh' > /vault/health-check.sh && \
