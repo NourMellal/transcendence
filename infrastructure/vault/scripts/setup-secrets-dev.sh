@@ -41,8 +41,8 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     -d '{
         "data": {
             "type": "sqlite",
-            "host": "./services/user-service/user-service.db",
-            "database_url": "file:./services/user-service/user-service.db",
+            "host": "./user-service.db",
+            "database_url": "file:./user-service.db",
             "connection_pool_size": "5",
             "migration_run": "true"
         }
