@@ -143,25 +143,30 @@ done
 echo ""
 
 # ========================================
-# Step 5: Initialize Vault with Secrets
+# Step 5: Initialize Vault with Secrets & Security
 # ========================================
-echo -e "${BLUE}🔑 Step 5: Setting up Vault secrets...${NC}"
+echo -e "${BLUE}🔑 Step 5: Setting up Vault secrets and security policies...${NC}"
 
 export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=dev-root-token
 
-# Run the setup script
-bash infrastructure/vault/scripts/setup-secrets-dev.sh
+# Run the SIMPLE setup script (now includes mandatory API Gateway policy)
+bash infrastructure/vault/simple-setup.sh
 
-echo -e "${GREEN}✅ Vault secrets configured${NC}"
+echo -e "${GREEN}✅ Vault secrets and security policies configured${NC}"
 echo ""
 
-# ========================================
-# Step 6: Validate Vault Integration
-# ========================================
-echo -e "${BLUE}🧪 Step 6: Validating Vault integration...${NC}"
-
-bash infrastructure/vault/scripts/validate-integration.sh
+# Extract the gateway token for .env
+if [ -f "/tmp/vault-gateway-token.txt" ]; then
+    GATEWAY_TOKEN=$(cat /tmp/vault-gateway-token.txt)
+    echo -e "${YELLOW}⚠️  IMPORTANT: API Gateway Security Token${NC}"
+    echo "Your API Gateway now uses a restricted token for security."
+    echo ""
+    echo "Add this to your .env file:"
+    echo -e "${GREEN}VAULT_TOKEN=$GATEWAY_TOKEN${NC}"
+    echo ""
+    read -p "Press Enter to continue..."
+fi
 
 echo ""
 

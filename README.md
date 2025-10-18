@@ -191,7 +191,7 @@ transcendence/
 - ✅ Fine-grained access control
 - ✅ Never commit secrets to Git
 
-**Learn More:** See [VAULT_EXPLANATION.md](./VAULT_EXPLANATION.md) for detailed information.
+**Learn More:** See [VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md) for a simple 3-minute overview.
 
 ### Other Security Measures
 
@@ -300,7 +300,7 @@ docker rm -f vault-dev redis-dev
 
 ## 📚 Documentation
 
-- 📖 **[VAULT_EXPLANATION.md](./VAULT_EXPLANATION.md)** - How Vault works in this project
+- 📖 **[VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md)** - Simple Vault overview (3 min read)
 - 🏗️ **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Detailed architecture guide
 - 🛠️ **[docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md)** - Development best practices
 - 🔧 **[docs/VAULT_TESTING_GUIDE.md](./docs/VAULT_TESTING_GUIDE.md)** - Testing Vault integration
@@ -442,4 +442,4 @@ This project is part of the 42 School curriculum.
 
 **Built with ❤️ by the Transcendence Team**
 
-_Questions? Check [VAULT_EXPLANATION.md](./VAULT_EXPLANATION.md) or ask in the team chat!_
+_Questions? Check [VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md) or ask in the team chat!_
