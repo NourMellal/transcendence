@@ -1,14 +1,17 @@
 /**
  * Vault Package Main Exports
  * 
- * Production-ready Vault integration for Transcendence microservices
+ * Production-ready Vault integration for Transcendence microservices.
+ * - Vault connection and authentication
+ * - Secret fetching (JWT, OAuth 42, database configs)
+ * - Environment variable fallback
+ * - Simple caching mechanism
  */
 
 // Core client and types
 export { VaultClient } from './client.js';
 export {
     ServiceVaultHelper,
-    createVaultHelper,
     createUserServiceVault,
     createGameServiceVault,
     createChatServiceVault,
@@ -20,39 +23,8 @@ export {
 export type {
     VaultConfig,
     VaultSecret,
-    VaultAuthResponse,
-    VaultListResponse,
-    VaultError,
-    VaultMetrics,
     ServiceVaultConfig,
-    EnvVaultConfig,
-    IVaultClient,
-    CacheEntry
+    DatabaseConfig,
+    JWTConfig,
+    APIConfig
 } from './types.js';
-
-// Re-export utility functions
-import {
-    createHealthyVaultClient,
-    waitForVault,
-    validateVaultConfig,
-    buildVaultConfigFromEnv,
-    createKVv2Path,
-    parseSecretPath,
-    retryWithBackoff,
-    isRetryableError,
-    maskSensitiveData,
-    createSafeLogger
-} from './utils';
-
-export {
-    createHealthyVaultClient,
-    waitForVault,
-    validateVaultConfig,
-    buildVaultConfigFromEnv,
-    createKVv2Path,
-    parseSecretPath,
-    retryWithBackoff,
-    isRetryableError,
-    maskSensitiveData,
-    createSafeLogger
-};

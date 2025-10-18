@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# OPTIONAL: Apply Vault Policies (Advanced - Not Required for PFE)
+# OPTIONAL: Apply Vault Policies
 # =================================================================
 # This demonstrates policy-based access control
 # Only run if you want to show advanced Vault features
