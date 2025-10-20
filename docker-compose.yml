@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # API Gateway
@@ -16,11 +15,15 @@ services:
       - TOURNAMENT_SERVICE_URL=http://tournament-service:3004
       - RATE_LIMIT_MAX=100
       - RATE_LIMIT_WINDOW=1 minute
+      # Vault configuration
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_SKIP_VERIFY=true
     depends_on:
       - user-service
       - game-service
       - chat-service
       - tournament-service
+      - vault
     networks:
       - transcendence-network
 
@@ -36,9 +39,14 @@ services:
       - USER_SERVICE_DB_PATH=/app/data/user-service.db
       - UPLOAD_DIR=/app/uploads
       - LOG_LEVEL=info
+      # Vault configuration
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_SKIP_VERIFY=true
     volumes:
       - user-data:/app/data
       - user-uploads:/app/uploads
+    depends_on:
+      - vault
     networks:
       - transcendence-network
 
@@ -100,60 +108,21 @@ services:
     networks:
       - transcendence-network
 
-  # Nginx with ModSecurity for security
-  nginx-modsecurity:
-    build:
-      context: infrastructure/nginx-modsecurity
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - api-gateway
-    volumes:
-      - ./infrastructure/nginx-modsecurity/nginx.conf:/etc/nginx/nginx.conf
-      - ./infrastructure/nginx-modsecurity/ssl:/etc/nginx/ssl
-    networks:
-      - transcendence-network
-
-  # HashiCorp Vault for secrets management
   vault:
-    image: vault:1.15
+    image: hashicorp/vault:1.18
+    container_name: transcendence-vault
     ports:
       - "8200:8200"
     environment:
-      - VAULT_DEV_ROOT_TOKEN_ID=dev-token-transcendence
+      - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
       - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
     cap_add:
       - IPC_LOCK
-    volumes:
-      - vault-data:/vault/data
     networks:
       - transcendence-network
+    restart: unless-stopped
+    command: server -dev -dev-root-token-id=dev-root-token
 
-  # PostgreSQL for production database (optional)
-  postgres:
-    image: postgres:15-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=transcendence
-      - POSTGRES_USER=transcendence
-      - POSTGRES_PASSWORD=transcendence_password
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - transcendence-network
-
-  # Monitoring with Prometheus
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    networks:
-      - transcendence-network
 
   # Grafana for dashboards
   grafana:
@@ -175,6 +144,7 @@ volumes:
   tournament-data:
   redis-data:
   vault-data:
+  vault-logs:
   postgres-data:
   prometheus-data:
   grafana-data:
