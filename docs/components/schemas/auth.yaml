@@ -1,0 +1,19 @@
+TwoFactorSecret:
+  type: object
+  properties:
+    secret:
+      type: string
+      example: "JBSWY3DPEHPK3PXP"
+    qrCode:
+      type: string
+      example: "data:image/png;base64,..."
+  required: [secret, qrCode]
+
+Enable2FARequest:
+  type: object
+  properties:
+    code:
+      type: string
+      example: "123456"
+      description: TOTP code
+  required: [code]

@@ -1,0 +1,102 @@
+/chat/messages:
+  get:
+    tags: [Chat]
+    operationId: Chat_getMessages
+    summary: Get chat messages
+    parameters:
+      - name: type
+        in: query
+        schema:
+          type: string
+          enum: [GLOBAL, PRIVATE, GAME]
+          default: GLOBAL
+      - name: recipientId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Required for PRIVATE messages
+      - name: gameId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Required for GAME messages
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      - name: before
+        in: query
+        schema:
+          type: string
+          format: date-time
+        description: Get messages before this timestamp
+    responses:
+      '200':
+        description: Chat messages
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/chat.yaml#/ChatMessage'
+                hasMore:
+                  type: boolean
+      '401':
+        description: Not authenticated
+
+  post:
+    tags: [Chat]
+    operationId: Chat_sendMessage
+    summary: Send a chat message
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/SendMessageRequest'
+    responses:
+      '201':
+        description: Message sent successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatMessage'
+      '400':
+        description: Invalid message content or recipient
+      '401':
+        description: Not authenticated
+
+/chat/conversations:
+  get:
+    tags: [Chat]
+    operationId: Chat_getConversations
+    summary: Get user's private conversations
+    responses:
+      '200':
+        description: List of conversations
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  recipientId:
+                    type: string
+                    format: uuid
+                  recipientUsername:
+                    type: string
+                  lastMessage:
+                    $ref: '../components/schemas/chat.yaml#/ChatMessage'
+                  unreadCount:
+                    type: integer
+      '401':
+        description: Not authenticated

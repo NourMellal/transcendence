@@ -1,0 +1,13 @@
+Error:
+  type: object
+  properties:
+    error:
+      type: string
+      example: "Invalid input"
+    message:
+      type: string
+      example: "The provided data is invalid"
+    code:
+      type: string
+      example: "INVALID_INPUT"
+  required: [error, message]

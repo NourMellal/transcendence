@@ -1,0 +1,36 @@
+/users/me:
+  get:
+    tags: [Users]
+    operationId: Users_getMe
+    summary: Get current user profile
+    responses:
+      '200':
+        description: Current user profile
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '401':
+        description: Not authenticated
+
+  patch:
+    tags: [Users]
+    operationId: Users_updateMe
+    summary: Update current user profile
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            $ref: '../components/schemas/user.yaml#/UpdateUserRequest'
+    responses:
+      '200':
+        description: User profile updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '400':
+        description: Invalid input
+      '401':
+        description: Not authenticated
