@@ -1,0 +1,133 @@
+Tournament:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "tournament-123e4567"
+    name:
+      type: string
+      example: "Weekly Pong Championship"
+    description:
+      type: string
+      example: "The ultimate pong tournament!"
+    maxParticipants:
+      type: integer
+      example: 16
+      minimum: 4
+      maximum: 32
+    currentParticipants:
+      type: integer
+      example: 8
+    status:
+      type: string
+      enum: [REGISTRATION, ONGOING, FINISHED, CANCELLED]
+      example: REGISTRATION
+    createdBy:
+      type: string
+      format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    participants:
+      type: array
+      items:
+        $ref: './user.yaml#/User'
+    bracket:
+      type: array
+      items:
+        $ref: '#/TournamentMatch'
+    winner:
+      type: string
+      format: uuid
+      nullable: true
+    registrationDeadline:
+      type: string
+      format: date-time
+      example: "2025-10-25T18:00:00Z"
+    startDate:
+      type: string
+      format: date-time
+      example: "2025-10-26T10:00:00Z"
+    createdAt:
+      type: string
+      format: date-time
+      example: "2025-10-22T10:00:00Z"
+  required:
+    - id
+    - name
+    - maxParticipants
+    - currentParticipants
+    - status
+    - createdBy
+    - participants
+    - registrationDeadline
+    - startDate
+    - createdAt
+
+TournamentMatch:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "match-123e4567"
+    tournamentId:
+      type: string
+      format: uuid
+      example: "tournament-123e4567"
+    player1:
+      type: string
+      format: uuid
+      nullable: true
+    player2:
+      type: string
+      format: uuid
+      nullable: true
+    winner:
+      type: string
+      format: uuid
+      nullable: true
+    round:
+      type: integer
+      example: 1
+    matchNumber:
+      type: integer
+      example: 1
+    status:
+      type: string
+      enum: [PENDING, PLAYING, FINISHED]
+      example: PENDING
+    gameId:
+      type: string
+      format: uuid
+      nullable: true
+    scheduledAt:
+      type: string
+      format: date-time
+      nullable: true
+  required: [id, tournamentId, round, matchNumber, status]
+
+CreateTournamentRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      example: "Weekly Pong Championship"
+      maxLength: 100
+    description:
+      type: string
+      example: "The ultimate pong tournament!"
+      maxLength: 500
+    maxParticipants:
+      type: integer
+      example: 16
+      minimum: 4
+      maximum: 32
+    registrationDeadline:
+      type: string
+      format: date-time
+      example: "2025-10-25T18:00:00Z"
+    startDate:
+      type: string
+      format: date-time
+      example: "2025-10-26T10:00:00Z"
+  required: [name, maxParticipants, registrationDeadline, startDate]

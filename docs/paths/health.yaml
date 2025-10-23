@@ -1,0 +1,35 @@
+/health:
+  get:
+    tags: [System]
+    operationId: System_health
+    summary: API health check
+    security: []
+    responses:
+      '200':
+        description: API is healthy
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "ok"
+                timestamp:
+                  type: string
+                  format: date-time
+                services:
+                  type: object
+                  properties:
+                    userService:
+                      type: string
+                      enum: [healthy, unhealthy]
+                    gameService:
+                      type: string
+                      enum: [healthy, unhealthy]
+                    chatService:
+                      type: string
+                      enum: [healthy, unhealthy]
+                    tournamentService:
+                      type: string
+                      enum: [healthy, unhealthy]

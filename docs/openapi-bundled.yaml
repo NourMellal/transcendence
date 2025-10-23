@@ -1,0 +1,486 @@
+openapi: 3.0.3
+info:
+  title: Transcendence API
+  description: |
+    API for the mighty Pong contest.
+    Auth (42 OAuth), session, 2FA, and profile endpoints.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server (API Gateway)
+components:
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT-based authentication using Bearer tokens
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        username:
+          type: string
+          example: great_ponger
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatars/user1.png
+        is2FAEnabled:
+          type: boolean
+          example: false
+        status:
+          type: string
+          enum:
+            - ONLINE
+            - OFFLINE
+            - INGAME
+          example: ONLINE
+      required:
+        - id
+        - username
+        - email
+        - is2FAEnabled
+        - status
+    TwoFactorSecret:
+      type: object
+      properties:
+        secret:
+          type: string
+          example: JBSWY3DPEHPK3PXP
+        qrCode:
+          type: string
+          example: data:image/png;base64,...
+      required:
+        - secret
+        - qrCode
+    Enable2FARequest:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '123456'
+          description: TOTP code
+      required:
+        - code
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: new_username
+        avatar:
+          type: string
+          format: binary
+          description: Image file to upload
+    Game:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: game-123e4567
+        player1:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        player2:
+          type: string
+          format: uuid
+          nullable: true
+          example: 123e4567-e89b-12d3-a456-426614174001
+        status:
+          type: string
+          enum:
+            - WAITING
+            - PLAYING
+            - FINISHED
+            - CANCELLED
+          example: WAITING
+        score:
+          type: object
+          properties:
+            player1:
+              type: integer
+              example: 5
+            player2:
+              type: integer
+              example: 3
+        winner:
+          type: string
+          format: uuid
+          nullable: true
+          example: 123e4567-e89b-12d3-a456-426614174000
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-10-22T10:00:00Z'
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2025-10-22T10:15:00Z'
+      required:
+        - id
+        - player1
+        - status
+        - score
+        - createdAt
+    CreateGameRequest:
+      type: object
+      properties:
+        gameMode:
+          type: string
+          enum:
+            - CLASSIC
+            - TOURNAMENT
+          example: CLASSIC
+        isPrivate:
+          type: boolean
+          example: false
+    JoinGameRequest:
+      type: object
+      properties:
+        gameId:
+          type: string
+          format: uuid
+          example: game-123e4567
+    GameMove:
+      type: object
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum:
+            - UP
+            - DOWN
+            - STOP
+        timestamp:
+          type: string
+          format: date-time
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: msg-123e4567
+        senderId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        senderUsername:
+          type: string
+          example: great_ponger
+        content:
+          type: string
+          example: Hello everyone!
+        timestamp:
+          type: string
+          format: date-time
+          example: '2025-10-22T10:00:00Z'
+        type:
+          type: string
+          enum:
+            - GLOBAL
+            - PRIVATE
+            - GAME
+          example: GLOBAL
+        recipientId:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+        - id
+        - senderId
+        - senderUsername
+        - content
+        - timestamp
+        - type
+    SendMessageRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          example: Hello everyone!
+          maxLength: 500
+        type:
+          type: string
+          enum:
+            - GLOBAL
+            - PRIVATE
+            - GAME
+          example: GLOBAL
+        recipientId:
+          type: string
+          format: uuid
+          nullable: true
+          example: 123e4567-e89b-12d3-a456-426614174001
+      required:
+        - content
+        - type
+    Tournament:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: tournament-123e4567
+        name:
+          type: string
+          example: Weekly Pong Championship
+        description:
+          type: string
+          example: The ultimate pong tournament!
+        maxParticipants:
+          type: integer
+          example: 16
+          minimum: 4
+          maximum: 32
+        currentParticipants:
+          type: integer
+          example: 8
+        status:
+          type: string
+          enum:
+            - REGISTRATION
+            - ONGOING
+            - FINISHED
+            - CANCELLED
+          example: REGISTRATION
+        createdBy:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                example: 123e4567-e89b-12d3-a456-426614174000
+              username:
+                type: string
+                example: great_ponger
+              email:
+                type: string
+                format: email
+                example: user@example.com
+              avatar:
+                type: string
+                format: uri
+                nullable: true
+                example: https://example.com/avatars/user1.png
+              is2FAEnabled:
+                type: boolean
+                example: false
+              status:
+                type: string
+                enum:
+                  - ONLINE
+                  - OFFLINE
+                  - INGAME
+                example: ONLINE
+            required:
+              - id
+              - username
+              - email
+              - is2FAEnabled
+              - status
+        bracket:
+          type: array
+          items:
+            $ref: '#/TournamentMatch'
+        winner:
+          type: string
+          format: uuid
+          nullable: true
+        registrationDeadline:
+          type: string
+          format: date-time
+          example: '2025-10-25T18:00:00Z'
+        startDate:
+          type: string
+          format: date-time
+          example: '2025-10-26T10:00:00Z'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-10-22T10:00:00Z'
+      required:
+        - id
+        - name
+        - maxParticipants
+        - currentParticipants
+        - status
+        - createdBy
+        - participants
+        - registrationDeadline
+        - startDate
+        - createdAt
+    TournamentMatch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: match-123e4567
+        tournamentId:
+          type: string
+          format: uuid
+          example: tournament-123e4567
+        player1:
+          type: string
+          format: uuid
+          nullable: true
+        player2:
+          type: string
+          format: uuid
+          nullable: true
+        winner:
+          type: string
+          format: uuid
+          nullable: true
+        round:
+          type: integer
+          example: 1
+        matchNumber:
+          type: integer
+          example: 1
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PLAYING
+            - FINISHED
+          example: PENDING
+        gameId:
+          type: string
+          format: uuid
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - tournamentId
+        - round
+        - matchNumber
+        - status
+    CreateTournamentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Weekly Pong Championship
+          maxLength: 100
+        description:
+          type: string
+          example: The ultimate pong tournament!
+          maxLength: 500
+        maxParticipants:
+          type: integer
+          example: 16
+          minimum: 4
+          maximum: 32
+        registrationDeadline:
+          type: string
+          format: date-time
+          example: '2025-10-25T18:00:00Z'
+        startDate:
+          type: string
+          format: date-time
+          example: '2025-10-26T10:00:00Z'
+      required:
+        - name
+        - maxParticipants
+        - registrationDeadline
+        - startDate
+    UserStats:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        gamesPlayed:
+          type: integer
+          example: 25
+        gamesWon:
+          type: integer
+          example: 18
+        gamesLost:
+          type: integer
+          example: 7
+        winRate:
+          type: number
+          format: float
+          example: 0.72
+        tournamentsPlayed:
+          type: integer
+          example: 3
+        tournamentsWon:
+          type: integer
+          example: 1
+        ranking:
+          type: integer
+          example: 5
+        totalScore:
+          type: integer
+          example: 1250
+      required:
+        - userId
+        - gamesPlayed
+        - gamesWon
+        - gamesLost
+        - winRate
+        - tournamentsPlayed
+        - tournamentsWon
+        - ranking
+        - totalScore
+    Leaderboard:
+      type: object
+      properties:
+        topPlayers:
+          type: array
+          items:
+            type: object
+            properties:
+              user:
+                $ref: ./user.yaml#/User
+              stats:
+                $ref: '#/UserStats'
+        lastUpdated:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Invalid input
+        message:
+          type: string
+          example: The provided data is invalid
+        code:
+          type: string
+          example: INVALID_INPUT
+      required:
+        - error
+        - message
+security:
+  - sessionAuth: []
+paths: {}

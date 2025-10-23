@@ -25,6 +25,7 @@
     "eslint": "^9.31.0",
     "eslint-plugin-import": "^2.32.0",
     "husky": "^8.0.3",
+    "js-yaml": "^4.1.0",
     "lint-staged": "^16.1.2",
     "prettier": "^3.3.1",
     "tsx": "^4.20.5",
@@ -46,7 +47,9 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "vault:start": "docker start vault-dev redis-dev 2>/dev/null || docker-compose up -d vault redis",
-    "vault:setup": "bash infrastructure/vault/simple-setup.sh"
+    "vault:setup": "bash infrastructure/vault/simple-setup.sh",
+    "openapi:bundle": "node docs/bundle-openapi.js",
+    "openapi:watch": "nodemon --watch docs/components --watch docs/paths --exec 'node docs/bundle-openapi.js'"
   },
   "repository": {
     "type": "git",

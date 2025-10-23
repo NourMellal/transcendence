@@ -1,0 +1,57 @@
+UserStats:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+    gamesPlayed:
+      type: integer
+      example: 25
+    gamesWon:
+      type: integer
+      example: 18
+    gamesLost:
+      type: integer
+      example: 7
+    winRate:
+      type: number
+      format: float
+      example: 0.72
+    tournamentsPlayed:
+      type: integer
+      example: 3
+    tournamentsWon:
+      type: integer
+      example: 1
+    ranking:
+      type: integer
+      example: 5
+    totalScore:
+      type: integer
+      example: 1250
+  required:
+    - userId
+    - gamesPlayed
+    - gamesWon
+    - gamesLost
+    - winRate
+    - tournamentsPlayed
+    - tournamentsWon
+    - ranking
+    - totalScore
+
+Leaderboard:
+  type: object
+  properties:
+    topPlayers:
+      type: array
+      items:
+        type: object
+        properties:
+          user:
+            $ref: './user.yaml#/User'
+          stats:
+            $ref: '#/UserStats'
+    lastUpdated:
+      type: string
+      format: date-time
