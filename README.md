@@ -1,171 +1,198 @@
-# Transcendence 🏓# Transcendence 🏓
+# Transcendence 🎮
 
-
-
-A real-time multiplayer Pong game with microservices architecture and enterprise-grade security.A real-time Pong-style game built by 42-Network students.
-
-**North-star:** _< 30 s from page-load → fair online match._
+A real-time multiplayer Pong game with event-driven microservices architecture built by 42 Network students.
 
 **Goal:** _< 30s from page-load → fair online match._
 
-## 🏗️ Architecture
-
----
-
-This project uses **Hexagonal Architecture** (Ports & Adapters) for maintainability and testability.
-
-## 🚀 Quick Start (For Your Teammates!)
-
-```
-
-### Prerequisitessrc/
-
-- **Node.js** v18+ ([Download](https://nodejs.org/))├─ domain/          # Business logic & entities
-
-- **Docker Desktop** ([Download](https://www.docker.com/))├─ application/     # Use cases & workflows
-
-- **pnpm** (will be installed automatically if missing)├─ adapters/        # External interfaces (DB, HTTP, etc.)
-
-├─ config/          # Environment configuration
-
-### One-Command Setup 🎯└─ app.ts           # Dependency injection
-
-```
-
-**Windows:**
-
-```powershell## 🚀 Quick Start
-
-powershell -ExecutionPolicy Bypass -File setup.ps1
-
-``````bash
-
-# Install dependencies
-
-**Linux/Mac/WSL:**pnpm install
-
-```bash
-
-bash setup.sh# Start development server
-
-```pnpm run dev
-
-```
-
-This will:
-
-- ✅ Install all dependencies# Run tests
-
-- ✅ Set up HashiCorp Vault with secretspnpm test
-
-- ✅ Start Redis database
-
-- ✅ Configure environment variables# Lint code
-
-- ✅ Validate everything workspnpm run lint
-
-
-
-### Start the Project## 📋 Development
-
-
-
-```bash- **Framework**: Fastify (Node.js)
-
-# Windows (recommended - handles PowerShell issues)- **Language**: TypeScript
-
-.\start.bat- **Architecture**: Hexagonal Architecture
-
-- **Database**: SQLite (development)
-
-# Or use pnpm directly (all platforms)- **Testing**: Vitest
-
-pnpm run dev:all- **Linting**: ESLint
-
-```
-
-## 🤝 Contributing
-
-**That's it!** All 5 services will start:
-
-- 🌐 API Gateway: `http://localhost:3000`1. Follow the established Hexagonal Architecture patterns
-
-- 👤 User Service: `http://localhost:3001`2. Write tests for new features
-
-- 🎮 Game Service: `http://localhost:3002`3. Run `pnpm run lint` before committing
-
-- 💬 Chat Service: `http://localhost:3003`4. Use conventional commits
-
-- 🏆 Tournament Service: `http://localhost:3004`
-
-## 📚 Key Files
-
-### Stop Services
-
-- `src/domain/` - Business entities and rules
-
-**Windows:**- `src/application/` - Use cases and workflows
-
-```bash- `src/adapters/` - External interfaces and implementations
-
-.\stop-services.bat- `docs/openapi.yaml` - API documentation
-
-```
-
-**Linux/Mac:**
-```bash
-pkill -f tsx
-```
-
 ---
 
 ## 🏗️ Architecture
 
-### Microservices Overview
+This project implements **Hexagonal Architecture (Ports & Adapters)** with **Event-Driven Microservices** using **RabbitMQ** for asynchronous communication.
+
+### Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    API Gateway (:3000)                   │
-│                 (Rate Limiting, Auth)                    │
-└────────┬────────┬──────────┬──────────┬─────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   API Gateway (:3000)                        │
+│             (Rate Limiting, Authentication)                  │
+└────────┬────────┬──────────┬──────────┬─────────────────────┘
          │        │          │          │
     ┌────▼───┐ ┌─▼────┐ ┌───▼───┐ ┌───▼─────────┐
     │  User  │ │ Game │ │ Chat  │ │ Tournament  │
     │:3001   │ │:3002 │ │:3003  │ │   :3004     │
     └────┬───┘ └──┬───┘ └───┬───┘ └──────┬──────┘
          │        │          │            │
-    ┌────▼────────▼──────────▼────────────▼─────┐
-    │         SQLite + Redis Databases           │
-    └────────────────────────────────────────────┘
-                        │
-              ┌─────────▼──────────┐
-              │   HashiCorp Vault  │
-              │   (Secrets Store)  │
-              │      :8200         │
-              └────────────────────┘
+         └────────┴────┬─────┴────────────┘
+                       │
+              ┌────────▼─────────┐
+              │     RabbitMQ     │
+              │  Event Messaging │
+              │      :5672       │
+              └──────────────────┘
+                       │
+         ┌─────────────┼─────────────┐
+         │             │             │
+    ┌────▼────┐  ┌────▼────┐  ┌────▼────┐
+    │ SQLite  │  │  Redis  │  │  Vault  │
+    │   DB    │  │  Cache  │  │ :8200   │
+    └─────────┘  └─────────┘  └─────────┘
 ```
 
-### Project Structure
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js** v22+ ([Download](https://nodejs.org/))
+- **Docker Desktop** ([Download](https://www.docker.com/))
+- **pnpm** (installed automatically if missing)
+
+### One-Command Setup
+
+**Linux/Mac/WSL:**
+```bash
+bash setup.sh
+```
+
+**Windows:**
+```powershell
+powershell -ExecutionPolicy Bypass -File setup.ps1
+```
+
+This will:
+- ✅ Install all dependencies
+- ✅ Set up HashiCorp Vault with secrets
+- ✅ Start RabbitMQ, Redis, and Vault
+- ✅ Configure environment variables
+- ✅ Validate everything works
+
+### Start All Services
+
+```bash
+# Start all services in development mode
+pnpm dev:all
+```
+
+**Services will be available at:**
+- 🌐 API Gateway: `http://localhost:3000`
+- 👤 User Service: `http://localhost:3001`
+- 🎮 Game Service: `http://localhost:3002`
+- 💬 Chat Service: `http://localhost:3003`
+- 🏆 Tournament Service: `http://localhost:3004`
+- 🐰 RabbitMQ UI: `http://localhost:15672` (transcendence/transcendence_dev)
+- 🔐 Vault: `http://localhost:8200`
+
+### Start Individual Services
+
+```bash
+pnpm dev:user          # User Service
+pnpm dev:game          # Game Service
+pnpm dev:chat          # Chat Service
+pnpm dev:tournament    # Tournament Service
+pnpm dev:gateway       # API Gateway
+```
+
+---
+
+## 📁 Project Structure
 
 ```
 transcendence/
-├── services/
-│   ├── user-service/        # Authentication, profiles, 2FA
-│   ├── game-service/        # Real-time Pong game logic
-│   ├── chat-service/        # WebSocket chat rooms
-│   └── tournament-service/  # Tournament brackets, matchmaking
+├── services/                      # Microservices
+│   ├── user-service/              # Authentication, profiles, 2FA
+│   │   ├── domain/                # Business entities & logic
+│   │   ├── application/           # Use cases
+│   │   └── infrastructure/
+│   │       ├── messaging/         # RabbitMQ integration
+│   │       ├── database/          # SQLite repositories
+│   │       └── http/              # HTTP controllers
+│   ├── game-service/              # Real-time Pong gameplay
+│   ├── chat-service/              # WebSocket chat rooms
+│   └── tournament-service/        # Tournament brackets
+│
+├── packages/                      # Shared Kernel
+│   ├── shared-messaging/          # Integration event contracts
+│   ├── shared-types/              # TypeScript types
+│   ├── shared-utils/              # Utilities (Vault helper)
+│   └── shared-validation/         # Input validation
+│
 ├── infrastructure/
-│   ├── api-gateway/         # Request routing, rate limiting
-│   ├── vault/               # HashiCorp Vault setup
-│   │   ├── scripts/         # Automated setup & validation
-│   │   └── policies/        # Access control policies
-│   └── nginx-modsecurity/   # WAF (Web Application Firewall)
-├── packages/
-│   ├── shared-types/        # TypeScript type definitions
-│   ├── shared-utils/        # Common utilities + Vault helper
-│   └── shared-validation/   # Input validation schemas
-└── docs/                    # Documentation
+│   ├── api-gateway/               # Request routing, rate limiting
+│   └── vault/                     # HashiCorp Vault setup
+│
+└── docs/                          # Documentation
+    ├── HEXAGONAL-ARCHITECTURE.md  # Architectural guide
+    ├── ARCHITECTURE.md            # Project structure
+    └── VAULT-QUICK-GUIDE.md       # Vault overview
 ```
+
+### Service Architecture (Hexagonal)
+
+Each service follows the same pattern:
+
+```
+service/
+├── domain/                # Core business logic
+│   ├── entities/          # Domain entities
+│   ├── events/            # Domain events
+│   ├── repositories/      # Repository interfaces
+│   └── value-objects/     # Value objects
+│
+├── application/           # Use cases & orchestration
+│   ├── use-cases/         # Business use cases
+│   ├── services/          # Application services
+│   └── dto/               # Data transfer objects
+│
+└── infrastructure/        # External adapters
+    ├── messaging/         # Event-driven messaging
+    │   ├── RabbitMQConnection.ts
+    │   ├── RabbitMQPublisher.ts
+    │   ├── RabbitMQConsumer.ts
+    │   └── handlers/      # Integration event handlers
+    ├── database/          # Database repositories
+    └── http/              # HTTP controllers
+```
+
+---
+
+## 🎯 Event-Driven Architecture
+
+Services communicate asynchronously via **RabbitMQ** using integration events.
+
+### Event Flow Example
+
+```
+User Registration Flow:
+
+1. User Service → Publishes UserRegisteredIntegrationEvent
+2. RabbitMQ → Routes event to subscribed queues
+3. Game Service → Handles event (creates player profile)
+4. Chat Service → Handles event (creates chat profile)
+5. Tournament Service → Handles event (enables registration)
+```
+
+### Integration Events
+
+**User Events:**
+- `UserRegisteredIntegrationEvent`
+- `UserProfileUpdatedIntegrationEvent`
+- `UserDeletedIntegrationEvent`
+
+**Game Events:**
+- `GameStartedIntegrationEvent`
+- `GameFinishedIntegrationEvent`
+- `PlayerJoinedIntegrationEvent`
+
+**Chat Events:**
+- `MessageSentIntegrationEvent`
+- `UserJoinedChatIntegrationEvent`
+
+**Tournament Events:**
+- `TournamentCreatedIntegrationEvent`
+- `TournamentStartedIntegrationEvent`
+- `TournamentFinishedIntegrationEvent`
 
 ---
 
@@ -173,34 +200,34 @@ transcendence/
 
 ### HashiCorp Vault Integration
 
-**All sensitive data is stored in Vault**, not in environment variables or code:
+All sensitive data is stored in **Vault**, not in environment variables or code:
 
-- 🔑 **JWT signing keys** - For authentication tokens
+- 🔑 **JWT signing keys** - Authentication tokens
 - 🔐 **OAuth credentials** - Google, GitHub login
 - 🗄️ **Database credentials** - Connection strings
 - 🎮 **Game configuration** - Server settings
-- 💬 **Chat configuration** - Rate limits, moderation
+- 💬 **Chat configuration** - Rate limits
 - 📧 **Email service** - SMTP credentials
-- 🛠️ **API keys** - External service integrations
+- 🛠️ **API keys** - External services
 
 **Why Vault?**
 - ✅ Centralized secret management
 - ✅ Encrypted storage
-- ✅ Audit logging (who accessed what)
+- ✅ Audit logging
 - ✅ Easy secret rotation
 - ✅ Fine-grained access control
 - ✅ Never commit secrets to Git
 
-**Learn More:** See [VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md) for a simple 3-minute overview.
+📖 **Learn More:** [VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md)
 
-### Other Security Measures
+### Other Security Features
 
 - 🛡️ **ModSecurity WAF** - Protection against common attacks
 - 🚦 **Rate Limiting** - Prevent abuse and DDoS
 - 🔒 **2FA Support** - Two-factor authentication
-- 🔑 **JWT Authentication** - Stateless session management
+- 🔑 **JWT Authentication** - Stateless sessions
 - 📝 **Input Validation** - Schema-based validation
-- 🌐 **CORS Protection** - Cross-origin request control
+- 🌐 **CORS Protection** - Cross-origin control
 
 ---
 
@@ -209,27 +236,22 @@ transcendence/
 ### Available Commands
 
 ```bash
-# Start all services in development mode
-pnpm run dev:all
+# Development
+pnpm dev:all           # Start all services
+pnpm dev:user          # Start user service
+pnpm dev:game          # Start game service
+pnpm dev:chat          # Start chat service
+pnpm dev:tournament    # Start tournament service
 
-# Start individual services
-pnpm run dev:user
-pnpm run dev:game
-pnpm run dev:chat
-pnpm run dev:tournament
-pnpm run dev:gateway
+# Build & Test
+pnpm build             # Build all services
+pnpm test              # Run all tests
+pnpm lint              # Lint code
 
-# Build for production
-pnpm run build
-
-# Run tests
-pnpm test
-
-# Lint code
-pnpm run lint
-
-# Type checking
-pnpm run type-check
+# Infrastructure
+docker-compose up -d rabbitmq vault redis   # Start infrastructure
+docker-compose logs -f [service]            # View logs
+docker-compose down                         # Stop all services
 ```
 
 ### Vault Commands
@@ -241,34 +263,22 @@ bash infrastructure/vault/scripts/validate-integration.sh
 # Check Vault health
 curl http://localhost:8200/v1/sys/health
 
-# Re-setup secrets (if needed)
-bash infrastructure/vault/scripts/setup-secrets-dev.sh
-
-# View all secrets (development only!)
+# View all secrets (dev only)
 bash infrastructure/vault/scripts/test-vault-system.sh
 ```
 
-### Docker Commands
+### RabbitMQ Management
 
-```bash
-# View running containers
-docker ps
+Access the RabbitMQ Management UI:
+- **URL:** http://localhost:15672
+- **Username:** transcendence
+- **Password:** transcendence_dev
 
-# View Vault logs
-docker logs vault-dev
-
-# View Redis logs
-docker logs redis-dev
-
-# Stop containers
-docker stop vault-dev redis-dev
-
-# Restart containers
-docker restart vault-dev redis-dev
-
-# Remove containers (will lose data!)
-docker rm -f vault-dev redis-dev
-```
+Monitor:
+- Message rates
+- Queue lengths
+- Consumer status
+- Exchange bindings
 
 ---
 
@@ -278,12 +288,13 @@ docker rm -f vault-dev redis-dev
 - **Node.js** v22+ - Runtime environment
 - **TypeScript** - Type-safe JavaScript
 - **Fastify** - High-performance web framework
+- **Socket.IO** - WebSocket communication
 - **Pino** - Fast JSON logger
-- **Socket.io** - WebSocket communication
 
-### Databases
-- **SQLite** - User and Tournament data
-- **Redis** - Game state and Chat messages
+### Messaging & Data
+- **RabbitMQ** - Event-driven messaging
+- **SQLite** - Persistent data storage
+- **Redis** - Cache and session storage
 
 ### Security & Infrastructure
 - **HashiCorp Vault** - Secret management
@@ -291,7 +302,7 @@ docker rm -f vault-dev redis-dev
 - **Docker** - Containerization
 
 ### Development Tools
-- **pnpm** - Fast, disk-efficient package manager
+- **pnpm** - Fast package manager
 - **ESLint** - Code linting
 - **Vitest** - Unit testing
 - **tsx** - Fast TypeScript execution
@@ -300,116 +311,139 @@ docker rm -f vault-dev redis-dev
 
 ## 📚 Documentation
 
-- 📖 **[VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md)** - Simple Vault overview (3 min read)
-- 🏗️ **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Detailed architecture guide
-- 🛠️ **[docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md)** - Development best practices
-- 🔧 **[docs/VAULT_TESTING_GUIDE.md](./docs/VAULT_TESTING_GUIDE.md)** - Testing Vault integration
-- 🌐 **[docs/openapi.yaml](./docs/openapi.yaml)** - API documentation
+### Essential Guides
+- 🏗️ **[docs/HEXAGONAL-ARCHITECTURE.md](./docs/HEXAGONAL-ARCHITECTURE.md)** - Complete architectural guide
+- 🔐 **[VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md)** - Vault overview (3 min)
+
+### Architecture Resources
+- **Hexagonal Architecture:** Clear separation of concerns
+- **Event-Driven:** Loose coupling between services
+- **Microservices:** Independent deployment & scaling
+- **Domain-Driven Design:** Business logic first
 
 ---
 
-## 🐛 Troubleshooting
+## 👥 Team Collaboration
 
-### Services won't start - "Port already in use"
+### Recommended Task Distribution (5 Developers)
 
-**Windows:**
-```powershell
-.\stop-services.bat
 ```
+Developer 1: User Service
+├─ Authentication & Authorization
+├─ Profile Management
+└─ Events: UserRegistered, UserUpdated
 
-**Linux/Mac:**
-```bash
-pkill -f tsx
-# Or find specific processes:
-lsof -ti:3000,3001,3002,3003,3004 | xargs kill -9
+Developer 2: Game Service
+├─ Real-time Pong Gameplay
+├─ WebSocket Management
+└─ Events: GameStarted, GameFinished
+
+Developer 3: Chat Service
+├─ Real-time Messaging
+├─ Chat Rooms
+└─ Events: MessageSent, UserJoined
+
+Developer 4: Tournament Service
+├─ Tournament Creation
+├─ Bracket Generation
+└─ Events: TournamentCreated, TournamentStarted
+
+Developer 5: Infrastructure & DevOps
+├─ API Gateway
+├─ Docker Orchestration
+└─ Monitoring & CI/CD
 ```
-
-### Vault validation fails
-
-```bash
-# Check Vault is running
-docker ps | grep vault-dev
-
-# Check Vault health
-curl http://localhost:8200/v1/sys/health
-
-# Re-initialize Vault secrets
-export VAULT_ADDR=http://localhost:8200
-export VAULT_TOKEN=dev-root-token
-bash infrastructure/vault/scripts/setup-secrets-dev.sh
-```
-
-### PowerShell execution policy error
-
-```powershell
-# Use the batch file instead:
-.\start.bat
-
-# Or change execution policy (admin required):
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### Database errors - "Cannot open database"
-
-```bash
-# Create database directories
-mkdir -p services/user-service/data
-mkdir -p services/tournament-service/data
-```
-
-### Docker issues
-
-```bash
-# Make sure Docker is running
-docker info
-
-# Restart Docker Desktop and try again
-```
-
----
-
-## 🤝 Contributing
 
 ### Git Workflow
 
-1. **Clone the repository**
+1. **Clone repository**
    ```bash
    git clone <repository-url>
    cd transcendence
    ```
 
-2. **Run setup script**
+2. **Run setup**
    ```bash
-   # Windows
-   powershell -ExecutionPolicy Bypass -File setup.ps1
-   
-   # Linux/Mac
-   bash setup.sh
+   bash setup.sh  # Linux/Mac
    ```
 
-3. **Create a feature branch**
+3. **Create feature branch**
    ```bash
-   git checkout -b feature/your-feature-name
+   git checkout -b feature/your-feature
    ```
 
-4. **Make your changes and test**
+4. **Develop & test**
    ```bash
-   pnpm run dev:all
+   pnpm dev:all
    pnpm test
-   pnpm run lint
+   pnpm lint
    ```
 
 5. **Commit with conventional commits**
    ```bash
    git commit -m "feat: add new feature"
    git commit -m "fix: resolve bug"
-   git commit -m "docs: update README"
    ```
 
-6. **Push and create pull request**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+---
+
+## 🐛 Troubleshooting
+
+### Services won't start - Port in use
+
+```bash
+# Linux/Mac/WSL
+pkill -f tsx
+
+# Or kill specific ports
+lsof -ti:3000,3001,3002,3003,3004 | xargs kill -9
+
+# Windows
+.\stop-services.bat
+```
+
+### RabbitMQ connection issues
+
+```bash
+# Check RabbitMQ is running
+docker ps | grep rabbitmq
+
+# Restart RabbitMQ
+docker-compose restart rabbitmq
+
+# Check logs
+docker-compose logs rabbitmq
+```
+
+### Vault issues
+
+```bash
+# Check Vault health
+curl http://localhost:8200/v1/sys/health
+
+# Restart Vault
+docker-compose restart vault
+
+# Re-initialize secrets
+bash infrastructure/vault/scripts/setup-secrets-dev.sh
+```
+
+### Docker issues
+
+```bash
+# Check Docker is running
+docker info
+
+# Start infrastructure
+docker-compose up -d rabbitmq vault redis
+
+# View all containers
+docker ps -a
+```
+
+---
+
+## 🤝 Contributing
 
 ### Code Standards
 
@@ -418,14 +452,17 @@ docker info
 - ✅ Write **unit tests** for new features
 - ✅ Use **Pino logger** for logging
 - ✅ Validate inputs with **shared-validation**
+- ✅ Publish **integration events** for cross-service communication
 - ✅ Never commit **secrets** or **database files**
 - ✅ Use **conventional commits** format
 
----
+### Development Best Practices
 
-## 📄 License
-
-This project is part of the 42 School curriculum.
+1. **Domain First**: Implement business logic in domain layer
+2. **Test Coverage**: Write tests for use cases
+3. **Event Contracts**: Define events in shared-messaging
+4. **Loose Coupling**: Communicate via events, not direct calls
+5. **Documentation**: Update docs for significant changes
 
 ---
 
@@ -437,9 +474,25 @@ This project is part of the 42 School curriculum.
 - 🧪 **Testability** - Hexagonal architecture
 - 📈 **Maintainability** - Clean code principles
 - 🤝 **Collaboration** - Clear documentation
+- 🔄 **Resilience** - Event-driven communication
+
+---
+
+## 📄 License
+
+This project is part of the 42 School curriculum.
+
+---
+
+## 🚀 Getting Started for New Team Members
+
+1. **Read** [docs/HEXAGONAL-ARCHITECTURE.md](./docs/HEXAGONAL-ARCHITECTURE.md)
+2. **Run** setup script
+3. **Start** development with `pnpm dev:all`
+4. **Choose** your service and start implementing!
 
 ---
 
 **Built with ❤️ by the Transcendence Team**
 
-_Questions? Check [VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md) or ask in the team chat!_
+_Questions? Check [HEXAGONAL-ARCHITECTURE.md](./docs/HEXAGONAL-ARCHITECTURE.md)!_
