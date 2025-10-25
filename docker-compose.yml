@@ -42,11 +42,14 @@ services:
       # Vault configuration
       - VAULT_ADDR=http://vault:8200
       - VAULT_SKIP_VERIFY=true
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
     volumes:
       - user-data:/app/data
       - user-uploads:/app/uploads
     depends_on:
       - vault
+      - rabbitmq
     networks:
       - transcendence-network
 
@@ -61,8 +64,12 @@ services:
       - GAME_SERVICE_PORT=3002
       - GAME_SERVICE_DB_PATH=/app/data/game-service.db
       - LOG_LEVEL=info
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
     volumes:
       - game-data:/app/data
+    depends_on:
+      - rabbitmq
     networks:
       - transcendence-network
 
@@ -77,8 +84,12 @@ services:
       - CHAT_SERVICE_PORT=3003
       - CHAT_SERVICE_DB_PATH=/app/data/chat-service.db
       - LOG_LEVEL=info
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
     volumes:
       - chat-data:/app/data
+    depends_on:
+      - rabbitmq
     networks:
       - transcendence-network
 
@@ -93,10 +104,34 @@ services:
       - TOURNAMENT_SERVICE_PORT=3004
       - TOURNAMENT_SERVICE_DB_PATH=/app/data/tournament-service.db
       - LOG_LEVEL=info
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
     volumes:
       - tournament-data:/app/data
+    depends_on:
+      - rabbitmq
     networks:
       - transcendence-network
+
+  # RabbitMQ for event-driven messaging
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: transcendence-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=transcendence
+      - RABBITMQ_DEFAULT_PASS=transcendence_dev
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - transcendence-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # Redis for caching and session storage
   redis:
@@ -143,6 +178,7 @@ volumes:
   chat-data:
   tournament-data:
   redis-data:
+  rabbitmq-data:
   vault-data:
   vault-logs:
   postgres-data:
