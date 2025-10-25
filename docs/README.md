@@ -1,8 +1,140 @@
-# OpenAPI Specification - Transcendence API
+# 📚 Transcendence Documentation
 
-## 📁 Structure
+**Clean Architecture** - **Split Files ONLY** - **Single Source of Truth**
 
-This directory contains the **modular OpenAPI specification** for the Transcendence API, split into multiple files for better maintainability.
+## 🏗️ New Documentation Structure
+
+```
+docs/
+├── index.md                     # 📋 This navigation hub
+├── getting-started/             # 🚀 Quick start & setup
+│   ├── QUICK_START.md          # 5-minute setup guide
+│   ├── INSTALLATION.md         # Detailed installation
+│   └── DEVELOPMENT_SETUP.md    # Development environment
+│
+├── architecture/                # 🏛️ System design
+│   ├── OVERVIEW.md             # High-level architecture
+│   ├── MICROSERVICES.md        # Service-oriented design
+│   ├── HEXAGONAL.md            # Ports & adapters pattern
+│   ├── MESSAGING.md            # Event-driven communication
+│   └── SECURITY.md             # Security patterns
+│
+├── development/                 # 👥 Team collaboration
+│   ├── TEAM_GUIDE.md           # Working together effectively
+│   ├── WORKFLOW.md             # Git flow & development
+│   ├── TESTING.md              # Testing strategies
+│   ├── PACKAGES.md             # Shared package management
+│   └── DEBUGGING.md            # Troubleshooting
+│
+├── api/                         # 🔗 REST API (SPLIT FILES ONLY)
+│   ├── README.md               # API documentation guide
+│   ├── openapi.yaml            # 🎯 MAIN ENTRY POINT
+│   ├── paths/                  # Endpoints by domain
+│   │   ├── auth.yaml          # Authentication
+│   │   ├── users.yaml         # User management
+│   │   ├── games.yaml         # Game lifecycle
+│   │   ├── chat.yaml          # Messaging
+│   │   ├── tournaments.yaml   # Tournament system
+│   │   ├── stats.yaml         # Statistics
+│   │   └── health.yaml        # Health checks
+│   └── components/             # Reusable API components
+│       ├── schemas/           # Data models
+│       ├── responses.yaml     # Standard responses
+│       ├── parameters.yaml    # Common parameters
+│       └── security.yaml      # Auth schemes
+```
+
+## ✅ What We Fixed
+
+### ❌ **Eliminated Redundancy**
+- **No more bundle files** - removed `openapi-bundled.yaml`
+- **No bundling scripts** - removed `bundle-openapi.js`
+- **Single source of truth** - only split files exist
+- **No sync issues** - eliminated duplicate information
+
+### ✅ **Clean API Architecture**
+- **Split files only** - `openapi.yaml` + `paths/` + `components/`
+- **Domain-organized** - each team owns their endpoints
+- **Reusable components** - DRY principle applied
+- **Modern tooling** - all tools support `$ref` now
+
+### 🎯 **Team Collaboration**
+- **Clear ownership** - each service team owns their paths
+- **No merge conflicts** - isolated changes in separate files
+- **Fast reviews** - small, focused pull requests
+- **Easy onboarding** - clear structure and documentation
+
+## 🚀 Quick Commands
+
+```bash
+# Validate API specification
+npm run api:validate
+
+# Preview API docs locally
+npm run api:preview
+
+# Build static API documentation
+npm run api:build
+
+# Start all services
+pnpm dev:all
+
+# Run tests
+pnpm test
+```
+
+## 📋 Updated Package.json Scripts
+
+```json
+{
+  "scripts": {
+    "api:validate": "redocly lint docs/api/openapi.yaml",
+    "api:preview": "redocly preview-docs docs/api/openapi.yaml", 
+    "api:build": "redocly build-docs docs/api/openapi.yaml -o docs/api/generated"
+  }
+}
+```
+
+## 🎯 Benefits of New Structure
+
+### For **API Documentation**:
+- ✅ **Single source of truth** - no bundle confusion
+- ✅ **Team ownership** - clear file responsibilities  
+- ✅ **Modern tooling** - all tools support split files
+- ✅ **Clean Git diffs** - isolated changes
+
+### For **General Documentation**:
+- ✅ **Navigable structure** - easy to find information
+- ✅ **Progressive disclosure** - from quick start to deep dive
+- ✅ **Role-based organization** - architects, developers, ops
+- ✅ **Maintainable** - clear ownership and update process
+
+## 📚 Migration Notes
+
+### Files Removed:
+- `openapi-bundled.yaml` ❌ (redundant bundle)
+- `bundle-openapi.js` ❌ (bundling script)
+- `MIGRATION-SUMMARY.md` ❌ (no longer needed)
+
+### Files Reorganized:
+- `openapi-main.yaml` → `api/openapi.yaml` ✅
+- `components/` → `api/components/` ✅  
+- `paths/` → `api/paths/` ✅
+- Architecture docs consolidated ✅
+
+### New Package Dependencies:
+- Added `@redocly/cli` for API validation and preview
+
+## 🆘 Quick Help
+
+- **API questions**: See [API README](./api/README.md)
+- **Setup issues**: Check [Quick Start](./getting-started/QUICK_START.md)
+- **Architecture**: Read [Architecture Overview](./architecture/OVERVIEW.md)
+- **Team workflow**: Review [Team Guide](./development/TEAM_GUIDE.md)
+
+---
+
+**The main entry point is now [docs/index.md](./index.md) - start there!** 🚀
 
 ```
 docs/

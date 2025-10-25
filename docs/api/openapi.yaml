@@ -2,16 +2,33 @@ openapi: 3.0.3
 info:
   title: Transcendence API
   description: |
-    API for the mighty Pong contest.
-    Auth (42 OAuth), session, 2FA, and profile endpoints.
+    Real-time multiplayer Pong game with microservices architecture.
+    
+    Features:
+    - 🔐 OAuth & 2FA Authentication
+    - 🎮 Real-time Pong gameplay
+    - 💬 Live chat & messaging
+    - 🏆 Tournament system
+    - 📊 Statistics & leaderboards
+    
+    Architecture: Event-driven microservices with RabbitMQ messaging.
   version: 1.0.0
+  license:
+    name: ISC
+    url: https://opensource.org/licenses/ISC
+  contact:
+    name: Transcendence Team
+    url: https://github.com/NourMellal/transcendence
 servers:
   - url: http://localhost:3000/api
     description: Local development server (API Gateway)
+  - url: https://api.transcendence.dev
+    description: Development environment
 
 components:
   securitySchemes:
-    $ref: './components/security.yaml#/securitySchemes'
+    jwtAuth:
+      $ref: './components/security.yaml#/securitySchemes/jwtAuth'
   
   schemas:
     # Auth schemas
@@ -59,7 +76,7 @@ components:
       $ref: './components/schemas/common.yaml#/Error'
 
 security:
-  - sessionAuth: []
+  - jwtAuth: []
 
 paths:
   # Authentication endpoints
