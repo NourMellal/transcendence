@@ -1,4 +1,4 @@
-import { User, Session } from './entities.js';
+import { User, Session } from './entities';
 
 // Repository ports (outbound)
 export interface UserRepository {
@@ -73,6 +73,10 @@ export interface Enable2FAUseCase {
 
 export interface Disable2FAUseCase {
     execute(userId: string, token: string): Promise<void>;
+}
+
+export interface Verify2FAUseCase {
+    execute(userId: string, token: string): Promise<boolean>;
 }
 
 export interface AuthenticateUserUseCase {
