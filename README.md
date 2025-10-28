@@ -218,7 +218,7 @@ All sensitive data is stored in **Vault**, not in environment variables or code:
 - ✅ Fine-grained access control
 - ✅ Never commit secrets to Git
 
-📖 **Learn More:** [VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md)
+📖 **Learn More:** [VAULT-QUICK-GUIDE.md](./docs/development/VAULT-QUICK-GUIDE.md)
 
 ### Other Security Features
 
@@ -312,8 +312,8 @@ Monitor:
 ## 📚 Documentation
 
 ### Essential Guides
-- 🏗️ **[docs/HEXAGONAL-ARCHITECTURE.md](./docs/HEXAGONAL-ARCHITECTURE.md)** - Complete architectural guide
-- 🔐 **[VAULT-QUICK-GUIDE.md](./VAULT-QUICK-GUIDE.md)** - Vault overview (3 min)
+- 🏗️ **[docs/HEXAGONAL-ARCHITECTURE.md](./docs/architecture/HEXAGONAL.md)** - Complete architectural guide
+- 🔐 **[VAULT-QUICK-GUIDE.md](./docs/development/VAULT-QUICK-GUIDE.md)** - Vault overview (3 min)
 
 ### Architecture Resources
 - **Hexagonal Architecture:** Clear separation of concerns
@@ -486,7 +486,7 @@ This project is part of the 42 School curriculum.
 
 ## 🚀 Getting Started for New Team Members
 
-1. **Read** [docs/HEXAGONAL-ARCHITECTURE.md](./docs/HEXAGONAL-ARCHITECTURE.md)
+1. **Read** [docs/HEXAGONAL-ARCHITECTURE.md](./docs/architecture/HEXAGONAL.md)
 2. **Run** setup script
 3. **Start** development with `pnpm dev:all`
 4. **Choose** your service and start implementing!
@@ -495,4 +495,4 @@ This project is part of the 42 School curriculum.
 
 **Built with ❤️ by the Transcendence Team**
 
-_Questions? Check [HEXAGONAL-ARCHITECTURE.md](./docs/HEXAGONAL-ARCHITECTURE.md)!_
+_Questions? Check [HEXAGONAL-ARCHITECTURE.md](./docs/architecture/HEXAGONAL.md)!_

@@ -11,8 +11,8 @@ import fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import proxy from '@fastify/http-proxy';
-import { getEnvVar, getEnvVarAsNumber, createAPIGatewayVault } from '@transcendence/shared-utils';
-
+import { getEnvVar, getEnvVarAsNumber } from '@transcendence/shared-utils';
+import { createAPIGatewayVault } from '@transcendence/shared-utils/src/vault';
 // Load configuration with Vault integration
 async function loadConfiguration() {
     const vault = createAPIGatewayVault();
