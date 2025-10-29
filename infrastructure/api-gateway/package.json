@@ -10,15 +10,18 @@
         "start": "node dist/server.js"
     },
     "dependencies": {
-        "@transcendence/shared-utils": "workspace:*",
-        "fastify": "^4.26.0",
-        "@fastify/http-proxy": "^9.5.0",
         "@fastify/cors": "^8.5.0",
+        "@fastify/http-proxy": "^9.5.0",
+        "@fastify/jwt": "^7.2.4",
         "@fastify/rate-limit": "^9.1.0",
-        "dotenv": "^16.3.1"
+        "@fastify/websocket": "^10.0.1",
+        "@transcendence/shared-utils": "workspace:*",
+        "dotenv": "^16.3.1",
+        "fastify": "^4.26.0",
+        "fastify-plugin": "^4.5.1"
     },
     "devDependencies": {
-        "@types/node": "^20.10.0",
+        "@types/node": "^20.19.17",
         "tsx": "^4.20.5",
         "typescript": "^5.3.3"
     }
