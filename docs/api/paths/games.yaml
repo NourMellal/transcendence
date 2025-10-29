@@ -155,3 +155,40 @@
                 $ref: '../components/schemas/game.yaml#/Game'
       '401':
         description: Not authenticated
+
+/games/ws:
+  get:
+    tags: [Games, WebSocket]
+    operationId: Games_websocketConnection
+    summary: WebSocket connection for real-time Pong gameplay
+    description: |
+      Establish WebSocket connection for real-time game updates.
+      
+      **Authentication:** JWT token required via query parameter `?token=<jwt>`
+      
+      **Client → Server Messages:**
+      - `{ "type": "join_game", "gameId": "uuid" }` - Join a game
+      - `{ "type": "paddle_move", "y": number }` - Update paddle position
+      - `{ "type": "ready" }` - Signal ready to start
+      
+      **Server → Client Messages:**
+      - `{ "type": "game_state", "ball": {...}, "paddle1": {...}, "paddle2": {...}, "score": {...} }`
+      - `{ "type": "game_start", "gameId": "uuid" }`
+      - `{ "type": "game_end", "winnerId": "uuid", "finalScore": {...} }`
+      - `{ "type": "player_joined", "playerId": "uuid" }`
+      - `{ "type": "player_left", "playerId": "uuid" }`
+      - `{ "type": "error", "message": "..." }`
+    parameters:
+      - name: token
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JWT authentication token
+    responses:
+      '101':
+        description: Switching Protocols - WebSocket connection established
+      '401':
+        description: Unauthorized - Invalid or missing token
+      '426':
+        description: Upgrade Required
