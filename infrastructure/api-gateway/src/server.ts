@@ -77,20 +77,22 @@ async function loadConfiguration() {
 }
 
 // Public endpoints that don't require authentication
+// These match the OpenAPI security exemptions
 const PUBLIC_ENDPOINTS = [
-    '/api/auth/signup',              // NEW: User registration
-    '/api/auth/login',               // NEW: Email/password login
-    '/api/auth/42/login',
-    '/api/auth/42/callback',
-    '/health',
-    '/api/docs'
+    '/api/auth/signup',          // User registration
+    '/api/auth/login',           // Email/password login
+    '/api/auth/42/login',        // OAuth 42 initiation
+    '/api/auth/42/callback',     // OAuth 42 callback
+    '/health',                   // Health check
+    '/api/docs'                  // API documentation
 ];
 
 // Define allowed HTTP methods per endpoint pattern
+// Must match OpenAPI specification exactly
 const ENDPOINT_METHODS: Record<string, string[]> = {
-    // Auth endpoints - FIXED PATHS
-    '/api/auth/signup': ['POST'],              // NEW: User registration
-    '/api/auth/login': ['POST'],               // NEW: Email/password login
+    // Authentication endpoints (8 total)
+    '/api/auth/signup': ['POST'],
+    '/api/auth/login': ['POST'],
     '/api/auth/42/login': ['GET'],
     '/api/auth/42/callback': ['GET'],
     '/api/auth/status': ['GET'],
@@ -98,21 +100,23 @@ const ENDPOINT_METHODS: Record<string, string[]> = {
     '/api/auth/2fa/generate': ['POST'],
     '/api/auth/2fa/enable': ['POST'],
     
-    // User endpoints
+    // User endpoints (1 endpoint, 2 methods)
     '/api/users/me': ['GET', 'PATCH'],
     
-    // Game endpoints
+    // Game endpoints (6 HTTP + 1 WebSocket)
     '/api/games': ['GET', 'POST'],
     '/api/games/:id': ['GET', 'DELETE'],
     '/api/games/:id/join': ['POST'],
     '/api/games/:id/leave': ['POST'],
     '/api/games/my-games': ['GET'],
+    // /api/games/ws - WebSocket (handled separately)
     
-    // Chat endpoints
+    // Chat endpoints (2 HTTP + 1 WebSocket)
     '/api/chat/messages': ['GET', 'POST'],
     '/api/chat/conversations': ['GET'],
+    // /api/chat/ws - WebSocket (handled separately)
     
-    // Tournament endpoints
+    // Tournament endpoints (6 total)
     '/api/tournaments': ['GET', 'POST'],
     '/api/tournaments/:id': ['GET', 'DELETE'],
     '/api/tournaments/:id/join': ['POST'],
@@ -120,7 +124,7 @@ const ENDPOINT_METHODS: Record<string, string[]> = {
     '/api/tournaments/:id/bracket': ['GET'],
     '/api/tournaments/my-tournaments': ['GET'],
     
-    // Stats endpoints
+    // Stats endpoints (3 total)
     '/api/stats/me': ['GET'],
     '/api/stats/users/:id': ['GET'],
     '/api/leaderboard': ['GET']
@@ -250,7 +254,7 @@ async function createGateway() {
 
                 try {
                     // Verify JWT token
-                    await app.jwt.verify(token);
+                    app.jwt.verify(token);
                     next(true);
                 } catch (err) {
                     next(false, 401, 'Invalid token');
@@ -325,6 +329,7 @@ async function createGateway() {
             await app.authenticate(request, reply);
         }
     };
+
     const methodValidationPreHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     // Extract path without query parameters
     const path = request.url.split('?')[0];
@@ -363,44 +368,49 @@ async function createGateway() {
     }
 };
     // Service discovery and routing
-   const services = [
-    //  ADD: Separate auth service proxy
-    { 
-        prefix: '/api/auth', 
-        upstream: config.USER_SERVICE_URL,  // Auth is part of user service
-        name: 'user-service'
-    },
-    { 
-        prefix: '/api/users', 
-        upstream: config.USER_SERVICE_URL,
-        name: 'user-service'
-    },
-    { 
-        prefix: '/api/games', 
-        upstream: config.GAME_SERVICE_URL,
-        name: 'game-service'
-    },
-    { 
-        prefix: '/api/chat', 
-        upstream: config.CHAT_SERVICE_URL,
-        name: 'chat-service'
-    },
-    { 
-        prefix: '/api/tournaments', 
-        upstream: config.TOURNAMENT_SERVICE_URL,
-        name: 'tournament-service'
-    },
-    { 
-        prefix: '/api/stats', 
-        upstream: config.USER_SERVICE_URL,
-        name: 'user-service'
-    },
-    { 
-        prefix: '/api/leaderboard', 
-        upstream: config.USER_SERVICE_URL,
-        name: 'user-service'
-    }
-];
+    // Services match OpenAPI specification paths
+    const services = [
+        // Authentication & User Management
+        { 
+            prefix: '/api/auth', 
+            upstream: config.USER_SERVICE_URL,
+            name: 'user-service'
+        },
+        { 
+            prefix: '/api/users', 
+            upstream: config.USER_SERVICE_URL,
+            name: 'user-service'
+        },
+        // Game Service (includes WebSocket /api/games/ws)
+        { 
+            prefix: '/api/games', 
+            upstream: config.GAME_SERVICE_URL,
+            name: 'game-service'
+        },
+        // Chat Service (includes WebSocket /api/chat/ws)
+        { 
+            prefix: '/api/chat', 
+            upstream: config.CHAT_SERVICE_URL,
+            name: 'chat-service'
+        },
+        // Tournament Service
+        { 
+            prefix: '/api/tournaments', 
+            upstream: config.TOURNAMENT_SERVICE_URL,
+            name: 'tournament-service'
+        },
+        // Statistics & Leaderboard
+        { 
+            prefix: '/api/stats', 
+            upstream: config.USER_SERVICE_URL,
+            name: 'user-service'
+        },
+        { 
+            prefix: '/api/leaderboard', 
+            upstream: config.USER_SERVICE_URL,
+            name: 'user-service'
+        }
+    ];
 
     // Register proxy routes for each service
     for (const service of services) {
@@ -414,8 +424,7 @@ async function createGateway() {
                 http2: false,
                 replyOptions: {
                     rewriteRequestHeaders: (originalReq, headers) => {
-                        const user = (originalReq as any).user;
-                        
+                        const user = originalReq.user as { userId?: string; sub?: string; email?: string; username?: string } | undefined;
                         return {
                             ...headers,
                             // Gateway identification
@@ -445,7 +454,7 @@ async function createGateway() {
                         };
                     }
                 },
-                // WebSocket support
+                // WebSocket supportRegister
                 websocket: service.prefix === '/api/games' || service.prefix === '/api/chat'
             });
         });
@@ -509,39 +518,106 @@ async function createGateway() {
             name: 'Transcendence API Gateway',
             version: '1.0.0',
             description: 'Real-time multiplayer Pong game with microservices architecture',
+            openapi: '3.0.3',
+            documentation: 'See docs/api/openapi.yaml for full specification',
             features: [
-                '🔐 OAuth & 2FA Authentication',
-                '🎮 Real-time Pong gameplay',
-                '💬 Live chat & messaging',
+                '🔐 OAuth 42 & Email/Password Authentication',
+                '🔒 Two-Factor Authentication (2FA)',
+                '🎮 Real-time Pong gameplay (WebSocket)',
+                '💬 Live chat & messaging (WebSocket)',
                 '🏆 Tournament system',
                 '📊 Statistics & leaderboards'
             ],
             architecture: 'Event-driven microservices with RabbitMQ messaging',
-            services: {
-                '/api/users': 'User management and authentication',
-                '/api/games': 'Game management and real-time gameplay',
-                '/api/chat': 'Real-time chat functionality',
-                '/api/tournaments': 'Tournament organization and management',
-                '/api/stats': 'User statistics and performance metrics',
-                '/api/leaderboard': 'Global leaderboard rankings'
-            },
             endpoints: {
-                '/health': 'Gateway and services health status',
-                '/api/docs': 'API documentation (this page)'
+                authentication: [
+                    'POST /api/auth/signup - User registration',
+                    'POST /api/auth/login - Email/password login',
+                    'GET /api/auth/42/login - OAuth 42 initiation',
+                    'GET /api/auth/42/callback - OAuth 42 callback',
+                    'GET /api/auth/status - Check authentication status',
+                    'POST /api/auth/logout - Logout user',
+                    'POST /api/auth/2fa/generate - Generate 2FA QR code',
+                    'POST /api/auth/2fa/enable - Enable 2FA'
+                ],
+                users: [
+                    'GET /api/users/me - Get current user profile',
+                    'PATCH /api/users/me - Update user profile'
+                ],
+                games: [
+                    'GET /api/games - List games',
+                    'POST /api/games - Create new game',
+                    'GET /api/games/{gameId} - Get game details',
+                    'DELETE /api/games/{gameId} - Delete game',
+                    'POST /api/games/{gameId}/join - Join game',
+                    'POST /api/games/{gameId}/leave - Leave game',
+                    'GET /api/games/my-games - Get user\'s games',
+                    'WebSocket /api/games/ws - Real-time gameplay'
+                ],
+                chat: [
+                    'GET /api/chat/messages - Get message history',
+                    'POST /api/chat/messages - Send message',
+                    'GET /api/chat/conversations - Get conversations',
+                    'WebSocket /api/chat/ws - Real-time chat'
+                ],
+                tournaments: [
+                    'GET /api/tournaments - List tournaments',
+                    'POST /api/tournaments - Create tournament',
+                    'GET /api/tournaments/{tournamentId} - Get tournament',
+                    'DELETE /api/tournaments/{tournamentId} - Delete tournament',
+                    'POST /api/tournaments/{tournamentId}/join - Join tournament',
+                    'POST /api/tournaments/{tournamentId}/leave - Leave tournament',
+                    'GET /api/tournaments/{tournamentId}/bracket - Get tournament bracket',
+                    'GET /api/tournaments/my-tournaments - Get user\'s tournaments'
+                ],
+                stats: [
+                    'GET /api/stats/me - Get current user stats',
+                    'GET /api/stats/users/{userId} - Get user stats',
+                    'GET /api/leaderboard - Get global leaderboard'
+                ],
+                infrastructure: [
+                    'GET /health - Health check',
+                    'GET /api/docs - API documentation (this page)'
+                ]
             },
             authentication: {
                 type: 'JWT Bearer Token',
                 header: 'Authorization: Bearer <token>',
-                publicEndpoints: PUBLIC_ENDPOINTS
+                publicEndpoints: PUBLIC_ENDPOINTS,
+                tokenExpiration: config.JWT_EXPIRES_IN
             },
             rateLimit: {
                 max: config.RATE_LIMIT_MAX,
-                window: config.RATE_LIMIT_WINDOW
+                window: config.RATE_LIMIT_WINDOW,
+                headers: {
+                    'x-ratelimit-limit': 'Maximum requests allowed',
+                    'x-ratelimit-remaining': 'Requests remaining',
+                    'x-ratelimit-reset': 'Time until limit resets',
+                    'retry-after': 'Seconds until retry'
+                }
             },
             websockets: {
-                games: 'ws://localhost:3000/api/games/ws',
-                chat: 'ws://localhost:3000/api/chat/ws',
-                authentication: 'Required via query param ?token=<jwt> or Authorization header'
+                games: {
+                    url: `ws://localhost:${config.PORT}/api/games/ws`,
+                    auth: 'Required via query param ?token=<jwt> or Authorization header',
+                    events: {
+                        client: ['paddle_move', 'join_game'],
+                        server: ['game_state', 'game_end']
+                    }
+                },
+                chat: {
+                    url: `ws://localhost:${config.PORT}/api/chat/ws`,
+                    auth: 'Required via query param ?token=<jwt> or Authorization header',
+                    events: {
+                        client: ['send_message', 'typing'],
+                        server: ['new_message', 'user_typing', 'user_online', 'user_offline']
+                    }
+                }
+            },
+            cors: {
+                origins: config.CORS_ORIGINS,
+                credentials: true,
+                methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
             }
         };
     });
@@ -599,4 +675,4 @@ async function start() {
     }
 }
 
-start();
+await start();
