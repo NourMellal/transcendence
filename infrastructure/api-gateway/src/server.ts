@@ -78,6 +78,8 @@ async function loadConfiguration() {
 
 // Public endpoints that don't require authentication
 const PUBLIC_ENDPOINTS = [
+    '/api/auth/signup',              // NEW: User registration
+    '/api/auth/login',               // NEW: Email/password login
     '/api/auth/42/login',
     '/api/auth/42/callback',
     '/health',
@@ -87,6 +89,8 @@ const PUBLIC_ENDPOINTS = [
 // Define allowed HTTP methods per endpoint pattern
 const ENDPOINT_METHODS: Record<string, string[]> = {
     // Auth endpoints - FIXED PATHS
+    '/api/auth/signup': ['POST'],              // NEW: User registration
+    '/api/auth/login': ['POST'],               // NEW: Email/password login
     '/api/auth/42/login': ['GET'],
     '/api/auth/42/callback': ['GET'],
     '/api/auth/status': ['GET'],

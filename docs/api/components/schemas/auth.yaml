@@ -1,3 +1,55 @@
+SignUpRequest:
+  type: object
+  properties:
+    username:
+      type: string
+      minLength: 3
+      maxLength: 20
+      pattern: '^[a-zA-Z0-9_-]+$'
+      example: "coolplayer123"
+      description: Unique username (alphanumeric, underscore, hyphen only)
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+      description: Valid email address
+    password:
+      type: string
+      minLength: 8
+      maxLength: 100
+      example: "SecurePass123!"
+      description: Password (minimum 8 characters)
+    displayName:
+      type: string
+      maxLength: 100
+      example: "Cool Player"
+      description: Optional display name
+  required: [username, email, password]
+
+LoginRequest:
+  type: object
+  properties:
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+      description: User email or username
+    password:
+      type: string
+      example: "SecurePass123!"
+      description: User password
+  required: [email, password]
+
+LoginResponse:
+  type: object
+  properties:
+    user:
+      $ref: './user.yaml#/User'
+    message:
+      type: string
+      example: "Login successful"
+  required: [user]
+
 TwoFactorSecret:
   type: object
   properties:
