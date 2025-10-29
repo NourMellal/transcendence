@@ -11,9 +11,11 @@
         "test": "vitest"
     },
     "dependencies": {
-        "@transcendence/shared-types": "workspace:*"
+        "@transcendence/shared-types": "workspace:*",
+        "node-vault": "^0.10.9"
     },
     "devDependencies": {
+        "@types/node-vault": "^0.9.13",
         "typescript": "^5.3.3",
         "vitest": "^3.2.4"
     }
