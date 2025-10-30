@@ -34,6 +34,62 @@
       '401':
         description: Invalid authorization code
 
+/auth/signup:
+  post:
+    tags: [Auth]
+    operationId: Auth_signup
+    summary: Register a new user account
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/SignUpRequest'
+    responses:
+      '201':
+        description: User created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '400':
+        description: Invalid input or username/email already exists
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '409':
+        description: Username or email already exists
+
+/auth/login:
+  post:
+    tags: [Auth]
+    operationId: Auth_login
+    summary: Login with email and password
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/LoginRequest'
+    responses:
+      '200':
+        description: Login successful, session created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/auth.yaml#/LoginResponse'
+      '401':
+        description: Invalid credentials
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '400':
+        description: Invalid input
+
 /auth/status:
   get:
     tags: [Auth]
