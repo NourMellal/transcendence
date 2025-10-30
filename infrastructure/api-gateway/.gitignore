@@ -1,0 +1,25 @@
+# Build output
+dist/
+*.tsbuildinfo
+
+# Generated files
+src/openapi.bundled.json
+src/types/openapi.d.ts
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
