@@ -13,7 +13,7 @@ User:
       format: email
       example: "user@example.com"
     avatar:
-      type: string
+      type: string`
       format: uri
       nullable: true
       example: "https://example.com/avatars/user1.png"

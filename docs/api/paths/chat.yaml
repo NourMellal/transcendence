@@ -100,3 +100,39 @@
                     type: integer
       '401':
         description: Not authenticated
+
+/chat/ws:
+  get:
+    tags: [Chat, WebSocket]
+    operationId: Chat_websocketConnection
+    summary: WebSocket connection for real-time chat
+    description: |
+      Establish WebSocket connection for real-time messaging.
+      
+      **Authentication:** JWT token required via query parameter `?token=<jwt>`
+      
+      **Client → Server Messages:**
+      - `{ "type": "send_message", "content": "text", "recipientId": "uuid" }` - Send private message
+      - `{ "type": "send_message", "content": "text", "gameId": "uuid" }` - Send game chat message
+      - `{ "type": "typing", "recipientId": "uuid" }` - Typing indicator
+      
+      **Server → Client Messages:**
+      - `{ "type": "new_message", "message": {...} }` - New message received
+      - `{ "type": "user_typing", "userId": "uuid", "username": "..." }` - User typing
+      - `{ "type": "user_online", "userId": "uuid" }` - User came online
+      - `{ "type": "user_offline", "userId": "uuid" }` - User went offline
+      - `{ "type": "error", "message": "..." }`
+    parameters:
+      - name: token
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JWT authentication token
+    responses:
+      '101':
+        description: Switching Protocols - WebSocket connection established
+      '401':
+        description: Unauthorized - Invalid or missing token
+      '426':
+        description: Upgrade Required

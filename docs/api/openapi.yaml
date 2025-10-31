@@ -22,8 +22,8 @@ info:
 servers:
   - url: http://localhost:3000/api
     description: Local development server (API Gateway)
-  - url: https://api.transcendence.dev
-    description: Development environment
+  # - url: https://api.transcendence.dev
+  #   description: Development environment
 
 components:
   securitySchemes:
@@ -34,6 +34,12 @@ components:
     # Auth schemas
     User:
       $ref: './components/schemas/user.yaml#/User'
+    SignUpRequest:
+      $ref: './components/schemas/auth.yaml#/SignUpRequest'
+    LoginRequest:
+      $ref: './components/schemas/auth.yaml#/LoginRequest'
+    LoginResponse:
+      $ref: './components/schemas/auth.yaml#/LoginResponse'
     TwoFactorSecret:
       $ref: './components/schemas/auth.yaml#/TwoFactorSecret'
     Enable2FARequest:
@@ -80,6 +86,10 @@ security:
 
 paths:
   # Authentication endpoints
+  /auth/signup:
+    $ref: './paths/auth.yaml#/~1auth~1signup'
+  /auth/login:
+    $ref: './paths/auth.yaml#/~1auth~1login'
   /auth/42/login:
     $ref: './paths/auth.yaml#/~1auth~142~1login'
   /auth/42/callback:
@@ -108,12 +118,16 @@ paths:
     $ref: './paths/games.yaml#/~1games~1{gameId}~1leave'
   /games/my-games:
     $ref: './paths/games.yaml#/~1games~1my-games'
+  /games/ws:
+    $ref: './paths/games.yaml#/~1games~1ws'
   
   # Chat endpoints
   /chat/messages:
     $ref: './paths/chat.yaml#/~1chat~1messages'
   /chat/conversations:
     $ref: './paths/chat.yaml#/~1chat~1conversations'
+  /chat/ws:
+    $ref: './paths/chat.yaml#/~1chat~1ws'
   
   # Tournament endpoints
   /tournaments:
