@@ -36,7 +36,7 @@ import { registerStatsRoutes } from './routes/stats.routes.js';
 
 // Load bundled OpenAPI specification
 const openApiSpec = JSON.parse(
-    readFileSync(join(__dirname, './openapi.bundled.json'), 'utf-8')
+    readFileSync(join(__dirname, '../openapi.bundled.json'), 'utf-8')
 );
 
 // Load configuration with Vault integration

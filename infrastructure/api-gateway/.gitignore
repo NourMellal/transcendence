@@ -3,7 +3,7 @@ dist/
 *.tsbuildinfo
 
 # Generated files
-src/openapi.bundled.json
+openapi.bundled.json
 src/types/openapi.d.ts
 
 # Dependencies
