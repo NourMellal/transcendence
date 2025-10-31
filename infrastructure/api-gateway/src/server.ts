@@ -2,12 +2,20 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
+// Extend Fastify types for custom decorators
+declare module 'fastify' {
+    interface FastifyInstance {
+        authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+        // optionalAuth: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    }
+}
+
 // Load .env from project root
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../../../.env') });
 
-import fastify from 'fastify';
+import fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import proxy from '@fastify/http-proxy';
@@ -76,6 +84,60 @@ async function loadConfiguration() {
     }
 }
 
+// Public endpoints that don't require authentication
+// These match the OpenAPI security exemptions
+const PUBLIC_ENDPOINTS = [
+    '/api/auth/signup',          // User registration
+    '/api/auth/login',           // Email/password login
+    '/api/auth/42/login',        // OAuth 42 initiation
+    '/api/auth/42/callback',     // OAuth 42 callback
+    '/health',                   // Health check
+    '/api/docs'                  // API documentation
+];
+
+// Define allowed HTTP methods per endpoint pattern
+// Must match OpenAPI specification exactly
+const ENDPOINT_METHODS: Record<string, string[]> = {
+    // Authentication endpoints (8 total)
+    '/api/auth/signup': ['POST'],
+    '/api/auth/login': ['POST'],
+    '/api/auth/42/login': ['GET'],
+    '/api/auth/42/callback': ['GET'],
+    '/api/auth/status': ['GET'],
+    '/api/auth/logout': ['POST'],
+    '/api/auth/2fa/generate': ['POST'],
+    '/api/auth/2fa/enable': ['POST'],
+    
+    // User endpoints (1 endpoint, 2 methods)
+    '/api/users/me': ['GET', 'PATCH'],
+    
+    // Game endpoints (6 HTTP + 1 WebSocket)
+    '/api/games': ['GET', 'POST'],
+    '/api/games/:id': ['GET', 'DELETE'],
+    '/api/games/:id/join': ['POST'],
+    '/api/games/:id/leave': ['POST'],
+    '/api/games/my-games': ['GET'],
+    // /api/games/ws - WebSocket (handled separately)
+    
+    // Chat endpoints (2 HTTP + 1 WebSocket)
+    '/api/chat/messages': ['GET', 'POST'],
+    '/api/chat/conversations': ['GET'],
+    // /api/chat/ws - WebSocket (handled separately)
+    
+    // Tournament endpoints (6 total)
+    '/api/tournaments': ['GET', 'POST'],
+    '/api/tournaments/:id': ['GET', 'DELETE'],
+    '/api/tournaments/:id/join': ['POST'],
+    '/api/tournaments/:id/leave': ['POST'],
+    '/api/tournaments/:id/bracket': ['GET'],
+    '/api/tournaments/my-tournaments': ['GET'],
+    
+    // Stats endpoints (3 total)
+    '/api/stats/me': ['GET'],
+    '/api/stats/users/:id': ['GET'],
+    '/api/leaderboard': ['GET']
+};
+
 async function createGateway() {
     // Load configuration with Vault integration
     const config = await loadConfiguration();
@@ -119,6 +181,47 @@ async function createGateway() {
     } else {
         app.log.warn('⚠️ API Gateway using environment variables (Vault unavailable)');
     }
+
+    // Register JWT plugin
+    await app.register(jwt, {
+        secret: config.JWT_SECRET,
+        sign: {
+            iss: config.JWT_ISSUER,
+            expiresIn: config.JWT_EXPIRES_IN
+        },
+        messages: {
+            badRequestErrorMessage: 'Format is Authorization: Bearer [token]',
+            noAuthorizationInHeaderMessage: 'Authorization header is missing',
+            authorizationTokenExpiredMessage: 'Authorization token expired',
+            authorizationTokenInvalid: (err) => {
+                return `Authorization token is invalid: ${err.message}`;
+            }
+        }
+    });
+
+    // Authentication decorator
+    app.decorate('authenticate', async function(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            await request.jwtVerify();
+        } catch (err) {
+            const error = err as Error;
+            reply.code(401).send({
+                statusCode: 401,
+                error: 'Unauthorized',
+                message: error.message || 'Invalid or missing authentication token'
+            });
+        }
+    });
+
+    // Optional authentication decorator (doesn't fail if no token)
+    // app.decorate('optionalAuth', async function(request: FastifyRequest, reply: FastifyReply) {
+    //     try {
+    //         await request.jwtVerify();
+    //     } catch (err) {
+    //         // Token is optional, don't fail
+    //         request.log.debug('No valid token provided for optional auth endpoint');
+    //     }
+    // });
 
     // Enable CORS with Vault configuration
     await app.register(cors, {
@@ -338,6 +441,23 @@ async function createGateway() {
     const closeGracefully = async (signal: string) => {
         app.log.info(`Received ${signal}, closing gracefully`);
 
+        try {
+            await app.close();
+            app.log.info('Gateway closed successfully');
+            process.exit(0);
+        } catch (err) {
+            app.log.error('Error during graceful shutdown:', err);
+            process.exit(1);
+        }
+    };
+
+    process.on('SIGTERM', () => closeGracefully('SIGTERM'));
+    process.on('SIGINT', () => closeGracefully('SIGINT'));
+
+    // Graceful shutdown
+    const closeGracefully = async (signal: string) => {
+        app.log.info(`Received ${signal}, closing gracefully`);
+        
         try {
             await app.close();
             app.log.info('Gateway closed successfully');
