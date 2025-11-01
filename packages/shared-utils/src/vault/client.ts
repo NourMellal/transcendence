@@ -1,24 +1,20 @@
 /**
- * Simple Vault client using node-vault
- * Rewritten from scratch for simplicity and reliability
+ * Fixed critical security issues while keeping it simple
  */
 
 import vault from 'node-vault';
 import type { VaultConfig, VaultSecret } from './types.js';
 
-/**
- * Simplified Vault client with basic KV v2 support
- */
 export class VaultClient {
     private vault: ReturnType<typeof vault>;
     private config: VaultConfig;
     private cache = new Map<string, { data: VaultSecret; expiresAt: number }>();
     private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+    private cleanupInterval?: NodeJS.Timeout;
 
     constructor(config: VaultConfig) {
         this.config = config;
         
-        // Create node-vault instance
         this.vault = vault({
             apiVersion: 'v1',
             endpoint: config.address,
@@ -27,14 +23,13 @@ export class VaultClient {
                 timeout: config.timeout || 5000,
             },
         });
+        
+        // Auto-cleanup expired cache
+        this.startCacheCleanup();
     }
 
-    /**
-     * Initialize and test Vault connection
-     */
     async initialize(): Promise<void> {
         try {
-            // Health check to verify connectivity
             const health = await this.vault.health();
             
             if (health.initialized && !health.sealed) {
@@ -48,12 +43,7 @@ export class VaultClient {
         }
     }
 
-    /**
-     * Read secret from Vault KV v2 store
-     * Automatically handles both KV v1 and v2 formats
-     */
     async getSecret(path: string): Promise<VaultSecret> {
-        // Check cache first
         const cached = this.getFromCache(path);
         if (cached) {
             return cached;
@@ -62,36 +52,39 @@ export class VaultClient {
         try {
             const response = await this.vault.read(path);
             
-            // KV v2 format: data is nested under response.data.data
-            // KV v1 format: data is directly under response.data
-            const secretData = ('data' in response.data) ? response.data.data : response.data;
+            // Proper KV v1/v2 detection
+            let secretData: Record<string, any>;
+            
+            if (response.data?.data && response.data?.metadata) {
+                // KV v2: has nested data + metadata
+                secretData = response.data.data;
+            } else if (response.data) {
+                // KV v1: data directly
+                secretData = response.data;
+            } else {
+                throw new Error(`No data found at path: ${path}`);
+            }
             
             if (!secretData || typeof secretData !== 'object') {
                 throw new Error(`Invalid secret format at path: ${path}`);
             }
 
             const secret: VaultSecret = {
-                data: secretData as Record<string, any>,
+                data: secretData,
             };
 
-            // Store in cache
             this.setCache(path, secret);
-
             return secret;
+            
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to read secret from ${path}: ${message}`);
         }
     }
 
-    /**
-     * Write secret to Vault KV v2 store
-     */
     async setSecret(path: string, data: Record<string, any>): Promise<void> {
         try {
             await this.vault.write(path, { data });
-            
-            // Invalidate cache for this path
             this.cache.delete(path);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -99,14 +92,9 @@ export class VaultClient {
         }
     }
 
-    /**
-     * Delete secret from Vault
-     */
     async deleteSecret(path: string): Promise<void> {
         try {
             await this.vault.delete(path);
-            
-            // Remove from cache
             this.cache.delete(path);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -114,9 +102,6 @@ export class VaultClient {
         }
     }
 
-    /**
-     * List secrets at a path
-     */
     async listSecrets(path: string): Promise<string[]> {
         try {
             const response = await this.vault.list(path);
@@ -127,18 +112,10 @@ export class VaultClient {
         }
     }
 
-    /**
-     * Get from cache if not expired
-     */
     private getFromCache(path: string): VaultSecret | null {
         const cached = this.cache.get(path);
         
-        if (!cached) {
-            return null;
-        }
-
-        // Check if expired
-        if (Date.now() > cached.expiresAt) {
+        if (!cached || Date.now() > cached.expiresAt) {
             this.cache.delete(path);
             return null;
         }
@@ -146,9 +123,6 @@ export class VaultClient {
         return cached.data;
     }
 
-    /**
-     * Store in cache with expiration
-     */
     private setCache(path: string, secret: VaultSecret): void {
         this.cache.set(path, {
             data: secret,
@@ -156,31 +130,50 @@ export class VaultClient {
         });
     }
 
-    /**
-     * Clear all cached secrets
-     */
+    private startCacheCleanup(): void {
+        this.cleanupInterval = setInterval(() => {
+            const now = Date.now();
+            for (const [path, cached] of this.cache.entries()) {
+                if (now > cached.expiresAt) {
+                    this.cache.delete(path);
+                }
+            }
+        }, 5 * 60 * 1000);
+        
+        // Don't block process exit
+        if (this.cleanupInterval.unref) {
+            this.cleanupInterval.unref();
+        }
+    }
+
     clearCache(): void {
         this.cache.clear();
     }
 
-    /**
-     * Get cache statistics
-     */
-    getCacheStats(): { size: number; paths: string[] } {
-        return {
-            size: this.cache.size,
-            paths: Array.from(this.cache.keys()),
-        };
+    getCacheStats(): { size: number } {
+        return { size: this.cache.size };
+    }
+
+    destroy(): void {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+        }
+        this.clearCache();
     }
 }
 
-/**
- * Factory function to create VaultClient from environment variables
- */
 export function createVaultClientFromEnv(): VaultClient {
+    // Only use dev token in development
+    const token = process.env.VAULT_TOKEN || 
+        (process.env.NODE_ENV === 'development' ? 'dev-root-token' : undefined);
+    
+    if (!token) {
+        throw new Error('❌ VAULT_TOKEN environment variable is required');
+    }
+
     const config: VaultConfig = {
         address: process.env.VAULT_ADDR || 'http://localhost:8200',
-        token: process.env.VAULT_TOKEN || 'dev-root-token',
+        token,
         timeout: parseInt(process.env.VAULT_TIMEOUT || '5000', 10),
     };
 
