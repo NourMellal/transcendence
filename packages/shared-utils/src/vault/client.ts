@@ -138,7 +138,7 @@ export class VaultClient {
                     this.cache.delete(path);
                 }
             }
-        }, 5 * 60 * 1000);
+        }, this.CACHE_TTL_MS);
         
         // Don't block process exit
         if (this.cleanupInterval.unref) {
