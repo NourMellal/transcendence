@@ -32,9 +32,12 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV PORT 3001
 
+# Create data directory for SQLite
+RUN mkdir -p /app/data
+
 COPY --from=builder /app/services/user-service/dist ./dist
 COPY --from=builder /app/services/user-service/package.json ./package.json
 COPY --from=deps /app/services/user-service/node_modules ./node_modules
 
 EXPOSE 3001
-CMD ["node", "dist/infrastructure/fastify/server.js"]
+CMD ["node", "dist/server.js"]
