@@ -4,8 +4,13 @@ import dotenv from 'dotenv';
 import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository.js';
 import { SignupUseCase } from './application/use-cases/signup.usecase.js';
 import { LoginUseCase } from './application/use-cases/login.usecase.js';
+import { LogoutUseCase } from './application/use-cases/logout.usecase.js';
+import { UpdateProfileUseCase } from './application/use-cases/update-profile.usecase.js';
+import { GetUserUseCase } from './application/use-cases/get-user.usecase.js';
 import { AuthController } from './infrastructure/http/controllers/auth.controller.js';
+import { UserController } from './infrastructure/http/controllers/user.controller.js';
 import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes.js';
+import { registerUserRoutes } from './infrastructure/http/routes/user.routes.js';
 import { initializeJWTService, getJWTService } from './infrastructure/services/jwt.service.js';
 
 dotenv.config();
@@ -25,9 +30,13 @@ async function main() {
     // Initialize use cases with Vault JWT Service
     const signupUseCase = new SignupUseCase(userRepository);
     const loginUseCase = new LoginUseCase(userRepository, jwtService);
+    const logoutUseCase = new LogoutUseCase(userRepository);
+    const updateProfileUseCase = new UpdateProfileUseCase(userRepository);
+    const getUserUseCase = new GetUserUseCase(userRepository);
 
     // Initialize controllers
-    const authController = new AuthController(signupUseCase, loginUseCase);
+    const authController = new AuthController(signupUseCase, loginUseCase, logoutUseCase, getUserUseCase);
+    const userController = new UserController(updateProfileUseCase, getUserUseCase);
 
     // Initialize Fastify
     const fastify = Fastify({
@@ -60,6 +69,7 @@ async function main() {
 
     // Register routes
     registerAuthRoutes(fastify, authController);
+    registerUserRoutes(fastify, userController);
 
     // Graceful shutdown
     const shutdown = async () => {

@@ -1,27 +1,20 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SignupUseCase } from '../../../application/use-cases/signup.usecase.js';
 import { LoginUseCase } from '../../../application/use-cases/login.usecase.js';
-
-interface SignupBody {
-    email: string;
-    username: string;
-    password: string;
-    displayName?: string;
-}
-
-interface LoginBody {
-    email: string;
-    password: string;
-}
+import { LogoutUseCase } from '../../../application/use-cases/logout.usecase.js';
+import { GetUserUseCase } from '../../../application/use-cases/get-user.usecase.js';
+import { SignupRequestDTO, LoginRequestDTO } from '../../../application/dto/auth.dto.js';
 
 export class AuthController {
     constructor(
         private signupUseCase: SignupUseCase,
-        private loginUseCase: LoginUseCase
+        private loginUseCase: LoginUseCase,
+        private logoutUseCase: LogoutUseCase,
+        private getUserUseCase: GetUserUseCase
     ) { }
 
     async signup(
-        request: FastifyRequest<{ Body: SignupBody }>,
+        request: FastifyRequest<{ Body: SignupRequestDTO }>,
         reply: FastifyReply
     ): Promise<void> {
         try {
@@ -62,7 +55,7 @@ export class AuthController {
     }
 
     async login(
-        request: FastifyRequest<{ Body: LoginBody }>,
+        request: FastifyRequest<{ Body: LoginRequestDTO }>,
         reply: FastifyReply
     ): Promise<void> {
         try {
@@ -100,6 +93,73 @@ export class AuthController {
                     message: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred during login'
                 });
             }
+        }
+    }
+
+    async status(
+        request: FastifyRequest,
+        reply: FastifyReply
+    ): Promise<void> {
+        try {
+            // Prefer x-user-id header (set by API Gateway). Fallback: Authorization token verification is handled by gateway.
+            const userId = request.headers['x-user-id'] as string;
+
+            if (!userId) {
+                return reply.code(401).send({
+                    error: 'Unauthorized',
+                    message: 'User not authenticated'
+                });
+            }
+
+            const user = await this.getUserUseCase.execute(userId);
+
+            if (!user) {
+                return reply.code(404).send({
+                    error: 'Not Found',
+                    message: 'User not found'
+                });
+            }
+
+            return reply.code(200).send({
+                authenticated: true,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    username: user.username,
+                    displayName: user.displayName,
+                }
+            });
+        } catch (error: any) {
+            request.log.error({ err: error }, 'Auth status failed');
+            return reply.code(500).send({
+                error: 'Internal Server Error',
+                message: 'Failed to get auth status'
+            });
+        }
+    }
+
+    async logout(
+        request: FastifyRequest,
+        reply: FastifyReply
+    ): Promise<void> {
+        try {
+            const userId = request.headers['x-user-id'] as string;
+
+            if (!userId) {
+                return reply.code(401).send({
+                    error: 'Unauthorized',
+                    message: 'User not authenticated'
+                });
+            }
+
+            const result = await this.logoutUseCase.execute(userId);
+            return reply.code(200).send(result);
+        } catch (error: any) {
+            request.log.error({ err: error }, 'Logout failed');
+            if (error.message.includes('not found')) {
+                return reply.code(404).send({ error: 'Not Found', message: error.message });
+            }
+            return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to logout' });
         }
     }
 }
