@@ -4,6 +4,7 @@ import { LoginUseCase } from '../../../application/use-cases/login.usecase.js';
 import { LogoutUseCase } from '../../../application/use-cases/logout.usecase.js';
 import { GetUserUseCase } from '../../../application/use-cases/get-user.usecase.js';
 import { SignupRequestDTO, LoginRequestDTO } from '../../../application/dto/auth.dto.js';
+import { AuthMapper } from '../../../application/mappers/auth.mapper.js';
 
 export class AuthController {
     constructor(
@@ -20,15 +21,7 @@ export class AuthController {
         try {
             const user = await this.signupUseCase.execute(request.body);
 
-            reply.code(201).send({
-                id: user.id,
-                email: user.email,
-                username: user.username,
-                displayName: user.displayName,
-                avatar: user.avatar,
-                is2FAEnabled: user.is2FAEnabled,
-                createdAt: user.createdAt,
-            });
+            reply.code(201).send(AuthMapper.toSignupResponseDTO(user));
         } catch (error: any) {
             if (error.message.includes('already exists')) {
                 reply.code(409).send({
@@ -61,18 +54,7 @@ export class AuthController {
         try {
             const result = await this.loginUseCase.execute(request.body);
 
-            reply.code(200).send({
-                user: {
-                    id: result.user.id,
-                    email: result.user.email,
-                    username: result.user.username,
-                    displayName: result.user.displayName,
-                    avatar: result.user.avatar,
-                    is2FAEnabled: result.user.is2FAEnabled,
-                },
-                accessToken: result.accessToken,
-                message: 'Login successful',
-            });
+            reply.code(200).send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken));
         } catch (error: any) {
             // Log full error for debugging
             request.log.error({ err: error }, 'Login failed');
@@ -122,12 +104,7 @@ export class AuthController {
 
             return reply.code(200).send({
                 authenticated: true,
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    username: user.username,
-                    displayName: user.displayName,
-                }
+                user: AuthMapper.toUserInfoDTO(user)
             });
         } catch (error: any) {
             request.log.error({ err: error }, 'Auth status failed');

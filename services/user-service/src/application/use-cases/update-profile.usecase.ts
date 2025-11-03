@@ -1,14 +1,7 @@
 import { UserRepository } from '../../domain/ports';
 import { User } from '../../domain/entities/user.entity';
 import { PasswordHelper } from '../../domain/entities/user.entity';
-
-interface UpdateProfileInput {
-    displayName?: string;
-    avatar?: string;
-    email?: string;
-    password?: string;
-    username?: string;
-}
+import { UpdateProfileInput } from '../dto/user.dto.js';
 
 export class UpdateProfileUseCase {
     constructor(private userRepository: UserRepository) { }

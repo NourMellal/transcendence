@@ -2,16 +2,7 @@ import jwt from 'jsonwebtoken';
 import { User, PasswordHelper } from '../../domain/entities/user.entity.js';
 import { UserRepository } from '../../domain/ports.js';
 import type { JWTConfig } from '@transcendence/shared-utils';
-
-export interface LoginUseCaseInput {
-    email: string;
-    password: string;
-}
-
-export interface LoginUseCaseOutput {
-    user: User;
-    accessToken: string;
-}
+import { LoginUseCaseInput, LoginUseCaseOutput } from '../dto/auth.dto.js';
 
 export interface JWTService {
     getJWTConfig(): Promise<JWTConfig>;

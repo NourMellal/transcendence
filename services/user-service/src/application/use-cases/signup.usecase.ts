@@ -1,13 +1,6 @@
 import { User, createUser, PasswordHelper } from '../../domain/entities/user.entity.js';
 import { UserRepository } from '../../domain/ports.js';
-
-export interface SignupUseCaseInput {
-    email: string;
-    username: string;
-    password: string;
-    displayName?: string;
-}
-
+import { SignupUseCaseInput } from '../dto/auth.dto.js';
 export class SignupUseCase {
     constructor(private userRepository: UserRepository) { }
 
@@ -60,6 +53,7 @@ export class SignupUseCase {
 
         // Save user
         await this.userRepository.save(user);
+
 
         // Return user without password hash
         const { passwordHash: _, ...userWithoutPassword } = user;

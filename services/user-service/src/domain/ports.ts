@@ -1,4 +1,4 @@
-import { User, Session } from './entities.js';
+import { User, Session } from './entities/user.entity.js';
 
 // Repository ports (outbound)
 export interface UserRepository {
