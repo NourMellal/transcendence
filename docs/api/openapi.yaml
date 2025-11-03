@@ -1,0 +1,156 @@
+openapi: 3.0.3
+info:
+  title: Transcendence API
+  description: |
+    Real-time multiplayer Pong game with microservices architecture.
+    
+    Features:
+    - 🔐 OAuth & 2FA Authentication
+    - 🎮 Real-time Pong gameplay
+    - 💬 Live chat & messaging
+    - 🏆 Tournament system
+    - 📊 Statistics & leaderboards
+    
+    Architecture: Event-driven microservices with RabbitMQ messaging.
+  version: 1.0.0
+  license:
+    name: ISC
+    url: https://opensource.org/licenses/ISC
+  contact:
+    name: Transcendence Team
+    url: https://github.com/NourMellal/transcendence
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server (API Gateway)
+  # - url: https://api.transcendence.dev
+  #   description: Development environment
+
+components:
+  securitySchemes:
+    jwtAuth:
+      $ref: './components/security.yaml#/securitySchemes/jwtAuth'
+  
+  schemas:
+    # Auth schemas
+    User:
+      $ref: './components/schemas/user.yaml#/User'
+    SignUpRequest:
+      $ref: './components/schemas/auth.yaml#/SignUpRequest'
+    LoginRequest:
+      $ref: './components/schemas/auth.yaml#/LoginRequest'
+    LoginResponse:
+      $ref: './components/schemas/auth.yaml#/LoginResponse'
+    TwoFactorSecret:
+      $ref: './components/schemas/auth.yaml#/TwoFactorSecret'
+    Enable2FARequest:
+      $ref: './components/schemas/auth.yaml#/Enable2FARequest'
+    UpdateUserRequest:
+      $ref: './components/schemas/user.yaml#/UpdateUserRequest'
+    
+    # Game schemas
+    Game:
+      $ref: './components/schemas/game.yaml#/Game'
+    CreateGameRequest:
+      $ref: './components/schemas/game.yaml#/CreateGameRequest'
+    JoinGameRequest:
+      $ref: './components/schemas/game.yaml#/JoinGameRequest'
+    GameMove:
+      $ref: './components/schemas/game.yaml#/GameMove'
+    
+    # Chat schemas
+    ChatMessage:
+      $ref: './components/schemas/chat.yaml#/ChatMessage'
+    SendMessageRequest:
+      $ref: './components/schemas/chat.yaml#/SendMessageRequest'
+    
+    # Tournament schemas
+    Tournament:
+      $ref: './components/schemas/tournament.yaml#/Tournament'
+    TournamentMatch:
+      $ref: './components/schemas/tournament.yaml#/TournamentMatch'
+    CreateTournamentRequest:
+      $ref: './components/schemas/tournament.yaml#/CreateTournamentRequest'
+    
+    # Stats schemas
+    UserStats:
+      $ref: './components/schemas/stats.yaml#/UserStats'
+    Leaderboard:
+      $ref: './components/schemas/stats.yaml#/Leaderboard'
+    
+    # Common schemas
+    Error:
+      $ref: './components/schemas/common.yaml#/Error'
+
+security:
+  - jwtAuth: []
+
+paths:
+  # Authentication endpoints
+  /auth/signup:
+    $ref: './paths/auth.yaml#/~1auth~1signup'
+  /auth/login:
+    $ref: './paths/auth.yaml#/~1auth~1login'
+  /auth/42/login:
+    $ref: './paths/auth.yaml#/~1auth~142~1login'
+  /auth/42/callback:
+    $ref: './paths/auth.yaml#/~1auth~142~1callback'
+  /auth/status:
+    $ref: './paths/auth.yaml#/~1auth~1status'
+  /auth/logout:
+    $ref: './paths/auth.yaml#/~1auth~1logout'
+  /auth/2fa/generate:
+    $ref: './paths/auth.yaml#/~1auth~12fa~1generate'
+  /auth/2fa/enable:
+    $ref: './paths/auth.yaml#/~1auth~12fa~1enable'
+  
+  # User endpoints
+  /users/me:
+    $ref: './paths/users.yaml#/~1users~1me'
+  
+  # Game endpoints
+  /games:
+    $ref: './paths/games.yaml#/~1games'
+  /games/{gameId}:
+    $ref: './paths/games.yaml#/~1games~1{gameId}'
+  /games/{gameId}/join:
+    $ref: './paths/games.yaml#/~1games~1{gameId}~1join'
+  /games/{gameId}/leave:
+    $ref: './paths/games.yaml#/~1games~1{gameId}~1leave'
+  /games/my-games:
+    $ref: './paths/games.yaml#/~1games~1my-games'
+  /games/ws:
+    $ref: './paths/games.yaml#/~1games~1ws'
+  
+  # Chat endpoints
+  /chat/messages:
+    $ref: './paths/chat.yaml#/~1chat~1messages'
+  /chat/conversations:
+    $ref: './paths/chat.yaml#/~1chat~1conversations'
+  /chat/ws:
+    $ref: './paths/chat.yaml#/~1chat~1ws'
+  
+  # Tournament endpoints
+  /tournaments:
+    $ref: './paths/tournaments.yaml#/~1tournaments'
+  /tournaments/{tournamentId}:
+    $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}'
+  /tournaments/{tournamentId}/join:
+    $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1join'
+  /tournaments/{tournamentId}/leave:
+    $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1leave'
+  /tournaments/{tournamentId}/bracket:
+    $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1bracket'
+  /tournaments/my-tournaments:
+    $ref: './paths/tournaments.yaml#/~1tournaments~1my-tournaments'
+  
+  # Stats endpoints
+  /stats/me:
+    $ref: './paths/stats.yaml#/~1stats~1me'
+  /stats/users/{userId}:
+    $ref: './paths/stats.yaml#/~1stats~1users~1{userId}'
+  /leaderboard:
+    $ref: './paths/stats.yaml#/~1leaderboard'
+  
+  # Health endpoint
+  /health:
+    $ref: './paths/health.yaml#/~1health'
