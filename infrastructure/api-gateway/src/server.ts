@@ -41,6 +41,31 @@ async function loadConfiguration() {
         // Get gateway-specific configuration from Vault
         const gatewayConfig = await vault.getServiceConfig();
 
+        const internalApiKey =
+            gatewayConfig.internal_api_key ?? gatewayConfig.internalApiKey ?? '';
+        const rateLimitMaxRaw =
+            gatewayConfig.rateLimitMax ?? gatewayConfig.rate_limit_max;
+        const rateLimitWindow =
+            gatewayConfig.rateLimitWindow ?? gatewayConfig.rate_limit_window;
+        const corsOriginsRaw =
+            gatewayConfig.corsOrigins ?? gatewayConfig.cors_origins;
+
+        const rateLimitMax =
+            typeof rateLimitMaxRaw === 'number'
+                ? rateLimitMaxRaw
+                : rateLimitMaxRaw
+                ? parseInt(String(rateLimitMaxRaw), 10)
+                : undefined;
+
+        const corsOrigins = Array.isArray(corsOriginsRaw)
+            ? corsOriginsRaw
+            : typeof corsOriginsRaw === 'string' && corsOriginsRaw.trim().length > 0
+            ? corsOriginsRaw
+                  .split(',')
+                  .map((origin) => origin.trim())
+                  .filter(Boolean)
+            : undefined;
+
         return {
             PORT: getEnvVarAsNumber('GATEWAY_PORT', 3000),
             // Service URLs
@@ -49,12 +74,12 @@ async function loadConfiguration() {
             CHAT_SERVICE_URL: getEnvVar('CHAT_SERVICE_URL', 'http://localhost:3003'),
             TOURNAMENT_SERVICE_URL: getEnvVar('TOURNAMENT_SERVICE_URL', 'http://localhost:3004'),
             // Rate limiting from Vault
-            RATE_LIMIT_MAX: gatewayConfig.rateLimitMax || 100,
-            RATE_LIMIT_WINDOW: gatewayConfig.rateLimitWindow || '1 minute',
+            RATE_LIMIT_MAX: rateLimitMax || 100,
+            RATE_LIMIT_WINDOW: rateLimitWindow || '1 minute',
             // CORS configuration from Vault
-            CORS_ORIGINS: gatewayConfig.corsOrigins?.split(',') || ['http://localhost:3000'],
+            CORS_ORIGINS: corsOrigins || ['http://localhost:3000'],
             // Internal API keys for service communication
-            INTERNAL_API_KEY: gatewayConfig.internalApiKey,
+            INTERNAL_API_KEY: internalApiKey || getEnvVar('INTERNAL_API_KEY'),
             vault
         };
     } catch (error) {
@@ -343,7 +368,7 @@ async function createGateway() {
             app.log.info('Gateway closed successfully');
             process.exit(0);
         } catch (err) {
-            app.log.error('Error during graceful shutdown:', err);
+            app.log.error('Error during graceful shutdown:');
             process.exit(1);
         }
     };

@@ -1,3 +1,5 @@
+import type { User } from '../../domain/entities/user.entity.js';
+
 /**
  * Authentication DTOs
  * Data Transfer Objects for auth-related operations
@@ -59,6 +61,6 @@ export interface LoginUseCaseInput {
 }
 
 export interface LoginUseCaseOutput {
-    user: UserInfoDTO;
+    user: User;
     accessToken: string;
 }

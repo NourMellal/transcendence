@@ -14,7 +14,7 @@ export class VaultClient {
 
     constructor(config: VaultConfig) {
         this.config = config;
-        
+
         this.vault = vault({
             apiVersion: 'v1',
             endpoint: config.address,
@@ -23,7 +23,7 @@ export class VaultClient {
                 timeout: config.timeout || 5000,
             },
         });
-        
+
         // Auto-cleanup expired cache
         this.startCacheCleanup();
     }
@@ -31,7 +31,7 @@ export class VaultClient {
     async initialize(): Promise<void> {
         try {
             const health = await this.vault.health();
-            
+
             if (health.initialized && !health.sealed) {
                 console.log('✅ Vault connection established');
             } else {
@@ -51,10 +51,10 @@ export class VaultClient {
 
         try {
             const response = await this.vault.read(path);
-            
+
             // Proper KV v1/v2 detection
             let secretData: Record<string, any>;
-            
+
             if (response.data?.data && response.data?.metadata) {
                 // KV v2: has nested data + metadata
                 secretData = response.data.data;
@@ -64,7 +64,7 @@ export class VaultClient {
             } else {
                 throw new Error(`No data found at path: ${path}`);
             }
-            
+
             if (!secretData || typeof secretData !== 'object') {
                 throw new Error(`Invalid secret format at path: ${path}`);
             }
@@ -75,7 +75,7 @@ export class VaultClient {
 
             this.setCache(path, secret);
             return secret;
-            
+
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to read secret from ${path}: ${message}`);
@@ -114,7 +114,7 @@ export class VaultClient {
 
     private getFromCache(path: string): VaultSecret | null {
         const cached = this.cache.get(path);
-        
+
         if (!cached || Date.now() > cached.expiresAt) {
             this.cache.delete(path);
             return null;
@@ -139,7 +139,7 @@ export class VaultClient {
                 }
             }
         }, this.CACHE_TTL_MS);
-        
+
         // Don't block process exit
         if (this.cleanupInterval.unref) {
             this.cleanupInterval.unref();
@@ -162,11 +162,14 @@ export class VaultClient {
     }
 }
 
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 export function createVaultClientFromEnv(): VaultClient {
     // Only use dev token in development
-    const token = process.env.VAULT_TOKEN || 
+    const token = process.env.VAULT_TOKEN ||
         (process.env.NODE_ENV === 'development' ? 'dev-root-token' : undefined);
-    
+
     if (!token) {
         throw new Error('❌ VAULT_TOKEN environment variable is required');
     }
