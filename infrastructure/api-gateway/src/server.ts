@@ -41,6 +41,8 @@ async function loadConfiguration() {
         // Get gateway-specific configuration from Vault
         const gatewayConfig = await vault.getServiceConfig();
 
+        const internalApiKey = gatewayConfig.internal_api_key || gatewayConfig.internalApiKey;
+
         return {
             PORT: getEnvVarAsNumber('GATEWAY_PORT', 3000),
             // Service URLs
@@ -54,7 +56,7 @@ async function loadConfiguration() {
             // CORS configuration from Vault
             CORS_ORIGINS: gatewayConfig.corsOrigins?.split(',') || ['http://localhost:3000'],
             // Internal API keys for service communication
-            INTERNAL_API_KEY: gatewayConfig.internalApiKey,
+            INTERNAL_API_KEY: internalApiKey || getEnvVar('INTERNAL_API_KEY'),
             vault
         };
     } catch (error) {
