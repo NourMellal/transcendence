@@ -156,6 +156,10 @@ export async function registerAuthRoutes(
             },
         });
 
+        if (response.status === 204) {
+            return reply.code(response.status).send();
+        }
+
         const data = await response.json();
         return reply.code(response.status).send(data);
     });

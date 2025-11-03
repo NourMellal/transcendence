@@ -3,10 +3,13 @@ export interface User {
     id: string;
     email: string;
     username: string;
+    passwordHash?: string;
     displayName?: string;
     avatar?: string;
     twoFASecret?: string;
     is2FAEnabled: boolean;
+    oauthProvider?: 'local' | '42';
+    oauthId?: string;
     createdAt: Date;
     updatedAt: Date;
 }
