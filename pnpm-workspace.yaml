@@ -2,6 +2,7 @@ gitBranchLockfile: true
 mergeGitBranchLockfilesBranchPattern:
   - dev
 packages:
+  - "apps/*"
   - "services/*"
   - "packages/*"
   - "infrastructure/*"
