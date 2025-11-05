@@ -40,6 +40,7 @@
     "dev:chat": "pnpm --filter @transcendence/chat-service dev",
     "dev:tournament": "pnpm --filter @transcendence/tournament-service dev",
     "dev:gateway": "pnpm --filter @transcendence/api-gateway dev",
+    "dev:web": "pnpm --filter @transcendence/web dev",
     "dev:all": "pnpm --parallel dev",
     "build": "pnpm --recursive build",
     "test": "pnpm --recursive test",

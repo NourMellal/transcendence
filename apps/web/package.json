@@ -1,0 +1,24 @@
+{
+  "name": "@transcendence/web",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frontend SPA for Transcendence",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "echo 'Linting skipped - no eslint config for web app yet'"
+  },
+  "dependencies": {
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "msw": "^2.4.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}
