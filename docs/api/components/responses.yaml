@@ -1,0 +1,128 @@
+# Common error responses
+Error400:
+  description: Bad Request
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "Invalid request parameters"
+          message:
+            type: string
+            example: "The request could not be understood by the server"
+          timestamp:
+            type: string
+            format: date-time
+
+Error401:
+  description: Unauthorized
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "Unauthorized"
+          message:
+            type: string
+            example: "Authentication required"
+          timestamp:
+            type: string
+            format: date-time
+
+Error403:
+  description: Forbidden
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "Forbidden"
+          message:
+            type: string
+            example: "Access denied"
+          timestamp:
+            type: string
+            format: date-time
+
+Error404:
+  description: Not Found
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "Not Found"
+          message:
+            type: string
+            example: "The requested resource was not found"
+          timestamp:
+            type: string
+            format: date-time
+
+Error422:
+  description: Unprocessable Entity
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "Validation Error"
+          message:
+            type: string
+            example: "The request was well-formed but contains invalid data"
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                field:
+                  type: string
+                message:
+                  type: string
+          timestamp:
+            type: string
+            format: date-time
+
+Error500:
+  description: Internal Server Error
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "Internal Server Error"
+          message:
+            type: string
+            example: "An unexpected error occurred"
+          timestamp:
+            type: string
+            format: date-time
+
+Success:
+  description: Operation successful
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          success:
+            type: boolean
+            example: true
+          message:
+            type: string
+            example: "Operation completed successfully"
+          timestamp:
+            type: string
+            format: date-time

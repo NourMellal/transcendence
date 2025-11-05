@@ -1,35 +1,57 @@
 {
-  "name": "transcendence",
+  "name": "@transcendence/root",
   "version": "1.0.0",
-  "description": "A real-time Pong-style game built by four 42-Network students.   **North-star:** *< 30 s from page-load → fair online match.*",
-  "main": "index.js",
+  "description": "Transcendence - Microservices Architecture for Real-time Pong Game",
+  "private": true,
+  "type": "module",
   "directories": {
     "doc": "docs"
   },
   "dependencies": {
-    "husky": "^8.0.3"
+    "@fastify/cookie": "^9.4.0",
+    "dotenv": "^16.6.1",
+    "fastify": "^4.29.1",
+    "husky": "^8.0.3",
+    "mysql": "^2.18.1",
+    "otplib": "^12.0.1",
+    "qrcode": "^1.5.4",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "eslint": "^9.31.0",
+    "@redocly/cli": "^1.34.5",
+    "@types/node": "^20.19.24",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.39.0",
+    "eslint-plugin-import": "^2.32.0",
     "husky": "^8.0.3",
-    "lint-staged": "^16.1.2",
-    "prettier": "^3.3.1",
+    "js-yaml": "^4.1.0",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
   "scripts": {
-    "test": "vitest run --config vitest.config.mjs",
-    "lint": "eslint . || echo 'No linting configured yet'",
-    "format": "prettier --check .",
-    "prepare": "husky install"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.md": [
-      "prettier --write"
-    ]
+    "predev:all": "node scripts/check-vault.js && bash docs/assets/setup-service.sh",
+    "dev:user": "pnpm --filter @transcendence/user-service dev",
+    "dev:game": "pnpm --filter @transcendence/game-service dev",
+    "dev:chat": "pnpm --filter @transcendence/chat-service dev",
+    "dev:tournament": "pnpm --filter @transcendence/tournament-service dev",
+    "dev:gateway": "pnpm --filter @transcendence/api-gateway dev",
+    "dev:all": "pnpm --parallel dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "vault:start": "docker start vault-dev redis-dev 2>/dev/null || docker-compose up -d vault redis",
+    "vault:setup": "bash infrastructure/vault/simple-setup.sh",
+    "api:validate": "redocly lint docs/api/openapi.yaml",
+    "api:preview": "redocly preview-docs docs/api/openapi.yaml",
+    "api:build": "redocly build-docs docs/api/openapi.yaml -o docs/api/generated"
   },
   "repository": {
     "type": "git",
@@ -38,7 +60,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/NourMellal/transcendence/issues"
   },

@@ -1,0 +1,48 @@
+ChatMessage:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "msg-123e4567"
+    senderId:
+      type: string
+      format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    senderUsername:
+      type: string
+      example: "great_ponger"
+    content:
+      type: string
+      example: "Hello everyone!"
+    timestamp:
+      type: string
+      format: date-time
+      example: "2025-10-22T10:00:00Z"
+    type:
+      type: string
+      enum: [GLOBAL, PRIVATE, GAME]
+      example: GLOBAL
+    recipientId:
+      type: string
+      format: uuid
+      nullable: true
+  required: [id, senderId, senderUsername, content, timestamp, type]
+
+SendMessageRequest:
+  type: object
+  properties:
+    content:
+      type: string
+      example: "Hello everyone!"
+      maxLength: 500
+    type:
+      type: string
+      enum: [GLOBAL, PRIVATE, GAME]
+      example: GLOBAL
+    recipientId:
+      type: string
+      format: uuid
+      nullable: true
+      example: "123e4567-e89b-12d3-a456-426614174001"
+  required: [content, type]

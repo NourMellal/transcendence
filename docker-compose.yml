@@ -1,0 +1,190 @@
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infrastructure/api-gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - GATEWAY_PORT=3000
+      - USER_SERVICE_URL=http://user-service:3001
+      - GAME_SERVICE_URL=http://game-service:3002
+      - CHAT_SERVICE_URL=http://chat-service:3003
+      - TOURNAMENT_SERVICE_URL=http://tournament-service:3004
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_WINDOW=1 minute
+      # Vault configuration
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_SKIP_VERIFY=true
+    depends_on:
+      - user-service
+      - game-service
+      - chat-service
+      - tournament-service
+      - vault
+    networks:
+      - transcendence-network
+
+  # User Service
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - USER_SERVICE_PORT=3001
+      - USER_SERVICE_DB_PATH=/app/data/user-service.db
+      - UPLOAD_DIR=/app/uploads
+      - LOG_LEVEL=info
+      # Vault configuration
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_SKIP_VERIFY=true
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+    volumes:
+      - user-data:/app/data
+      - user-uploads:/app/uploads
+    depends_on:
+      - vault
+      - rabbitmq
+    networks:
+      - transcendence-network
+
+  # Game Service
+  game-service:
+    build:
+      context: .
+      dockerfile: services/game-service/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - GAME_SERVICE_PORT=3002
+      - GAME_SERVICE_DB_PATH=/app/data/game-service.db
+      - LOG_LEVEL=info
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+    volumes:
+      - game-data:/app/data
+    depends_on:
+      - rabbitmq
+    networks:
+      - transcendence-network
+
+  # Chat Service
+  chat-service:
+    build:
+      context: .
+      dockerfile: services/chat-service/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - CHAT_SERVICE_PORT=3003
+      - CHAT_SERVICE_DB_PATH=/app/data/chat-service.db
+      - LOG_LEVEL=info
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+    volumes:
+      - chat-data:/app/data
+    depends_on:
+      - rabbitmq
+    networks:
+      - transcendence-network
+
+  # Tournament Service
+  tournament-service:
+    build:
+      context: .
+      dockerfile: services/tournament-service/Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - TOURNAMENT_SERVICE_PORT=3004
+      - TOURNAMENT_SERVICE_DB_PATH=/app/data/tournament-service.db
+      - LOG_LEVEL=info
+      # RabbitMQ configuration
+      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+    volumes:
+      - tournament-data:/app/data
+    depends_on:
+      - rabbitmq
+    networks:
+      - transcendence-network
+
+  # RabbitMQ for event-driven messaging
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: transcendence-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=transcendence
+      - RABBITMQ_DEFAULT_PASS=transcendence_dev
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - transcendence-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - transcendence-network
+
+  vault:
+    image: hashicorp/vault:1.18
+    container_name: transcendence-vault
+    ports:
+      - "8200:8200"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - transcendence-network
+    restart: unless-stopped
+    command: server -dev -dev-root-token-id=dev-root-token
+
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - transcendence-network
+
+volumes:
+  user-data:
+  user-uploads:
+  game-data:
+  chat-data:
+  tournament-data:
+  redis-data:
+  rabbitmq-data:
+  vault-data:
+  vault-logs:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  transcendence-network:
+    driver: bridge

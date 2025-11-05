@@ -1,0 +1,110 @@
+# Common path parameters
+UserId:
+  name: userId
+  in: path
+  required: true
+  description: Unique identifier for a user
+  schema:
+    type: string
+    pattern: '^[a-fA-F0-9-]+$'
+    example: "123e4567-e89b-12d3-a456-426614174000"
+
+GameId:
+  name: gameId
+  in: path
+  required: true
+  description: Unique identifier for a game
+  schema:
+    type: string
+    pattern: '^[a-fA-F0-9-]+$'
+    example: "456e7890-e89b-12d3-a456-426614174111"
+
+TournamentId:
+  name: tournamentId
+  in: path
+  required: true
+  description: Unique identifier for a tournament
+  schema:
+    type: string
+    pattern: '^[a-fA-F0-9-]+$'
+    example: "789e1234-e89b-12d3-a456-426614174222"
+
+ChatRoomId:
+  name: chatRoomId
+  in: path
+  required: true
+  description: Unique identifier for a chat room
+  schema:
+    type: string
+    pattern: '^[a-fA-F0-9-]+$'
+    example: "abc1234-e89b-12d3-a456-426614174333"
+
+# Query parameters for pagination
+Limit:
+  name: limit
+  in: query
+  required: false
+  description: Maximum number of items to return (default 20, max 100)
+  schema:
+    type: integer
+    minimum: 1
+    maximum: 100
+    default: 20
+    example: 20
+
+Offset:
+  name: offset
+  in: query
+  required: false
+  description: Number of items to skip (default 0)
+  schema:
+    type: integer
+    minimum: 0
+    default: 0
+    example: 0
+
+Page:
+  name: page
+  in: query
+  required: false
+  description: Page number (1-based, default 1)
+  schema:
+    type: integer
+    minimum: 1
+    default: 1
+    example: 1
+
+# Sorting parameters
+SortBy:
+  name: sortBy
+  in: query
+  required: false
+  description: Field to sort by
+  schema:
+    type: string
+    enum: [createdAt, updatedAt, name, score]
+    default: createdAt
+    example: createdAt
+
+SortOrder:
+  name: sortOrder
+  in: query
+  required: false
+  description: Sort order
+  schema:
+    type: string
+    enum: [asc, desc]
+    default: desc
+    example: desc
+
+# Search parameters
+Search:
+  name: search
+  in: query
+  required: false
+  description: Search term for filtering results
+  schema:
+    type: string
+    minLength: 1
+    maxLength: 100
+    example: "pong"

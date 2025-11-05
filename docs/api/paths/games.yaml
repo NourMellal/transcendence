@@ -1,0 +1,194 @@
+/games:
+  get:
+    tags: [Games]
+    operationId: Games_listGames
+    summary: List all games
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum: [WAITING, PLAYING, FINISHED, CANCELLED]
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+    responses:
+      '200':
+        description: List of games
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                games:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/game.yaml#/Game'
+                total:
+                  type: integer
+
+  post:
+    tags: [Games]
+    operationId: Games_createGame
+    summary: Create a new game
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/game.yaml#/CreateGameRequest'
+    responses:
+      '201':
+        description: Game created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/game.yaml#/Game'
+      '400':
+        description: Invalid input
+      '401':
+        description: Not authenticated
+
+/games/{gameId}:
+  get:
+    tags: [Games]
+    operationId: Games_getGame
+    summary: Get game by ID
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Game details
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/game.yaml#/Game'
+      '404':
+        description: Game not found
+
+/games/{gameId}/join:
+  post:
+    tags: [Games]
+    operationId: Games_joinGame
+    summary: Join an existing game
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Successfully joined game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/game.yaml#/Game'
+      '400':
+        description: Cannot join game (full, finished, etc.)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '401':
+        description: Not authenticated
+      '404':
+        description: Game not found
+
+/games/{gameId}/leave:
+  post:
+    tags: [Games]
+    operationId: Games_leaveGame
+    summary: Leave a game
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Successfully left game
+      '400':
+        description: Cannot leave game
+      '401':
+        description: Not authenticated
+      '404':
+        description: Game not found
+
+/games/my-games:
+  get:
+    tags: [Games]
+    operationId: Games_getMyGames
+    summary: Get current user's games
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum: [WAITING, PLAYING, FINISHED, CANCELLED]
+    responses:
+      '200':
+        description: User's games
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../components/schemas/game.yaml#/Game'
+      '401':
+        description: Not authenticated
+
+/games/ws:
+  get:
+    tags: [Games, WebSocket]
+    operationId: Games_websocketConnection
+    summary: WebSocket connection for real-time Pong gameplay
+    description: |
+      Establish WebSocket connection for real-time game updates.
+      
+      **Authentication:** JWT token required via query parameter `?token=<jwt>`
+      
+      **Client → Server Messages:**
+      - `{ "type": "join_game", "gameId": "uuid" }` - Join a game
+      - `{ "type": "paddle_move", "y": number }` - Update paddle position
+      - `{ "type": "ready" }` - Signal ready to start
+      
+      **Server → Client Messages:**
+      - `{ "type": "game_state", "ball": {...}, "paddle1": {...}, "paddle2": {...}, "score": {...} }`
+      - `{ "type": "game_start", "gameId": "uuid" }`
+      - `{ "type": "game_end", "winnerId": "uuid", "finalScore": {...} }`
+      - `{ "type": "player_joined", "playerId": "uuid" }`
+      - `{ "type": "player_left", "playerId": "uuid" }`
+      - `{ "type": "error", "message": "..." }`
+    parameters:
+      - name: token
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JWT authentication token
+    responses:
+      '101':
+        description: Switching Protocols - WebSocket connection established
+      '401':
+        description: Unauthorized - Invalid or missing token
+      '426':
+        description: Upgrade Required

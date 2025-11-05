@@ -1,0 +1,38 @@
+User:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    username:
+      type: string
+      example: "great_ponger"
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+    avatar:
+      type: string`
+      format: uri
+      nullable: true
+      example: "https://example.com/avatars/user1.png"
+    is2FAEnabled:
+      type: boolean
+      example: false
+    status:
+      type: string
+      enum: [ONLINE, OFFLINE, INGAME]
+      example: ONLINE
+  required: [id, username, email, is2FAEnabled, status]
+
+UpdateUserRequest:
+  type: object
+  properties:
+    username:
+      type: string
+      example: "new_username"
+    avatar:
+      type: string
+      format: binary
+      description: Image file to upload

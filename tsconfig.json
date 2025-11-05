@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@transcendence/shared-types": ["./packages/shared-types/src"],
+      "@transcendence/shared-utils": ["./packages/shared-utils/src"],
+      "@transcendence/shared-validation": ["./packages/shared-validation/src"]
+    }
+  },
+  "references": [
+    { "path": "./packages/shared-types" },
+    { "path": "./packages/shared-utils" },
+    { "path": "./packages/shared-validation" },
+    { "path": "./services/chat-service" },
+    { "path": "./services/game-service" },
+    { "path": "./services/tournament-service" },
+    { "path": "./services/user-service" }
+  ],
+  "files": [],
+  "include": []
+}

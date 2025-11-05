@@ -1,0 +1,63 @@
+/stats/me:
+  get:
+    tags: [Stats]
+    operationId: Stats_getMyStats
+    summary: Get current user's statistics
+    responses:
+      '200':
+        description: User statistics
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/stats.yaml#/UserStats'
+      '401':
+        description: Not authenticated
+
+/stats/users/{userId}:
+  get:
+    tags: [Stats]
+    operationId: Stats_getUserStats
+    summary: Get user statistics by ID
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: User statistics
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/stats.yaml#/UserStats'
+      '404':
+        description: User not found
+
+/leaderboard:
+  get:
+    tags: [Stats]
+    operationId: Stats_getLeaderboard
+    summary: Get global leaderboard
+    parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+      - name: type
+        in: query
+        schema:
+          type: string
+          enum: [GAMES_WON, WIN_RATE, TOURNAMENTS_WON, TOTAL_SCORE]
+          default: GAMES_WON
+    responses:
+      '200':
+        description: Global leaderboard
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/stats.yaml#/Leaderboard'

@@ -1,11 +1,133 @@
-# dependencies
+# Node.js dependencies
 node_modules/
 .pnpm-store/
-# IDE
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Configuration files with sensitive data
+config.json
+secrets.json
+credentials.json
+
+# Database files (CRITICAL - contains user data)
+*.db
+*.sqlite
+*.sqlite3
+services/user-service/user-service.db
+services/game-service/game-service.db
+services/chat-service/chat-service.db
+services/tournament-service/tournament-service.db
+
+# Database backups and dumps
+*.sql
+*.dump
+*.backup
+
+# Logs
+logs/
+*.log
+
+# TypeScript build output
+dist/
+lib/
+build/
+coverage/
+*.tsbuildinfo
+
+# IDE and Editor files
 .vscode/
 .idea/
-# build
-dist
-coverage
-# env
-.env
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Authentication and session files
+sessions/
+tokens/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# 2FA secrets and QR codes (CRITICAL - security risk)
+qr-codes/
+2fa-secrets/
+totp-secrets/
+
+# Image uploads and user data
+uploads/
+user-avatars/
+static-files/
+
+# Vault secrets (HashiCorp Vault)
+infrastructure/vault/data/
+infrastructure/vault/logs/
+infrastructure/vault/*.json
+infrastructure/vault/*.hcl
+
+# SSL certificates
+*.crt
+*.cert
+*.ca-bundle
+*.p7b
+*.p7s
+*.pfx
+
+# API keys and tokens
+api-keys.json
+oauth-secrets.json
+jwt-secrets.json
+
+# Service-specific sensitive files
+services/*/uploads/
+services/*/sessions/
+services/*/logs/
+services/*/*.db
+services/*/*.sqlite*
+
+# Nginx configuration with sensitive data
+infrastructure/nginx-modsecurity/nginx.conf
+infrastructure/nginx-modsecurity/ssl/
+
+# Test databases and temporary test files
+test-*.db
+test-*.sqlite*
+*.test.db
+
+# Docker overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Package manager lock files (keep pnpm-lock.yaml)
+package-lock.json
+yarn.lock
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+/AGENTS.md
