@@ -12,39 +12,53 @@ const API_BASE = 'http://localhost:3000';
 export const handlers = [
   // POST /auth/signup - Register a new user
   http.post(`${API_BASE}/auth/signup`, async ({ request }) => {
-    const body = (await request.json()) as SignUpRequest;
+    try {
+      const body = (await request.json()) as SignUpRequest;
 
-    // Create new user based on signup data
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      username: body.username,
-      email: body.email,
-      avatar: null,
-      is2FAEnabled: false,
-      status: 'ONLINE',
-    };
+      // Create new user based on signup data
+      const newUser: User = {
+        id: crypto.randomUUID(),
+        username: body.username,
+        email: body.email,
+        avatar: null,
+        is2FAEnabled: false,
+        status: 'ONLINE',
+      };
 
-    // Set as current user
-    setCurrentUser(newUser);
+      // Set as current user
+      setCurrentUser(newUser);
 
-    return HttpResponse.json(newUser, { status: 201 });
+      return HttpResponse.json(newUser, { status: 201 });
+    } catch (error) {
+      return HttpResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
   }),
 
   // POST /auth/login - Login with email and password
   http.post(`${API_BASE}/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as LoginRequest;
+    try {
+      const body = (await request.json()) as LoginRequest;
 
-    // Mock login validation (accept any credentials)
-    // In real implementation, would validate against stored credentials
-    const user = mockUser;
-    setCurrentUser(user);
+      // Mock login validation (accept any credentials)
+      // In real implementation, would validate against stored credentials
+      const user = mockUser;
+      setCurrentUser(user);
 
-    const response: LoginResponse = {
-      user,
-      message: 'Login successful',
-    };
+      const response: LoginResponse = {
+        user,
+        message: 'Login successful',
+      };
 
-    return HttpResponse.json(response, { status: 200 });
+      return HttpResponse.json(response, { status: 200 });
+    } catch (error) {
+      return HttpResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
   }),
 
   // GET /auth/status - Get current authentication status
@@ -77,39 +91,46 @@ export const handlers = [
       return new HttpResponse(null, { status: 401 });
     }
 
-    const contentType = request.headers.get('content-type');
+    try {
+      const contentType = request.headers.get('content-type');
 
-    let updates: Partial<User> = {};
+      let updates: Partial<User> = {};
 
-    if (contentType?.includes('application/json')) {
-      // Handle JSON updates
-      const body = (await request.json()) as Partial<UpdateUserRequest>;
-      if (body.username) {
-        updates.username = body.username;
-      }
-    } else if (contentType?.includes('multipart/form-data')) {
-      // Handle form data (for avatar upload)
-      const formData = await request.formData();
-      const username = formData.get('username');
-      const avatar = formData.get('avatar');
+      if (contentType?.includes('application/json')) {
+        // Handle JSON updates
+        const body = (await request.json()) as Partial<UpdateUserRequest>;
+        if (body.username) {
+          updates.username = body.username;
+        }
+      } else if (contentType?.includes('multipart/form-data')) {
+        // Handle form data (for avatar upload)
+        const formData = await request.formData();
+        const username = formData.get('username');
+        const avatar = formData.get('avatar');
 
-      if (username && typeof username === 'string') {
-        updates.username = username;
+        if (username && typeof username === 'string') {
+          updates.username = username;
+        }
+        if (avatar) {
+          // Mock avatar URL
+          updates.avatar = 'https://example.com/avatars/updated-avatar.png';
+        }
       }
-      if (avatar) {
-        // Mock avatar URL
-        updates.avatar = 'https://example.com/avatars/updated-avatar.png';
-      }
+
+      // Update current user
+      const updatedUser = {
+        ...getCurrentUser()!,
+        ...updates,
+      };
+
+      setCurrentUser(updatedUser);
+
+      return HttpResponse.json(updatedUser, { status: 200 });
+    } catch (error) {
+      return HttpResponse.json(
+        { error: 'Invalid request data' },
+        { status: 400 }
+      );
     }
-
-    // Update current user
-    const updatedUser = {
-      ...getCurrentUser()!,
-      ...updates,
-    };
-
-    setCurrentUser(updatedUser);
-
-    return HttpResponse.json(updatedUser, { status: 200 });
   }),
 ];
