@@ -1,10 +1,1 @@
-* text=auto eol=lf
-
-# Treat common binary assets explicitly
-*.png binary
-*.jpg binary
-*.jpeg binary
-*.gif binary
-*.ico binary
-*.zip binary
-*.gz binary
+pnpm-lock.yaml merge=pnpm-lockfile
