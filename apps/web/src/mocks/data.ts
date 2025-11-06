@@ -1,4 +1,4 @@
-import type { User } from '../types';
+import type { User } from '../models/User';
 
 // Mock user data that matches the User model from OpenAPI spec
 export const mockUser: User = {

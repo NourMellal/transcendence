@@ -1,5 +1,6 @@
 import { worker } from './mocks/browser';
-import type { User, LoginRequest, SignUpRequest } from './types';
+import { HttpClient, AuthService, UserService } from './services';
+import type { LoginRequest, SignUpRequest } from './models';
 
 // Start MSW
 worker.start({
@@ -10,6 +11,11 @@ worker.start({
 });
 
 const API_BASE = 'http://localhost:3000';
+
+// Initialize services
+const httpClient = new HttpClient({ baseURL: API_BASE });
+const authService = new AuthService(httpClient);
+const userService = new UserService(httpClient);
 
 async function initApp() {
   const statusDiv = document.getElementById('status')!;
@@ -83,12 +89,11 @@ async function testAuthStatus() {
   result.textContent = 'Testing...';
 
   try {
-    const response = await fetch(`${API_BASE}/auth/status`);
-    const data = response.status === 401 ? null : await response.json();
+    const user = await authService.getStatus();
     result.textContent = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data,
+      status: user ? 200 : 401,
+      statusText: user ? 'OK' : 'Unauthorized',
+      data: user,
     }, null, 2);
   } catch (error) {
     result.textContent = `Error: ${error}`;
@@ -100,15 +105,19 @@ async function testUsersMe() {
   result.textContent = 'Testing...';
 
   try {
-    const response = await fetch(`${API_BASE}/users/me`);
-    const data = response.status === 401 ? null : await response.json();
+    const user = await userService.getProfile();
     result.textContent = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data,
+      status: 200,
+      statusText: 'OK',
+      data: user,
     }, null, 2);
   } catch (error) {
-    result.textContent = `Error: ${error}`;
+    const httpError = error as { status?: number; message?: string };
+    result.textContent = JSON.stringify({
+      status: httpError.status || 500,
+      statusText: httpError.message || 'Error',
+      data: null,
+    }, null, 2);
   }
 }
 
@@ -122,22 +131,19 @@ async function testLogin() {
       password: 'SecurePass123!',
     };
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(loginData),
-    });
-
-    const data = await response.json();
+    const response = await authService.login(loginData);
     result.textContent = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data,
+      status: 200,
+      statusText: 'OK',
+      data: response,
     }, null, 2);
   } catch (error) {
-    result.textContent = `Error: ${error}`;
+    const httpError = error as { status?: number; message?: string };
+    result.textContent = JSON.stringify({
+      status: httpError.status || 500,
+      statusText: httpError.message || 'Error',
+      data: null,
+    }, null, 2);
   }
 }
 
@@ -153,22 +159,19 @@ async function testSignup() {
       displayName: 'New User',
     };
 
-    const response = await fetch(`${API_BASE}/auth/signup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(signupData),
-    });
-
-    const data = await response.json();
+    const user = await authService.signup(signupData);
     result.textContent = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data,
+      status: 201,
+      statusText: 'Created',
+      data: user,
     }, null, 2);
   } catch (error) {
-    result.textContent = `Error: ${error}`;
+    const httpError = error as { status?: number; message?: string };
+    result.textContent = JSON.stringify({
+      status: httpError.status || 500,
+      statusText: httpError.message || 'Error',
+      data: null,
+    }, null, 2);
   }
 }
 
@@ -181,22 +184,19 @@ async function testUpdateProfile() {
       username: 'updated_ponger',
     };
 
-    const response = await fetch(`${API_BASE}/users/me`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updateData),
-    });
-
-    const data = await response.json();
+    const user = await userService.updateProfile(updateData);
     result.textContent = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data,
+      status: 200,
+      statusText: 'OK',
+      data: user,
     }, null, 2);
   } catch (error) {
-    result.textContent = `Error: ${error}`;
+    const httpError = error as { status?: number; message?: string };
+    result.textContent = JSON.stringify({
+      status: httpError.status || 500,
+      statusText: httpError.message || 'Error',
+      data: null,
+    }, null, 2);
   }
 }
 
@@ -205,17 +205,19 @@ async function testLogout() {
   result.textContent = 'Testing...';
 
   try {
-    const response = await fetch(`${API_BASE}/auth/logout`, {
-      method: 'POST',
-    });
-
+    await authService.logout();
     result.textContent = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data: response.status === 204 ? 'No Content (Success)' : await response.text(),
+      status: 204,
+      statusText: 'No Content',
+      data: 'Logged out successfully',
     }, null, 2);
   } catch (error) {
-    result.textContent = `Error: ${error}`;
+    const httpError = error as { status?: number; message?: string };
+    result.textContent = JSON.stringify({
+      status: httpError.status || 500,
+      statusText: httpError.message || 'Error',
+      data: null,
+    }, null, 2);
   }
 }
 
