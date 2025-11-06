@@ -1,6 +1,4 @@
 gitBranchLockfile: true
-mergeGitBranchLockfilesBranchPattern:
-  - dev
 packages:
   - "services/*"
   - "packages/*"
