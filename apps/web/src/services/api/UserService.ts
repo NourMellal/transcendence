@@ -3,7 +3,7 @@
  * Handles all user-related API calls
  */
 
-import { HttpClient } from '../api/HttpClient';
+import { HttpClient } from './HttpClient';
 import type { User, UpdateUserRequest } from '../../models/User';
 
 export class UserService {

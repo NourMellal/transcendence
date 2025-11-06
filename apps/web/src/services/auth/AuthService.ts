@@ -33,9 +33,9 @@ export class AuthService {
       credentials
     );
     
-    // In a real app, you might store the JWT token here
-    // For now with MSW, we don't have an actual token
-    // localStorage.setItem('authToken', response.token);
+    // Note: With MSW mocking, we don't have an actual JWT token
+    // In real implementation, the token would be returned by the backend
+    // and stored here: localStorage.setItem('authToken', response.token);
     
     return response;
   }
@@ -63,6 +63,7 @@ export class AuthService {
    */
   async logout(): Promise<void> {
     await this.httpClient.post<void>('/auth/logout');
+    // Clean up stored auth token if it exists
     localStorage.removeItem('authToken');
   }
 

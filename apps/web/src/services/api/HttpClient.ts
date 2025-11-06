@@ -67,9 +67,9 @@ export class HttpClient {
       throw error;
     }
 
-    // Handle 204 No Content
+    // Handle 204 No Content - return null which caller can handle
     if (response.status === 204) {
-      return undefined as T;
+      return null as unknown as T;
     }
 
     const contentType = response.headers.get('content-type');
