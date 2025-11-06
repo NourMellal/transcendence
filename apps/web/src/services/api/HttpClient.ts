@@ -24,6 +24,13 @@ export class HttpClient {
   }
 
   /**
+   * Get the base URL
+   */
+  getBaseURL(): string {
+    return this.baseURL;
+  }
+
+  /**
    * Get authorization token from localStorage
    */
   private getAuthToken(): string | null {

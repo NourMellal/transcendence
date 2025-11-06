@@ -71,6 +71,6 @@ export class AuthService {
    * This redirects to 42's SSO, so no fetch call needed
    */
   initiate42Login(): void {
-    window.location.href = `${this.httpClient['baseURL']}/auth/42/login`;
+    window.location.href = `${this.httpClient.getBaseURL()}/auth/42/login`;
   }
 }

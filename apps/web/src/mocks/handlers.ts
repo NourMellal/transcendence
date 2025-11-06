@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { User } from '../models/User';
+import type { User, UpdateUserRequest } from '../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../models/Auth';
 import {
   mockUser,
