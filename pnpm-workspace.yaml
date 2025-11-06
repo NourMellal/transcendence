@@ -3,4 +3,5 @@ packages:
   - "services/*"
   - "packages/*"
   - "infrastructure/*"
+  - "apps/*"
 
