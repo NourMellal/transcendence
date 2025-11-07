@@ -1,18 +1,13 @@
-import { Component } from './base/Component.js';
-import { AuthService } from '../services/auth/AuthService.js';
-import { HttpClient } from '../services/api/HttpClient.js';
-import { validateEmail } from '../utils/validation.js';
-import { showError, showSuccess } from '../utils/errors.js';
+import { Component } from './base/Component';
+import { authManager } from '../utils/auth';
+import { validateEmail, validatePassword } from '../utils/validation';
+import { showError, showSuccess } from '../utils/errors';
 
 export class LoginPage extends Component {
-    private authService: AuthService;
     private isPasswordVisible = false;
 
     constructor() {
         super('div', 'login-page');
-        // Initialize AuthService with HttpClient as required by existing architecture
-        const httpClient = new HttpClient('/api');
-        this.authService = new AuthService(httpClient);
     }
 
     protected render(): void {
@@ -196,8 +191,7 @@ export class LoginPage extends Component {
         const signupLink = this.element.querySelector('.signup-link');
         signupLink?.addEventListener('click', (e: Event) => {
             e.preventDefault();
-            // TODO: Navigate to signup page
-            console.log('Navigate to signup');
+            window.location.href = '/auth/signup';
         });
 
         const forgotPasswordLink = this.element.querySelector('.forgot-password-link');
@@ -217,13 +211,15 @@ export class LoginPage extends Component {
         const password = formData.get('password') as string;
 
         // Validation
-        if (!validateEmail(email)) {
-            showError('Please enter a valid email address');
+        const emailValidation = validateEmail(email);
+        if (!emailValidation.isValid) {
+            showError(emailValidation.errors[0] ?? 'Please enter a valid email address');
             return;
         }
 
-        if (password.length < 6) {
-            showError('Password must be at least 6 characters long');
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+            showError(passwordValidation.errors[0] ?? 'Please enter a valid password');
             return;
         }
 
@@ -231,11 +227,11 @@ export class LoginPage extends Component {
         this.setLoading(true);
 
         try {
-            const response = await this.authService.login({ email, password });
+            await authManager.login(email, password);
             showSuccess('Login successful!');
             
             // TODO: Navigate to dashboard
-            console.log('Login successful:', response);
+            console.log('Login successful');
             
         } catch (error) {
             showError('Invalid email or password');
@@ -275,7 +271,7 @@ export class LoginPage extends Component {
             button.disabled = true;
             
             // Initiate 42 School OAuth login - this will redirect automatically
-            this.authService.initiate42Login();
+            await authManager.start42Login();
             
         } catch (error) {
             console.error('❌ 42 School login failed:', error);

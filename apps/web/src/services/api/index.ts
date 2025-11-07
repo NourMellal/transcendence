@@ -7,7 +7,8 @@
  */
 
 // Export service classes and instances
-export { HttpClient, httpClient, ApiError } from './HttpClient';
+export { HttpClient, ApiError } from './HttpClient';
+export { httpClient } from './client';
 export { UserService, userService } from './UserService';
 export { GameService, gameService } from './GameService';
 export { TournamentService, tournamentService } from './TournamentService';

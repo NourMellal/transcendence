@@ -32,6 +32,13 @@ export class HttpClient {
   }
 
   /**
+   * Read current base URL (useful for redirects/logging)
+   */
+  public getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  /**
    * Get authorization token from localStorage
    */
   public getAuthToken(): string | null {
@@ -172,6 +179,3 @@ export class HttpClient {
     return this.request<T>('DELETE', url, config);
   }
 }
-
-// Singleton instance
-export const httpClient = new HttpClient();

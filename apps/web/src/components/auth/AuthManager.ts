@@ -12,8 +12,9 @@ export class AuthManager extends Component {
   private loginForm!: LoginForm;
   private registerForm!: RegisterForm;
 
-  constructor() {
+  constructor(initialForm: 'login' | 'register' = 'login') {
     super('div', 'auth-manager min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8');
+    this.currentForm = initialForm;
   }
 
   protected render(): void {

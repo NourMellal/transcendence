@@ -3,7 +3,7 @@
  */
 
 import { User } from '../models';
-import { authService } from '../services/api';
+import { authService } from '../services/auth/AuthService';
 
 /**
  * Authentication state
@@ -65,18 +65,13 @@ class AuthManager {
     this.setState({ isLoading: true, error: null });
     
     try {
-      if (authService.isAuthenticated()) {
-        const user = await authService.getStatus();
-        if (user) {
-          this.setState({
-            user,
-            isAuthenticated: true,
-            isLoading: false
-          });
-        } else {
-          // Token is invalid
-          this.logout();
-        }
+      const user = await authService.getStatus();
+      if (user) {
+        this.setState({
+          user,
+          isAuthenticated: true,
+          isLoading: false
+        });
       } else {
         this.setState({
           user: null,

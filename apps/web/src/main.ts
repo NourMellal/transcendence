@@ -1,5 +1,6 @@
 import './styles/login-page.css';
-import { LoginPage } from './components/LoginPage.js';
+import { LoginPage } from './components/LoginPage';
+import { AuthManager } from './components/auth/AuthManager';
 
 /**
  * Main application entry point
@@ -9,28 +10,59 @@ import { LoginPage } from './components/LoginPage.js';
 console.log('🚀 ft_transcendence Frontend Starting...');
 console.log('🎨 Loading beautiful botanical login design...');
 
+const DEV : boolean = true
+async function startMockServer(): Promise<void> {
+  if (!DEV) {
+    return;
+  }
+
+  try {
+    const { worker } = await import('./mocks/browser');
+    await worker.start({
+      serviceWorker: {
+        url: '/mockServiceWorker.js',
+      },
+      onUnhandledRequest: 'bypass',
+    });
+    console.log('🛠️ MSW worker started (development only)');
+  } catch (error) {
+    console.warn('⚠️ Failed to start MSW worker:', error);
+  }
+}
+
+function isRegisterRoute(): boolean {
+  const path = window.location.pathname.toLowerCase();
+  const registerPaths = ['/auth/signup', '/auth/register', '/register', '/signup'];
+  const searchIntent =
+    new URLSearchParams(window.location.search).get('view')?.toLowerCase() === 'register';
+  return registerPaths.includes(path) || searchIntent;
+}
+
 // Initialize the application
 async function initializeApp(): Promise<void> {
   try {
+    await startMockServer();
     console.log('📱 Initializing UI Components...');
-    
+
     // Get the root container
     const app = document.getElementById('app');
     if (!app) {
       throw new Error('App container not found');
     }
 
-    // Create and mount the impressive login page
-    const loginPage = new LoginPage();
-    loginPage.mount(app);
-    
+    // Create and mount the appropriate auth component
+    const component = isRegisterRoute()
+      ? new AuthManager('register')
+      : new LoginPage();
+    component.mount(app);
+
     console.log('✅ Login page mounted successfully!');
     console.log('🌺 Beautiful tropical botanical design loaded');
     console.log('🎯 Split-screen layout with modern form design ready');
-    
+
   } catch (error) {
     console.error('❌ Failed to initialize app:', error);
-    
+
     // Show error message to user
     const app = document.getElementById('app');
     if (app) {
@@ -58,8 +90,8 @@ async function initializeApp(): Promise<void> {
           ">
             <h1 style="color: #dc3545; margin-bottom: 16px; font-size: 24px;">❌ Application Error</h1>
             <p style="color: #666; margin-bottom: 24px; line-height: 1.5;">Failed to load the application. Please refresh the page to try again.</p>
-            <button 
-              onclick="window.location.reload()" 
+            <button
+              onclick="window.location.reload()"
               style="
                 background: #40c4c4;
                 color: white;

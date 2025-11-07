@@ -1,4 +1,4 @@
-import { httpClient } from './HttpClient';
+import { httpClient } from './client';
 import { 
   User, 
   UserProfile, 

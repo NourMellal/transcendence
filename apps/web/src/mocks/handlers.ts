@@ -8,7 +8,7 @@ import {
   getIsAuthenticated,
 } from './data';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = '/api';
 
 export const handlers = [
   // POST /auth/signup - Register a new user
@@ -133,5 +133,38 @@ export const handlers = [
         { status: 400 }
       );
     }
+  }),
+
+  // GET /auth/42/login - return authorization URL
+  http.get(`${API_BASE}/auth/42/login`, () => {
+    const origin = globalThis.location?.origin ?? 'http://localhost:3000';
+    const authorizationUrl = new URL('https://profile.intra.42.fr/oauth/authorize');
+    authorizationUrl.searchParams.set('client_id', 'mock-client-id');
+    authorizationUrl.searchParams.set('redirect_uri', `${origin}/auth/42/callback`);
+    authorizationUrl.searchParams.set('response_type', 'code');
+    authorizationUrl.searchParams.set('state', crypto.randomUUID());
+
+    return HttpResponse.json(
+      { authorizationUrl: authorizationUrl.toString() },
+      { status: 200 }
+    );
+  }),
+
+  // GET /auth/42/callback - simulate oauth success
+  http.get(`${API_BASE}/auth/42/callback`, ({ request }) => {
+    const url = new URL(request.url);
+    const code = url.searchParams.get('code');
+    if (!code) {
+      return HttpResponse.json({ error: 'Missing authorization code' }, { status: 400 });
+    }
+
+    setCurrentUser(mockUser);
+
+    const response: LoginResponse = {
+      user: mockUser,
+      message: 'OAuth login successful',
+    };
+
+    return HttpResponse.json(response, { status: 200 });
   }),
 ];
