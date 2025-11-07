@@ -50,7 +50,10 @@ export class VaultClient {
         }
 
         try {
-            const response = await this.vault.read(path);
+            // Handle KV v2 paths - insert /data/ after the mount point
+            // e.g., secret/security/config -> secret/data/security/config
+            const kvV2Path = path.replace(/^(secret)\//, '$1/data/');
+            const response = await this.vault.read(kvV2Path);
             
             // Proper KV v1/v2 detection
             let secretData: Record<string, any>;
@@ -84,7 +87,9 @@ export class VaultClient {
 
     async setSecret(path: string, data: Record<string, any>): Promise<void> {
         try {
-            await this.vault.write(path, { data });
+            // Handle KV v2 paths
+            const kvV2Path = path.replace(/^(secret)\//, '$1/data/');
+            await this.vault.write(kvV2Path, { data });
             this.cache.delete(path);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -94,7 +99,9 @@ export class VaultClient {
 
     async deleteSecret(path: string): Promise<void> {
         try {
-            await this.vault.delete(path);
+            // Handle KV v2 paths - for delete, use metadata path
+            const kvV2Path = path.replace(/^(secret)\//, '$1/metadata/');
+            await this.vault.delete(kvV2Path);
             this.cache.delete(path);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
