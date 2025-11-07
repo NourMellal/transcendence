@@ -1,6 +1,6 @@
 export type ComponentCtor = new (props?: any) => { render: (container: HTMLElement) => void; unrender?: () => void };
 
-export class Router {
+export default class Router {
 	outlet: HTMLElement;
 	routes: Array<{ path: string; component: any }>;
 	rootComponent?: ComponentCtor;
