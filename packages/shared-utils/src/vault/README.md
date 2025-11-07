@@ -40,8 +40,8 @@ async function setup() {
 import { createVaultHelper } from '@transcendence/shared-utils';
 
 const vault = createVaultHelper('my-service', {
-    jwt: 'secret/jwt/auth',
-    database: 'secret/database/my-service',
+    jwt: 'secret/data/jwt/auth',
+    database: 'secret/data/database/my-service',
 });
 
 await vault.initialize();
@@ -52,12 +52,12 @@ const jwt = await vault.getJWTConfig();
 
 | Path | Content |
 |------|---------|
-| `secret/jwt/auth` | JWT signing key, issuer, expiration |
-| `secret/api/oauth` | OAuth 42 client ID & secret |
-| `secret/database/user-service` | SQLite database path |
-| `secret/database/game-service` | Redis connection (host, port) |
-| `secret/game/config` | Game WebSocket secrets |
-| `secret/chat/config` | Chat service settings |
+| `secret/data/jwt/auth` | JWT signing key, issuer, expiration |
+| `secret/data/api/oauth` | OAuth 42 client ID & secret |
+| `secret/data/database/user-service` | SQLite database path |
+| `secret/data/database/game-service` | Redis connection (host, port) |
+| `secret/data/game/config` | Game WebSocket secrets |
+| `secret/data/chat/config` | Chat service settings |
 
 ## Environment Fallback
 
