@@ -101,7 +101,7 @@ echo -e "${BLUE}🔐 Step 4: Starting HashiCorp Vault...${NC}"
 # Check if vault-dev container already exists
 if docker ps -a --format '{{.Names}}' | grep -q '^vault-dev$'; then
     echo -e "${YELLOW}⚠️  Vault container already exists${NC}"
-    
+
     # Check if it's running
     if docker ps --format '{{.Names}}' | grep -q '^vault-dev$'; then
         echo -e "${GREEN}✅ Vault is already running${NC}"
@@ -119,7 +119,7 @@ else
         -e VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200 \
         -p 8200:8200 \
         hashicorp/vault:1.18 server -dev
-    
+
     echo -e "${GREEN}✅ Vault container created and started${NC}"
 fi
 
@@ -130,13 +130,13 @@ for i in {1..30}; do
         echo -e "${GREEN}✅ Vault is ready!${NC}"
         break
     fi
-    
+
     if [ $i -eq 30 ]; then
         echo -e "${RED}❌ Vault failed to start${NC}"
         echo "Please check Docker logs: docker logs vault-dev"
         exit 1
     fi
-    
+
     sleep 1
 done
 
@@ -183,7 +183,7 @@ else
         --name redis-dev \
         -p 6379:6379 \
         redis:7-alpine
-    
+
     echo -e "${GREEN}✅ Redis started${NC}"
 fi
 
