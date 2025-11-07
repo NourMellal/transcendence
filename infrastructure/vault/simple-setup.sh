@@ -178,7 +178,10 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     "$VAULT_ADDR/v1/secret/data/gateway/config" \
     -d '{
         "data": {
-            "cors_origins": "http://localhost:3000,http://localhost:8080"
+            "cors_origins": "http://localhost:3000,http://localhost:8080",
+            "internalApiKey": "transcendence-internal-api-key-dev-2024",
+            "rateLimitMax": "100",
+            "rateLimitWindow": "1 minute"
         }
     }' > /dev/null
 

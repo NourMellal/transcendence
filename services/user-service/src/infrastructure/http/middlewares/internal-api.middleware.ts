@@ -65,13 +65,26 @@ export async function validateInternalApiKey(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    // In development mode without SKIP_INTERNAL_API_CHECK, skip validation entirely
-    // This allows direct testing of the service without going through the gateway
-    if (process.env.NODE_ENV === 'development' && process.env.SKIP_INTERNAL_API_CHECK !== 'false') {
-        request.log.debug('Skipping internal API key validation in development mode.');
-        return;
+    const apiKey = request.headers['x-internal-api-key'] as string;
+
+    // If no API key is provided, check if we should allow it in development
+    if (!apiKey) {
+        // In development mode, allow requests without API key (for direct testing)
+        // But in production, always require the API key
+        // if (process.env.NODE_ENV === 'development' && process.env.SKIP_INTERNAL_API_CHECK !== 'false') {
+        //     request.log.debug('Skipping internal API key validation in development mode (no key provided).');
+        //     return;
+        // }
+
+        // Production or explicit check required - reject
+        return reply.code(403).send({
+            statusCode: 403,
+            error: 'Forbidden',
+            message: 'Missing internal API key',
+        });
     }
 
+    // If API key is provided, always validate it (even in development)
     const INTERNAL_API_KEY = await loadInternalApiKey();
 
     if (!INTERNAL_API_KEY) {
@@ -83,13 +96,20 @@ export async function validateInternalApiKey(
         });
     }
 
-    const apiKey = request.headers['x-internal-api-key'] as string;
-
-    if (!apiKey || apiKey !== INTERNAL_API_KEY) {
+    if (apiKey !== INTERNAL_API_KEY) {
+        request.log.warn({
+            providedKeyLength: apiKey.length,
+            expectedKeyLength: INTERNAL_API_KEY.length,
+            providedKey: apiKey,
+            expectedKey: INTERNAL_API_KEY,
+        }, 'Invalid internal API key provided');
         return reply.code(403).send({
             statusCode: 403,
             error: 'Forbidden',
-            message: 'Invalid or missing internal API key',
+            message: 'Invalid internal API key',
         });
     }
+
+    // Valid API key - allow request
+    request.log.debug('Internal API key validated successfully');
 }
