@@ -4,6 +4,7 @@
     "baseUrl": ".",
     "outDir": "./dist",
     "rootDir": "./src",
+    "lib": ["ES2022", "DOM"],
     "paths": {
       "@transcendence/shared-types": ["../../packages/shared-types/src"],
       "@transcendence/shared-utils": ["../../packages/shared-utils/src"],
