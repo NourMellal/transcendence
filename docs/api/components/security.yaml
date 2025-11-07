@@ -1,0 +1,6 @@
+securitySchemes:
+  jwtAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+    description: JWT-based authentication using Bearer tokens
