@@ -343,7 +343,7 @@ async function createGateway() {
             app.log.info('Gateway closed successfully');
             process.exit(0);
         } catch (err) {
-            app.log.error('Error during graceful shutdown:', err);
+            app.log.error('Error during graceful shutdown:');
             process.exit(1);
         }
     };

@@ -148,7 +148,6 @@ export async function registerAuthRoutes(
         const response = await fetch(`${userServiceUrl}/auth/logout`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'x-internal-api-key': internalApiKey,
                 'x-request-id': request.id,
                 'x-user-id': user?.userId || user?.sub || '',
@@ -175,7 +174,6 @@ export async function registerAuthRoutes(
         const response = await fetch(`${userServiceUrl}/auth/2fa/generate`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'x-internal-api-key': internalApiKey,
                 'x-request-id': request.id,
                 'x-user-id': user?.userId || user?.sub || '',

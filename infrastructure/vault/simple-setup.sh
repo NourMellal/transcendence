@@ -42,7 +42,51 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     }' > /dev/null
 
 # =================================================================
-# STEP 2: Store Database Configurations
+# STEP 2: Store Internal API Keys (for service-to-service auth)
+# =================================================================
+echo "📝 Storing internal API keys..."
+
+# User Service - Internal API Key (read by createUserServiceVault -> secret/security/config)
+curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
+    "$VAULT_ADDR/v1/secret/data/security/config" \
+    -d '{
+        "data": {
+            "internal_api_key": "transcendence-internal-api-key-dev-2024",
+            "jwt_secret_key": "my-super-secret-jwt-key-for-signing-tokens",
+            "jwt_issuer": "transcendence",
+            "jwt_expiration_hours": "24"
+        }
+    }' > /dev/null
+
+# Game Service - Internal API Key
+curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
+    "$VAULT_ADDR/v1/secret/data/game-service" \
+    -d '{
+        "data": {
+            "INTERNAL_API_KEY": "transcendence-internal-api-key-dev-2024"
+        }
+    }' > /dev/null
+
+# Chat Service - Internal API Key
+curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
+    "$VAULT_ADDR/v1/secret/data/chat-service" \
+    -d '{
+        "data": {
+            "INTERNAL_API_KEY": "transcendence-internal-api-key-dev-2024"
+        }
+    }' > /dev/null
+
+# Tournament Service - Internal API Key
+curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
+    "$VAULT_ADDR/v1/secret/data/tournament-service" \
+    -d '{
+        "data": {
+            "INTERNAL_API_KEY": "transcendence-internal-api-key-dev-2024"
+        }
+    }' > /dev/null
+
+# =================================================================
+# STEP 3: Store Database Configurations
 # =================================================================
 echo "📝 Storing database configurations..."
 
@@ -87,7 +131,7 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     }' > /dev/null
 
 # =================================================================
-# STEP 3: Store Game Configuration
+# STEP 4: Store Game Configuration
 # =================================================================
 echo "📝 Storing game configuration..."
 curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
@@ -100,7 +144,7 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     }' > /dev/null
 
 # =================================================================
-# STEP 4: Store Chat Configuration
+# STEP 5: Store Chat Configuration
 # =================================================================
 echo "📝 Storing chat configuration..."
 curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
@@ -113,7 +157,7 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     }' > /dev/null
 
 # =================================================================
-# STEP 5: Store OAuth 42 Configuration (MANDATORY for PFE)
+# STEP 6: Store OAuth 42 Configuration (MANDATORY for PFE)
 # =================================================================
 echo "📝 Storing OAuth 42 configuration..."
 curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
@@ -127,7 +171,7 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     }' > /dev/null
 
 # =================================================================
-# STEP 6: Store API Gateway Configuration
+# STEP 7: Store API Gateway Configuration
 # =================================================================
 echo "📝 Storing API gateway configuration..."
 curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
@@ -139,7 +183,7 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
     }' > /dev/null
 
 # =================================================================
-# STEP 7: Apply API Gateway Policy (REQUIRED)
+# STEP 8: Apply API Gateway Policy (REQUIRED)
 # =================================================================
 echo "🔐 Applying API Gateway security policy..."
 
@@ -169,6 +213,7 @@ echo "✅ Vault setup complete!"
 echo ""
 echo "📊 Summary of Secrets Stored:"
 echo "   • JWT authentication keys"
+echo "   • Internal API keys (for service-to-service communication)"
 echo "   • OAuth 42 credentials (for 42 School login)"
 echo "   • Database configurations (SQLite + Redis)"
 echo "   • Game service settings"

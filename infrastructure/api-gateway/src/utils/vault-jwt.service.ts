@@ -5,7 +5,7 @@
  * Provides secure token verification using secrets from Vault
  */
 
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { createAPIGatewayVault } from '@transcendence/shared-utils';
 import type { JWTConfig } from '@transcendence/shared-utils';
 
