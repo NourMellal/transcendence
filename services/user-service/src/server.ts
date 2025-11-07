@@ -1,19 +1,33 @@
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Load .env from project root BEFORE any other imports
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../../.env') });
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import dotenv from 'dotenv';
 import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository.js';
 import { SignupUseCase } from './application/use-cases/signup.usecase.js';
 import { LoginUseCase } from './application/use-cases/login.usecase.js';
 import { LogoutUseCase } from './application/use-cases/logout.usecase.js';
 import { UpdateProfileUseCase } from './application/use-cases/update-profile.usecase.js';
 import { GetUserUseCase } from './application/use-cases/get-user.usecase.js';
+import { Generate2FAUseCaseImpl } from './application/use-cases/generate-2fa.usecase.js';
+import { Enable2FAUseCaseImpl } from './application/use-cases/enable-2fa.usecase.js';
+import { Disable2FAUseCaseImpl } from './application/use-cases/disable-2fa.usecase.js';
+import { OAuth42LoginUseCaseImpl } from './application/use-cases/oauth42-login.usecase.js';
+import { OAuth42CallbackUseCaseImpl } from './application/use-cases/oauth42-callback.usecase.js';
+import { OAuthStateManager } from './application/services/oauth-state.manager.js';
 import { AuthController } from './infrastructure/http/controllers/auth.controller.js';
 import { UserController } from './infrastructure/http/controllers/user.controller.js';
 import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes.js';
 import { registerUserRoutes } from './infrastructure/http/routes/user.routes.js';
-import { initializeJWTService, getJWTService } from './infrastructure/services/jwt.service.js';
-
-dotenv.config();
+import { initializeJWTService } from './infrastructure/services/jwt.service.js';
+import { createTwoFAService } from './infrastructure/services/two-fa.service.js';
+import { createOAuth42Service } from './infrastructure/services/oauth42.service.js';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
@@ -22,6 +36,10 @@ const DB_PATH = process.env.DB_PATH || './data/users.db';
 async function main() {
     // Initialize Vault JWT Service
     const jwtService = await initializeJWTService();
+    const oauth42Service = createOAuth42Service();
+    await oauth42Service.initialize();
+    const oauthStateManager = new OAuthStateManager();
+    const twoFAService = createTwoFAService();
 
     // Initialize database
     const userRepository = new SQLiteUserRepository();
@@ -29,13 +47,33 @@ async function main() {
 
     // Initialize use cases with Vault JWT Service
     const signupUseCase = new SignupUseCase(userRepository);
-    const loginUseCase = new LoginUseCase(userRepository, jwtService);
+    const loginUseCase = new LoginUseCase(userRepository, jwtService, twoFAService);
     const logoutUseCase = new LogoutUseCase(userRepository);
     const updateProfileUseCase = new UpdateProfileUseCase(userRepository);
     const getUserUseCase = new GetUserUseCase(userRepository);
+    const generate2FAUseCase = new Generate2FAUseCaseImpl(userRepository, twoFAService);
+    const enable2FAUseCase = new Enable2FAUseCaseImpl(userRepository, twoFAService);
+    const disable2FAUseCase = new Disable2FAUseCaseImpl(userRepository, twoFAService);
+    const oauth42LoginUseCase = new OAuth42LoginUseCaseImpl(oauth42Service, oauthStateManager);
+    const oauth42CallbackUseCase = new OAuth42CallbackUseCaseImpl(
+        oauth42Service,
+        userRepository,
+        jwtService,
+        oauthStateManager
+    );
 
     // Initialize controllers
-    const authController = new AuthController(signupUseCase, loginUseCase, logoutUseCase, getUserUseCase);
+    const authController = new AuthController(
+        signupUseCase,
+        loginUseCase,
+        logoutUseCase,
+        getUserUseCase,
+        oauth42LoginUseCase,
+        oauth42CallbackUseCase,
+        generate2FAUseCase,
+        enable2FAUseCase,
+        disable2FAUseCase
+    );
     const userController = new UserController(updateProfileUseCase, getUserUseCase);
 
     // Initialize Fastify

@@ -63,7 +63,7 @@ export interface UpdateProfileUseCase {
 export interface Generate2FAUseCase {
     execute(userId: string): Promise<{
         secret: string;
-        qrCodeUrl: string;
+        qrCode: string;
     }>;
 }
 

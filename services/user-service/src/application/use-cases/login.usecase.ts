@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User, PasswordHelper } from '../../domain/entities/user.entity.js';
-import { UserRepository } from '../../domain/ports.js';
+import { UserRepository, TwoFAService } from '../../domain/ports.js';
 import type { JWTConfig } from '@transcendence/shared-utils';
 import { LoginUseCaseInput, LoginUseCaseOutput } from '../dto/auth.dto.js';
 
@@ -11,7 +11,8 @@ export interface JWTService {
 export class LoginUseCase {
     constructor(
         private userRepository: UserRepository,
-        private jwtService: JWTService
+        private jwtService: JWTService,
+        private twoFAService?: TwoFAService
     ) { }
 
     async execute(input: LoginUseCaseInput): Promise<LoginUseCaseOutput> {
@@ -35,6 +36,22 @@ export class LoginUseCase {
         const isPasswordValid = await PasswordHelper.verify(input.password, user.passwordHash);
         if (!isPasswordValid) {
             throw new Error('Invalid credentials');
+        }
+
+        if (user.is2FAEnabled) {
+            if (!this.twoFAService) {
+                throw new Error('2FA service unavailable');
+            }
+            if (!input.totpCode) {
+                throw new Error('Two-factor authentication required');
+            }
+            if (!user.twoFASecret) {
+                throw new Error('Two-factor authentication not configured');
+            }
+            const isTokenValid = this.twoFAService.verifyToken(user.twoFASecret, input.totpCode);
+            if (!isTokenValid) {
+                throw new Error('Invalid 2FA token');
+            }
         }
 
         // Generate JWT token using Vault secrets

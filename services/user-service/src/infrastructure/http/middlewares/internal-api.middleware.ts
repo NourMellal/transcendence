@@ -1,37 +1,60 @@
 /**
  * Internal API middleware
  * Validates that requests come from API Gateway with valid internal API key
- * Fetches the key from Vault for enhanced security
+ * Fetches the key from Vault once and caches it for the process lifetime
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { VaultClient } from '@transcendence/shared-utils';
+import { createUserServiceVault } from '@transcendence/shared-utils';
 
+let vaultHelper: ReturnType<typeof createUserServiceVault> | null = null;
+let vaultInitialized = false;
 let cachedInternalApiKey: string | null = null;
+let fetchingInternalApiKey: Promise<string | null> | null = null;
 
-/**
- * Initialize and cache the internal API key from Vault
- */
-async function getInternalApiKey(): Promise<string | null> {
+async function loadInternalApiKey(): Promise<string | null> {
     if (cachedInternalApiKey) {
         return cachedInternalApiKey;
     }
 
-    try {
-        const vault = new VaultClient({
-            address: process.env.VAULT_ADDR || 'http://localhost:8200',
-            token: process.env.VAULT_TOKEN || 'dev-root-token',
-        });
+    if (!fetchingInternalApiKey) {
+        fetchingInternalApiKey = (async () => {
+            let key: string | null = null;
 
-        await vault.initialize();
-        const secrets = await vault.getSecret('secret/user-service');
-        cachedInternalApiKey = secrets.data.INTERNAL_API_KEY || null;
-        return cachedInternalApiKey;
-    } catch (error) {
-        console.error('[Vault] Failed to fetch INTERNAL_API_KEY:', error);
-        // Fallback to environment variable
-        return process.env.INTERNAL_API_KEY || null;
+            try {
+                // Lazy initialization of vaultHelper
+                if (!vaultHelper) {
+                    vaultHelper = createUserServiceVault();
+                }
+
+                if (!vaultInitialized) {
+                    await vaultHelper.initialize();
+                    vaultInitialized = true;
+                }
+
+                const config = await vaultHelper.getServiceConfig();
+                key = (config.internal_api_key ?? config.internalApiKey ?? process.env.INTERNAL_API_KEY ?? null) as string | null;
+
+                if (!key) {
+                    console.warn('[Security] INTERNAL_API_KEY missing in Vault configuration and environment.');
+                }
+            } catch (error) {
+                console.warn('[Security] Failed to load INTERNAL_API_KEY from Vault:', error);
+                key = process.env.INTERNAL_API_KEY || null;
+            }
+
+            if (!key && process.env.NODE_ENV === 'development') {
+                console.warn('[Security] Allowing requests without INTERNAL_API_KEY in development mode.');
+            }
+
+            cachedInternalApiKey = key;
+            return key;
+        })().finally(() => {
+            fetchingInternalApiKey = null;
+        });
     }
+
+    return fetchingInternalApiKey;
 }
 
 /**
@@ -42,11 +65,22 @@ export async function validateInternalApiKey(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    const INTERNAL_API_KEY = await getInternalApiKey();
-
-    // In development mode, allow requests without key
-    if (process.env.NODE_ENV === 'development' && !INTERNAL_API_KEY) {
+    // In development mode without SKIP_INTERNAL_API_CHECK, skip validation entirely
+    // This allows direct testing of the service without going through the gateway
+    if (process.env.NODE_ENV === 'development' && process.env.SKIP_INTERNAL_API_CHECK !== 'false') {
+        request.log.debug('Skipping internal API key validation in development mode.');
         return;
+    }
+
+    const INTERNAL_API_KEY = await loadInternalApiKey();
+
+    if (!INTERNAL_API_KEY) {
+        request.log.error('INTERNAL_API_KEY is not configured. Rejecting request.');
+        return reply.code(500).send({
+            statusCode: 500,
+            error: 'Internal Server Error',
+            message: 'Internal API key is not configured',
+        });
     }
 
     const apiKey = request.headers['x-internal-api-key'] as string;

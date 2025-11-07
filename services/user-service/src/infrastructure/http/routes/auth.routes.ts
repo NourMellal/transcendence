@@ -1,12 +1,26 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AuthController } from '../controllers/auth.controller.js';
 import { validateInternalApiKey } from '../middlewares/internal-api.middleware.js';
-import { SignupRequestDTO, LoginRequestDTO } from '../../../application/dto/auth.dto.js';
+import { SignupRequestDTO, LoginRequestDTO, Enable2FARequestDTO, Disable2FARequestDTO } from '../../../application/dto/auth.dto.js';
 
 export function registerAuthRoutes(
     fastify: FastifyInstance,
     authController: AuthController
 ) {
+    // GET /auth/42/login - Start OAuth flow
+    fastify.get('/auth/42/login', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest, reply: FastifyReply) => {
+        return authController.oauth42Login(request, reply);
+    });
+
+    // GET /auth/42/callback - Handle OAuth callback
+    fastify.get('/auth/42/callback', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest, reply: FastifyReply) => {
+        return authController.oauth42Callback(request as FastifyRequest<{ Querystring: { code?: string; state?: string; } }>, reply);
+    });
+
     // POST /auth/signup - Register new user
     fastify.post<{ Body: SignupRequestDTO }>('/auth/signup', {
         preHandler: [validateInternalApiKey]
@@ -33,6 +47,27 @@ export function registerAuthRoutes(
         preHandler: [validateInternalApiKey]
     }, async (request: FastifyRequest, reply: FastifyReply) => {
         return authController.logout(request, reply);
+    });
+
+    // POST /auth/2fa/generate - Generate 2FA secret
+    fastify.post('/auth/2fa/generate', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest, reply: FastifyReply) => {
+        return authController.generate2FA(request, reply);
+    });
+
+    // POST /auth/2fa/enable - Enable 2FA
+    fastify.post<{ Body: Enable2FARequestDTO }>('/auth/2fa/enable', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest<{ Body: Enable2FARequestDTO }>, reply: FastifyReply) => {
+        return authController.enable2FA(request, reply);
+    });
+
+    // POST /auth/2fa/disable - Disable 2FA
+    fastify.post<{ Body: Disable2FARequestDTO }>('/auth/2fa/disable', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest<{ Body: Disable2FARequestDTO }>, reply: FastifyReply) => {
+        return authController.disable2FA(request, reply);
     });
 
     fastify.log.info('✅ Auth routes registered');
