@@ -1,0 +1,76 @@
+Game:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "game-123e4567"
+    player1:
+      type: string
+      format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    player2:
+      type: string
+      format: uuid
+      nullable: true
+      example: "123e4567-e89b-12d3-a456-426614174001"
+    status:
+      type: string
+      enum: [WAITING, PLAYING, FINISHED, CANCELLED]
+      example: WAITING
+    score:
+      type: object
+      properties:
+        player1:
+          type: integer
+          example: 5
+        player2:
+          type: integer
+          example: 3
+    winner:
+      type: string
+      format: uuid
+      nullable: true
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    createdAt:
+      type: string
+      format: date-time
+      example: "2025-10-22T10:00:00Z"
+    finishedAt:
+      type: string
+      format: date-time
+      nullable: true
+      example: "2025-10-22T10:15:00Z"
+  required: [id, player1, status, score, createdAt]
+
+CreateGameRequest:
+  type: object
+  properties:
+    gameMode:
+      type: string
+      enum: [CLASSIC, TOURNAMENT]
+      example: CLASSIC
+    isPrivate:
+      type: boolean
+      example: false
+
+JoinGameRequest:
+  type: object
+  properties:
+    gameId:
+      type: string
+      format: uuid
+      example: "game-123e4567"
+
+GameMove:
+  type: object
+  properties:
+    playerId:
+      type: string
+      format: uuid
+    direction:
+      type: string
+      enum: [UP, DOWN, STOP]
+    timestamp:
+      type: string
+      format: date-time

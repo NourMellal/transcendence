@@ -1,0 +1,43 @@
+{
+    "name": "@transcendence/api-gateway",
+    "version": "1.0.0",
+    "description": "API Gateway for Transcendence microservices",
+    "main": "dist/server.js",
+    "type": "module",
+    "scripts": {
+        "bundle:openapi": "redocly bundle ../../docs/api/openapi.yaml -o openapi.bundled.json",
+        "types:generate": "openapi-typescript ../../docs/api/openapi.yaml -o src/types/openapi.d.ts",
+        "types:watch": "openapi-typescript ../../docs/api/openapi.yaml -o src/types/openapi.d.ts --watch",
+        "prebuild": "pnpm bundle:openapi && pnpm types:generate",
+        "predev": "pnpm bundle:openapi",
+        "dev": "concurrently \"pnpm types:watch\" \"tsx watch src/server.ts\"",
+        "dev:server": "tsx watch src/server.ts",
+        "build": "tsc",
+        "start": "node dist/server.js"
+    },
+    "dependencies": {
+        "@fastify/cors": "^8.5.0",
+        "@fastify/http-proxy": "^9.5.0",
+        "@fastify/jwt": "^7.2.4",
+        "@fastify/rate-limit": "^9.1.0",
+        "@fastify/swagger": "^8.15.0",
+        "@fastify/swagger-ui": "^4.1.0",
+        "@fastify/websocket": "^10.0.1",
+        "@transcendence/shared-utils": "workspace:*",
+        "@transcendence/shared-validation": "workspace:*",
+        "dotenv": "^16.3.1",
+        "fastify": "^4.26.0",
+        "fastify-plugin": "^4.5.1",
+        "jsonwebtoken": "^9.0.2",
+        "zod": "^3.22.4"
+    },
+    "devDependencies": {
+        "@redocly/cli": "^2.10.0",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^20.19.17",
+        "concurrently": "^9.2.1",
+        "openapi-typescript": "^7.10.1",
+        "tsx": "^4.20.5",
+        "typescript": "^5.3.3"
+    }
+}

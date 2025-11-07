@@ -1,0 +1,22 @@
+{
+    "name": "@transcendence/shared-utils",
+    "version": "1.0.0",
+    "description": "Shared utilities for Transcendence microservices",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest"
+    },
+    "dependencies": {
+        "@transcendence/shared-types": "workspace:*",
+        "node-vault": "^0.10.9"
+    },
+    "devDependencies": {
+        "@types/node-vault": "^0.9.13",
+        "typescript": "^5.3.3",
+        "vitest": "^3.2.4"
+    }
+}

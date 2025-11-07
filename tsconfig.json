@@ -1,29 +1,21 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-
-    /* Path mapping */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@transcendence/shared-types": ["./packages/shared-types/src"],
+      "@transcendence/shared-utils": ["./packages/shared-utils/src"],
+      "@transcendence/shared-validation": ["./packages/shared-validation/src"]
     }
   },
-  "include": ["src/**/*", "vite.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "references": [
+    { "path": "./packages/shared-types" },
+    { "path": "./packages/shared-utils" },
+    { "path": "./packages/shared-validation" },
+    { "path": "./services/chat-service" },
+    { "path": "./services/game-service" },
+    { "path": "./services/tournament-service" },
+    { "path": "./services/user-service" }
+  ],
+  "files": [],
+  "include": []
 }
