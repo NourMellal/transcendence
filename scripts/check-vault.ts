@@ -6,11 +6,12 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { existsSync, mkdirSync, copyFileSync } from 'fs';
+import { join } from 'path';
 
 const execAsync = promisify(exec);
 
 const VAULT_URL = 'http://localhost:8200';
-const REDIS_PORT = 6379;
 
 async function checkVault() {
   try {
@@ -100,31 +101,73 @@ async function startRedis() {
   }
 }
 
+async function setupServiceEnvironments() {
+  console.log('\n🔧 Setting up service environments...');
+
+  const services = [
+    { name: 'user-service', needsDataDir: true },
+    { name: 'game-service' },
+    { name: 'chat-service' },
+    { name: 'tournament-service' },
+    { name: 'api-gateway' }
+  ];
+
+  for (const service of services) {
+    const servicePath = join(process.cwd(), 'services', service.name);
+    const infrastructurePath = join(process.cwd(), 'infrastructure', service.name);
+
+    const basePath = existsSync(servicePath)
+      ? servicePath
+      : existsSync(infrastructurePath)
+        ? infrastructurePath
+        : null;
+
+    if (!basePath) continue;
+
+    const envPath = join(basePath, '.env');
+    const envExamplePath = join(basePath, '.env.example');
+
+    if (!existsSync(envPath) && existsSync(envExamplePath)) {
+      copyFileSync(envExamplePath, envPath);
+      try {
+        await execAsync(`sed -i 's/\\r$//' "${envPath}"`);
+      } catch {
+        // sed may not be available; ignore CRLF fix in that case
+      }
+      console.log(`  ✅ Created .env for ${service.name}`);
+    }
+
+    if (service.needsDataDir) {
+      const dataPath = join(basePath, 'data');
+      if (!existsSync(dataPath)) {
+        mkdirSync(dataPath, { recursive: true });
+        console.log(`  ✅ Created data directory for ${service.name}`);
+      }
+    }
+  }
+
+  console.log('✅ Service environments ready');
+}
+
 async function main() {
   console.log('🔍 Checking prerequisites...\n');
   
   const vaultRunning = await checkVault();
   const redisRunning = await checkRedis();
   
-  if (vaultRunning && redisRunning) {
-    console.log('✅ Vault is running');
-    console.log('✅ Redis is running');
-    console.log('\n🚀 All systems ready!\n');
-    return;
-  }
-  
-  // Start what's needed
   if (!vaultRunning) {
     await startVault();
   } else {
     console.log('✅ Vault is running');
   }
-  
+
   if (!redisRunning) {
     await startRedis();
   } else {
     console.log('✅ Redis is running');
   }
+
+  await setupServiceEnvironments();
   
   console.log('\n🚀 All systems ready!\n');
 }

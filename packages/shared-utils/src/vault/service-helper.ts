@@ -212,36 +212,36 @@ export function createVaultHelper(
 
 export const createUserServiceVault = () =>
     createVaultHelper('user-service', {
-        database: 'secret/database/user-service',
-        jwt: 'secret/jwt/auth',
-        api: 'secret/api/oauth',
-        config: 'secret/security/config',
+        database: 'secret/data/database/user-service',
+        jwt: 'secret/data/jwt/auth',
+        api: 'secret/data/api/oauth',
+        config: 'secret/data/security/config',
     });
 
 export const createGameServiceVault = () =>
     createVaultHelper('game-service', {
-        database: 'secret/database/game-service',
-        jwt: 'secret/jwt/game',
-        config: 'secret/game/config',
+        database: 'secret/data/database/game-service',
+        jwt: 'secret/data/jwt/game',
+        config: 'secret/data/game/config',
     });
 
 export const createChatServiceVault = () =>
     createVaultHelper('chat-service', {
-        database: 'secret/database/chat-service',
-        jwt: 'secret/jwt/auth',
-        config: 'secret/chat/config',
+        database: 'secret/data/database/chat-service',
+        jwt: 'secret/data/jwt/auth',
+        config: 'secret/data/chat/config',
     });
 
 export const createTournamentServiceVault = () =>
     createVaultHelper('tournament-service', {
-        database: 'secret/database/tournament-service',
-        jwt: 'secret/jwt/auth',
-        config: 'secret/game/config',
+        database: 'secret/data/database/tournament-service',
+        jwt: 'secret/data/jwt/auth',
+        config: 'secret/data/game/config',
     });
 
 export const createAPIGatewayVault = () =>
     createVaultHelper('api-gateway', {
-        jwt: 'secret/jwt/auth',
-        api: 'secret/api/oauth',
-        config: 'secret/gateway/config',
+        jwt: 'secret/data/jwt/auth',
+        api: 'secret/data/api/oauth',
+        config: 'secret/data/gateway/config',
     });

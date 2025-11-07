@@ -15,8 +15,8 @@ import websocket from '@fastify/websocket';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { readFileSync } from 'fs';
-import { getEnvVar, getEnvVarAsNumber, createAPIGatewayVault } from '@transcendence/shared-utils';
 import { initializeVaultJWTService } from './utils/vault-jwt.service.js';
+import { loadGatewayConfig } from './config/gateway-config.js';
 
 // Import route handlers
 import { registerAuthRoutes } from './routes/auth.routes.js';
@@ -31,54 +31,9 @@ const openApiSpec = JSON.parse(
     readFileSync(join(__dirname, '../openapi.bundled.json'), 'utf-8')
 );
 
-// Load configuration with Vault integration
-async function loadConfiguration() {
-    const vault = createAPIGatewayVault();
-
-    try {
-        await vault.initialize();
-
-        // Get gateway-specific configuration from Vault
-        const gatewayConfig = await vault.getServiceConfig();
-
-        return {
-            PORT: getEnvVarAsNumber('GATEWAY_PORT', 3000),
-            // Service URLs
-            USER_SERVICE_URL: getEnvVar('USER_SERVICE_URL', 'http://localhost:3001'),
-            GAME_SERVICE_URL: getEnvVar('GAME_SERVICE_URL', 'http://localhost:3002'),
-            CHAT_SERVICE_URL: getEnvVar('CHAT_SERVICE_URL', 'http://localhost:3003'),
-            TOURNAMENT_SERVICE_URL: getEnvVar('TOURNAMENT_SERVICE_URL', 'http://localhost:3004'),
-            // Rate limiting from Vault
-            RATE_LIMIT_MAX: gatewayConfig.rateLimitMax || 100,
-            RATE_LIMIT_WINDOW: gatewayConfig.rateLimitWindow || '1 minute',
-            // CORS configuration from Vault
-            CORS_ORIGINS: gatewayConfig.corsOrigins?.split(',') || ['http://localhost:3000'],
-            // Internal API keys for service communication
-            INTERNAL_API_KEY: gatewayConfig.internalApiKey,
-            vault
-        };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.warn('Vault not available, using environment variables:', errorMessage);
-        // FALLBACK TO ENVIRONMENT VARIABLES IF VAULT IS UNAVAILABLE
-        return {
-            PORT: getEnvVarAsNumber('GATEWAY_PORT', 3000),
-            USER_SERVICE_URL: getEnvVar('USER_SERVICE_URL', 'http://localhost:3001'),
-            GAME_SERVICE_URL: getEnvVar('GAME_SERVICE_URL', 'http://localhost:3002'),
-            CHAT_SERVICE_URL: getEnvVar('CHAT_SERVICE_URL', 'http://localhost:3003'),
-            TOURNAMENT_SERVICE_URL: getEnvVar('TOURNAMENT_SERVICE_URL', 'http://localhost:3004'),
-            RATE_LIMIT_MAX: getEnvVarAsNumber('RATE_LIMIT_MAX', 100),
-            RATE_LIMIT_WINDOW: getEnvVar('RATE_LIMIT_WINDOW', '1 minute'),
-            CORS_ORIGINS: getEnvVar('CORS_ORIGINS', 'http://localhost:3000').split(','),
-            INTERNAL_API_KEY: getEnvVar('INTERNAL_API_KEY'),
-            vault: null
-        };
-    }
-}
-
 async function createGateway() {
     // Load configuration with Vault integration
-    const config = await loadConfiguration();
+    const config = await loadGatewayConfig();
 
     // Initialize Vault JWT Service
     await initializeVaultJWTService();
@@ -113,7 +68,7 @@ async function createGateway() {
     });
 
     // Log configuration status
-    if (config.vault) {
+    if (config.usingVault) {
         app.log.info('✅ API Gateway initialized with Vault integration');
         app.log.info('🔐 Using security configuration from Vault');
     } else {
@@ -122,7 +77,7 @@ async function createGateway() {
 
     // Enable CORS with Vault configuration
     await app.register(cors, {
-        origin: config.CORS_ORIGINS,
+        origin: config.corsOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
@@ -132,8 +87,8 @@ async function createGateway() {
 
     // Rate limiting with Vault configuration
     await app.register(rateLimit, {
-        max: config.RATE_LIMIT_MAX,
-        timeWindow: config.RATE_LIMIT_WINDOW,
+        max: config.rateLimitMax,
+        timeWindow: config.rateLimitWindow,
         cache: 10000,
         allowList: ['127.0.0.1'],
         redis: undefined, // Can be configured later for distributed rate limiting
@@ -234,24 +189,24 @@ async function createGateway() {
     });
 
     // Register route handlers with new architecture
-    await registerAuthRoutes(app, config.USER_SERVICE_URL, config.INTERNAL_API_KEY);
-    await registerUserRoutes(app, config.USER_SERVICE_URL, config.INTERNAL_API_KEY);
-    await registerGameRoutes(app, config.GAME_SERVICE_URL, config.INTERNAL_API_KEY);
-    await registerChatRoutes(app, config.CHAT_SERVICE_URL, config.INTERNAL_API_KEY);
-    await registerTournamentRoutes(app, config.TOURNAMENT_SERVICE_URL, config.INTERNAL_API_KEY);
-    await registerStatsRoutes(app, config.USER_SERVICE_URL, config.INTERNAL_API_KEY);
+    await registerAuthRoutes(app, config.userServiceUrl, config.internalApiKey);
+    await registerUserRoutes(app, config.userServiceUrl, config.internalApiKey);
+    await registerGameRoutes(app, config.gameServiceUrl, config.internalApiKey);
+    await registerChatRoutes(app, config.chatServiceUrl, config.internalApiKey);
+    await registerTournamentRoutes(app, config.tournamentServiceUrl, config.internalApiKey);
+    await registerStatsRoutes(app, config.userServiceUrl, config.internalApiKey);
 
     // WebSocket proxy routes (these bypass validation middleware)
     await app.register(async (fastify) => {
         await fastify.register(proxy, {
-            upstream: config.GAME_SERVICE_URL,
+            upstream: config.gameServiceUrl,
             prefix: '/api/games/ws',
             websocket: true,
             replyOptions: {
                 rewriteRequestHeaders: (originalReq, headers) => {
                     return {
                         ...headers,
-                        'x-internal-api-key': config.INTERNAL_API_KEY,
+                        'x-internal-api-key': config.internalApiKey,
                         'x-forwarded-by': 'transcendence-gateway',
                     };
                 }
@@ -261,14 +216,14 @@ async function createGateway() {
 
     await app.register(async (fastify) => {
         await fastify.register(proxy, {
-            upstream: config.CHAT_SERVICE_URL,
+            upstream: config.chatServiceUrl,
             prefix: '/api/chat/ws',
             websocket: true,
             replyOptions: {
                 rewriteRequestHeaders: (originalReq, headers) => {
                     return {
                         ...headers,
-                        'x-internal-api-key': config.INTERNAL_API_KEY,
+                        'x-internal-api-key': config.internalApiKey,
                         'x-forwarded-by': 'transcendence-gateway',
                     };
                 }
@@ -283,16 +238,16 @@ async function createGateway() {
         const startTime = Date.now();
 
         const healthChecks = await Promise.allSettled([
-            fetch(`${config.USER_SERVICE_URL}/health`, {
+            fetch(`${config.userServiceUrl}/health`, {
                 signal: AbortSignal.timeout(5000)
             }),
-            fetch(`${config.GAME_SERVICE_URL}/health`, {
+            fetch(`${config.gameServiceUrl}/health`, {
                 signal: AbortSignal.timeout(5000)
             }),
-            fetch(`${config.CHAT_SERVICE_URL}/health`, {
+            fetch(`${config.chatServiceUrl}/health`, {
                 signal: AbortSignal.timeout(5000)
             }),
-            fetch(`${config.TOURNAMENT_SERVICE_URL}/health`, {
+            fetch(`${config.tournamentServiceUrl}/health`, {
                 signal: AbortSignal.timeout(5000)
             })
         ]);
@@ -359,7 +314,7 @@ async function start() {
         const { app, config } = await createGateway();
 
         await app.listen({
-            port: config.PORT,
+            port: config.port,
             host: '0.0.0.0'
         });
 
@@ -367,19 +322,19 @@ async function start() {
         console.log('🚀 ═══════════════════════════════════════════════════════');
         console.log('🎮 Transcendence API Gateway v2.0');
         console.log('═══════════════════════════════════════════════════════');
-        console.log(`📍 Gateway URL: http://localhost:${config.PORT}`);
-        console.log(`📚 API Docs:    http://localhost:${config.PORT}/api/docs/`);
-        console.log(`💚 Health:      http://localhost:${config.PORT}/health`);
+        console.log(`📍 Gateway URL: http://localhost:${config.port}`);
+        console.log(`📚 API Docs:    http://localhost:${config.port}/api/docs/`);
+        console.log(`💚 Health:      http://localhost:${config.port}/health`);
         console.log('═══════════════════════════════════════════════════════');
         console.log('📡 Proxied Services:');
-        console.log(`   • User Service:       ${config.USER_SERVICE_URL}`);
-        console.log(`   • Game Service:       ${config.GAME_SERVICE_URL}`);
-        console.log(`   • Chat Service:       ${config.CHAT_SERVICE_URL}`);
-        console.log(`   • Tournament Service: ${config.TOURNAMENT_SERVICE_URL}`);
+        console.log(`   • User Service:       ${config.userServiceUrl}`);
+        console.log(`   • Game Service:       ${config.gameServiceUrl}`);
+        console.log(`   • Chat Service:       ${config.chatServiceUrl}`);
+        console.log(`   • Tournament Service: ${config.tournamentServiceUrl}`);
         console.log('═══════════════════════════════════════════════════════');
         console.log(`🔒 Security: Defense-in-depth (Rate Limit + Schema Validation + JWT Auth)`);
-        console.log(`⚡ Rate Limiting: ${config.RATE_LIMIT_MAX} req/${config.RATE_LIMIT_WINDOW}`);
-        console.log(`🌐 CORS Origins: ${config.CORS_ORIGINS.join(', ')}`);
+        console.log(`⚡ Rate Limiting: ${config.rateLimitMax} req/${config.rateLimitWindow}`);
+        console.log(`🌐 CORS Origins: ${config.corsOrigins.join(', ')}`);
         console.log('═══════════════════════════════════════════════════════');
         console.log('');
     } catch (error) {

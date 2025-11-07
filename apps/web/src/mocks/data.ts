@@ -11,8 +11,8 @@ export const mockUser: User = {
 };
 
 // State management for mock
-export let currentUser: User | null = mockUser;
-export let isAuthenticated = true;
+export let currentUser: User | null = null;
+export let isAuthenticated = false;
 
 export function setCurrentUser(user: User | null) {
   currentUser = user;
