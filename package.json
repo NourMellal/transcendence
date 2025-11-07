@@ -33,13 +33,12 @@
     "vitest": "^3.2.4"
   },
   "scripts": {
-    "predev:all": "node scripts/check-vault.js && bash docs/assets/setup-service.sh",
+    "predev:all": "tsx scripts/check-vault.ts",
     "dev:user": "pnpm --filter @transcendence/user-service dev",
     "dev:game": "pnpm --filter @transcendence/game-service dev",
     "dev:chat": "pnpm --filter @transcendence/chat-service dev",
     "dev:tournament": "pnpm --filter @transcendence/tournament-service dev",
     "dev:gateway": "pnpm --filter @transcendence/api-gateway dev",
-    "dev:web": "pnpm --filter @transcendence/web dev",
     "dev:all": "pnpm --parallel dev",
     "build": "pnpm --recursive build",
     "test": "pnpm --recursive test",
@@ -64,5 +63,5 @@
     "url": "https://github.com/NourMellal/transcendence/issues"
   },
   "homepage": "https://github.com/NourMellal/transcendence#readme",
-  "packageManager": "pnpm@10.20.0"
+  "packageManager": "pnpm@9.1.0+sha512.67f5879916a9293e5cf059c23853d571beaf4f753c707f40cb22bed5fb1578c6aad3b6c4107ccb3ba0b35be003eb621a16471ac836c87beb53f9d54bb4612724"
 }
