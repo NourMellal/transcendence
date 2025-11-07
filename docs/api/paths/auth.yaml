@@ -111,7 +111,7 @@
     operationId: Auth_logout
     summary: Log out current user
     responses:
-      '204':
+      '200':
         description: Logged out successfully
 
 /auth/2fa/generate:
@@ -145,5 +145,24 @@
         description: 2FA enabled successfully
       '400':
         description: Invalid TOTP code
+      '401':
+        description: Not authenticated
+
+/auth/2fa/disable:
+  post:
+    tags: [TwoFA]
+    operationId: Auth_disable2FA
+    summary: Disable 2FA for current user
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/Enable2FARequest'
+    responses:
+      '200':
+        description: 2FA disabled successfully
+      '400':
+        description: Invalid TOTP code or 2FA not enabled
       '401':
         description: Not authenticated
