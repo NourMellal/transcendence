@@ -1,5 +1,6 @@
-import { SqliteUserRepo } from './adapters/persistence/sqlite/user.repo';
-import { SqliteSessionStore } from './adapters/persistence/session.store';
+// MOCK APPLICATION SETUP - Replace mock implementations with real ones for production
+import { MockSqliteUserRepo } from './adapters/persistence/sqlite/user.repo';
+import { MockSqliteSessionStore } from './adapters/persistence/session.store';
 import { OtpTwoFAService } from './adapters/external/twofa-service';
 import { LocalImageStore } from './adapters/external/image-store';
 import { FortyTwoOAuthClient } from './adapters/external/oauth42-client';
@@ -14,9 +15,9 @@ import { env } from './config';
 // TODO: Initialize DB
 const db = null;
 
-// Adapters
-const userRepo = new SqliteUserRepo(db);
-const sessionStore = new SqliteSessionStore(db);
+// MOCK Adapters - Replace with real implementations for production
+const userRepo = new MockSqliteUserRepo(db);
+const sessionStore = new MockSqliteSessionStore(db);
 const twoFAService = new OtpTwoFAService(null); // TODO: otplib
 const imageStore = new LocalImageStore(env.UPLOAD_DIR);
 const oauth42Client = new FortyTwoOAuthClient(

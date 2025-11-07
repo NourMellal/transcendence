@@ -7,6 +7,7 @@ export interface OAuth42Client {
   }>;
 }
 
+// MOCK IMPLEMENTATION - Replace with real 42 API integration for production
 export class FortyTwoOAuthClient implements OAuth42Client {
   constructor(
     private clientId: string,
@@ -15,8 +16,9 @@ export class FortyTwoOAuthClient implements OAuth42Client {
   ) {}
 
   async exchangeCode(code: string): Promise<{ access_token: string }> {
-    // Implement token exchange with 42 API
-    return { access_token: '' };
+    // MOCK: In production, exchange code with 42 API using clientId, clientSecret, redirectUri
+    console.log(`MOCK: Exchanging code ${code} for access token`);
+    return { access_token: 'mock_access_token_12345' };
   }
 
   async getUserInfo(accessToken: string): Promise<{
@@ -24,7 +26,12 @@ export class FortyTwoOAuthClient implements OAuth42Client {
     email: string;
     login: string;
   }> {
-    // Implement user info fetch from 42 API
-    return { id: 0, email: '', login: '' };
+    // MOCK: In production, fetch user info from 42 API using accessToken
+    console.log(`MOCK: Fetching user info with token ${accessToken}`);
+    return { 
+      id: 42000, 
+      email: 'mock.user@student.42.fr', 
+      login: 'mockuser' 
+    };
   }
 }
