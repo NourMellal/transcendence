@@ -26,9 +26,6 @@ importers:
       otplib:
         specifier: ^12.0.1
         version: 12.0.1
-      qrcode:
-        specifier: ^1.5.4
-        version: 1.5.4
       sqlite:
         specifier: ^5.1.1
         version: 5.1.1

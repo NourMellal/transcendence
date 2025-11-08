@@ -14,6 +14,18 @@ set -e
 VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
 VAULT_TOKEN="${VAULT_TOKEN:-dev-root-token}"
 
+# Generate or reuse the internal API key so every service shares the same value
+if [ -z "${INTERNAL_API_KEY:-}" ]; then
+    if command -v openssl >/dev/null 2>&1; then
+        INTERNAL_API_KEY="$(openssl rand -hex 32)"
+    else
+        INTERNAL_API_KEY="$(head -c 32 /dev/urandom | xxd -p | head -c 64)"
+    fi
+    GENERATED_INTERNAL_API_KEY=1
+else
+    GENERATED_INTERNAL_API_KEY=0
+fi
+
 echo "🔐 Starting Simple Vault Setup for PFE..."
 echo ""
 
@@ -183,7 +195,19 @@ curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
             "rateLimitMax": "100",
             "rateLimitWindow": "1 minute"
         }
-    }' > /dev/null
+    }" > /dev/null
+
+# =================================================================
+# STEP 7: Store shared security configuration
+# =================================================================
+echo "📝 Storing shared security configuration..."
+curl -s -X POST -H "X-Vault-Token: $VAULT_TOKEN" \
+    "$VAULT_ADDR/v1/secret/data/security/config" \
+    -d "{
+        \"data\": {
+            \"internal_api_key\": \"${INTERNAL_API_KEY}\"
+        }
+    }" > /dev/null
 
 # =================================================================
 # STEP 8: Apply API Gateway Policy (REQUIRED)
@@ -222,6 +246,7 @@ echo "   • Database configurations (SQLite + Redis)"
 echo "   • Game service settings"
 echo "   • Chat service settings"
 echo "   • API Gateway settings"
+echo "   • Shared security settings (Internal API key)"
 echo ""
 echo "🔐 Security Policy Applied:"
 echo "   • API Gateway policy enforced (least privilege access)"
@@ -232,6 +257,14 @@ echo ""
 echo "⚠️  IMPORTANT: Update your .env file with this token:"
 echo "   VAULT_TOKEN=$GATEWAY_TOKEN"
 echo ""
+echo "$INTERNAL_API_KEY" > /tmp/internal-api-key.txt
+echo "🔑 Internal API Key: $INTERNAL_API_KEY"
+echo "   • Saved to: /tmp/internal-api-key.txt"
+echo ""
+if [ "$GENERATED_INTERNAL_API_KEY" -eq 1 ]; then
+    echo "💡 Tip: export INTERNAL_API_KEY=\"$INTERNAL_API_KEY\" before rerunning to reuse this value."
+    echo ""
+fi
 echo "⚠️  IMPORTANT: Update OAuth 42 Credentials!"
 echo "   1. Get your credentials from: https://profile.intra.42.fr/oauth/applications"
 echo "   2. Update them in Vault:"
