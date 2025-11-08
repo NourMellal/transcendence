@@ -34,7 +34,7 @@
     "vitest": "^3.2.4"
   },
   "scripts": {
-    "predev:all": "node scripts/check-vault.js && bash docs/assets/setup-service.sh",
+    "predev:all": "node scripts/check-vault.js && bash scripts/setup-service.sh",
     "dev:user": "pnpm --filter @transcendence/user-service dev",
     "dev:game": "pnpm --filter @transcendence/game-service dev",
     "dev:chat": "pnpm --filter @transcendence/chat-service dev",
