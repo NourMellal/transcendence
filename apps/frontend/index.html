@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ping Pong Sign In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .error-message {
+      color: #ef4444;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+    .input-error {
+      border-color: #ef4444 !important;
+    }
+  </style>
+</head>
+<body class="bg-[url('assets/bg.png')] bg-no-repeat bg-cover bg-center bg-fixed">
+  
+  <div class="min-h-screen flex items-center justify-center md:justify-end md:pr-40 p-4 bg-black bg-opacity-0">
+     <div id="signin-card" class="bg-white bg-opacity-50 backdrop-blur-sm rounded-lg shadow-lg p-8 w-full max-w-sm border border-gray-200/60 transform transition-all duration-500 opacity-0 translate-x-6">
+      
+      <div class="text-center mb-6"> 
+        <div class="flex justify-center items-center mb-2">
+          <img src="assets/title_black-removebg-preview.png" alt="Ping Pong" class="h-16 sm:h-20 md:h-24 mx-auto object-contain drop-shadow-lg transform transition-transform duration-300 hover:scale-105" />
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-semibold text-gray-900">Welcome Back!</h1>
+        <p class="text-sm text-gray-600">Sign in to continue.</p>
+      </div>
+
+      <form id="signin-form" class="space-y-4">
+        
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-800 mb-1">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <div id="email-error" class="error-message hidden"></div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-800 mb-1">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <div id="password-error" class="error-message hidden"></div>
+        </div>
+
+        <div class="flex items-center justify-between text-sm">
+          <div class="flex items-center">
+            <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+            <label for="remember-me" class="ml-2 block text-gray-900">Remember me</label>
+          </div>
+          <a href="#" class="font-medium text-blue-600 hover:text-blue-500">
+            Forgot password?
+          </a>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 rounded-md font-medium hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300"
+        >
+          Sign In
+        </button>
+
+        <div class="relative my-6">
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 text-gray-600">Or continue with</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          id="auth42-btn"
+          class="w-full bg-white text-black py-2 px-4 rounded-md font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-300 flex items-center justify-center gap-2"
+        >
+          <img src="assets/42-logo.svg" alt="42" class="w-5 h-5" />
+          Sign in with 42
+        </button>
+
+        <p class="mt-4 text-center text-sm text-gray-700">
+          Don't have an account?
+          <a href="signup.html" class="font-medium text-blue-600 hover:text-blue-500">
+            Sign Up
+          </a>
+        </p>
+        
+      </form>
+      
+    </div>
+  </div>
+
+  <script src="src/signin.js" type="module"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const card = document.getElementById('signin-card');
+        if (card) {
+          requestAnimationFrame(() => {
+            card.classList.remove('opacity-0', 'translate-x-6');
+            card.classList.add('opacity-100', 'translate-x-0');
+          });
+        }
+      });
+    </script>
+</body>
+</html>
