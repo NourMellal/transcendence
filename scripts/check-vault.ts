@@ -39,16 +39,8 @@ async function startVault() {
     console.log('✅ Vault started (existing container)');
   } catch (error) {
     // If that fails, create a new container
-    console.log('📦 Creating new Vault container...');
-    await execAsync(`
-      docker run -d \
-        --name vault-dev \
-        --cap-add=IPC_LOCK \
-        -e VAULT_DEV_ROOT_TOKEN_ID=dev-root-token \
-        -e VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200 \
-        -p 8200:8200 \
-        hashicorp/vault:1.18 server -dev
-    `);
+    console.log('📦 Creating new Vault container via docker compose...');
+    await execAsync('docker compose -f infrastructure/vault/docker-compose.yml up -d');
     console.log('✅ Vault created and started');
     
     // Wait for Vault to be ready

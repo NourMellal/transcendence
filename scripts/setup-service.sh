@@ -74,15 +74,8 @@ if ! curl -s "${VAULT_ADDR}/v1/sys/health" > /dev/null 2>&1; then
             echo -e "${GREEN}✅ Vault started${NC}"
         fi
     else
-        docker run -d \
-            --name vault-dev \
-            --cap-add=IPC_LOCK \
-            -e VAULT_DEV_ROOT_TOKEN_ID=dev-root-token \
-            -e VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200 \
-            -p 8200:8200 \
-            hashicorp/vault:1.18 server -dev
-        
-        echo -e "${GREEN}✅ Vault container created and started${NC}"
+        docker compose -f infrastructure/vault/docker-compose.yml up -d
+        echo -e "${GREEN}✅ Vault container created via docker compose${NC}"
     fi
     
     # Wait for Vault to be ready

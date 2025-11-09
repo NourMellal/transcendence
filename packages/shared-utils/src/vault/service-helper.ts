@@ -145,6 +145,37 @@ export class ServiceVaultHelper {
     }
 
     /**
+     * Get shared internal API key (single source of truth)
+     */
+    async getInternalApiKey(): Promise<string | null> {
+        const path = this.serviceConfig.secretPaths.internalApiKey;
+
+        if (!path || !this.initialized) {
+            return this.getInternalApiKeyFromEnv();
+        }
+
+        try {
+            const secret = await this.client.getSecret(path);
+            const key = this.extractInternalApiKey(secret.data);
+
+            if (!key) {
+                console.warn(
+                    `[${this.serviceConfig.serviceName}] Internal API key missing at ${path}, using environment fallback.`
+                );
+                return this.getInternalApiKeyFromEnv();
+            }
+
+            return key;
+        } catch (error) {
+            console.warn(
+                `[${this.serviceConfig.serviceName}] Failed to get internal API key from Vault, using environment:`,
+                (error as Error).message
+            );
+            return this.getInternalApiKeyFromEnv();
+        }
+    }
+
+    /**
      * Check if Vault is healthy
      */
     async isVaultHealthy(): Promise<boolean> {
@@ -193,6 +224,24 @@ export class ServiceVaultHelper {
             '42_client_secret': process.env.OAUTH_42_CLIENT_SECRET || '',
         };
     }
+
+    private getInternalApiKeyFromEnv(): string | null {
+        const key = process.env.INTERNAL_API_KEY;
+        return key && key.trim().length > 0 ? key.trim() : null;
+    }
+
+    private extractInternalApiKey(data: Record<string, any>): string | null {
+        const candidates = ['key', 'internal_api_key', 'internalApiKey', 'INTERNAL_API_KEY'];
+
+        for (const candidate of candidates) {
+            const value = data[candidate];
+            if (typeof value === 'string' && value.trim().length > 0) {
+                return value.trim();
+            }
+        }
+
+        return null;
+    }
 }
 
 /**
@@ -216,6 +265,7 @@ export const createUserServiceVault = () =>
         jwt: 'secret/jwt/auth',
         api: 'secret/api/oauth',
         config: 'secret/security/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createGameServiceVault = () =>
@@ -223,6 +273,7 @@ export const createGameServiceVault = () =>
         database: 'secret/database/game-service',
         jwt: 'secret/jwt/game',
         config: 'secret/game/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createChatServiceVault = () =>
@@ -230,6 +281,7 @@ export const createChatServiceVault = () =>
         database: 'secret/database/chat-service',
         jwt: 'secret/jwt/auth',
         config: 'secret/chat/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createTournamentServiceVault = () =>
@@ -237,6 +289,7 @@ export const createTournamentServiceVault = () =>
         database: 'secret/database/tournament-service',
         jwt: 'secret/jwt/auth',
         config: 'secret/game/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createAPIGatewayVault = () =>
@@ -244,4 +297,5 @@ export const createAPIGatewayVault = () =>
         jwt: 'secret/jwt/auth',
         api: 'secret/api/oauth',
         config: 'secret/gateway/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });

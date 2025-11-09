@@ -6,7 +6,8 @@
 | **OAuth 42** | 42 School login (MANDATORY) | `42_client_id: "u-s4t2..."` |
 | **Database Paths** | SQLite file locations | `host: "./user-service.db"` |
 | **Redis Config** | Connection to Redis | `host: "localhost", port: 6379` |
-| **Game Settings** | WebSocket secrets | `websocket_secret: "xyz..."` |t - Quick Overview
+| **Game Settings** | WebSocket secrets | `websocket_secret: "xyz..."` |
+| **Internal API Key** | Gateway ↔ services auth | `secret/shared/internal-api-key` |t - Quick Overview
 
 ## What You Need to Know (3 Minutes Read)
 
@@ -31,6 +32,7 @@ const password = await vault.getSecret();  // ✅ GOOD - secure!
 | **Database Paths** | SQLite file locations | `host: "./user-service.db"` |
 | **Redis Config** | Connection to Redis | `host: "localhost", port: 6379` |
 | **Game Settings** | WebSocket secrets | `websocket_secret: "xyz..."` |
+| **Internal API Key** | Gateway ↔ services auth | `secret/shared/internal-api-key` |
 
 ---
 
@@ -77,7 +79,7 @@ packages/shared-utils/src/vault/
 
 ```bash
 # Start Vault
-docker-compose up -d vault-dev
+docker compose -f infrastructure/vault/docker-compose.yml up -d
 
 # Store secrets
 bash infrastructure/vault/simple-setup.sh
@@ -156,7 +158,7 @@ This creates a policy so API Gateway can ONLY read `jwt/auth` and `gateway/confi
 
 | Problem | Solution |
 |---------|----------|
-| "Vault not running" | `docker-compose up -d vault-dev` |
+| "Vault not running" | `docker compose -f infrastructure/vault/docker-compose.yml up -d` |
 | "Connection refused" | Check Vault is on port 8200: `docker ps` |
 | "No secrets found" | Run: `bash infrastructure/vault/simple-setup.sh` |
 
