@@ -144,19 +144,23 @@ services:
       - transcendence-network
 
   vault:
-    image: hashicorp/vault:1.18
+    build:
+      context: infrastructure/vault
+      dockerfile: docker/Dockerfile
     container_name: transcendence-vault
-    ports:
-      - "8200:8200"
     environment:
       - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
       - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    ports:
+      - "8200:8200"
     cap_add:
       - IPC_LOCK
+    volumes:
+      - vault-data:/vault/data
+      - vault-logs:/vault/logs
     networks:
       - transcendence-network
     restart: unless-stopped
-    command: server -dev -dev-root-token-id=dev-root-token
 
 
   # Grafana for dashboards

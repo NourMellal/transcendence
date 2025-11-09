@@ -32,8 +32,7 @@ async function loadInternalApiKey(): Promise<string | null> {
                     vaultInitialized = true;
                 }
 
-                const config = await vaultHelper.getServiceConfig();
-                key = (config.internal_api_key ?? config.internalApiKey ?? process.env.INTERNAL_API_KEY ?? null) as string | null;
+                key = await vaultHelper.getInternalApiKey();
 
                 if (!key) {
                     console.warn('[Security] INTERNAL_API_KEY missing in Vault configuration and environment.');
@@ -100,8 +99,6 @@ export async function validateInternalApiKey(
         request.log.warn({
             providedKeyLength: apiKey.length,
             expectedKeyLength: INTERNAL_API_KEY.length,
-            providedKey: apiKey,
-            expectedKey: INTERNAL_API_KEY,
         }, 'Invalid internal API key provided');
         return reply.code(403).send({
             statusCode: 403,

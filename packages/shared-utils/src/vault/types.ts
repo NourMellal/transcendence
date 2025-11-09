@@ -38,6 +38,7 @@ export interface ServiceVaultConfig {
         jwt?: string;
         api?: string;
         config?: string;
+        internalApiKey?: string;
     };
 }
 
