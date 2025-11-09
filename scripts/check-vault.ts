@@ -120,10 +120,10 @@ async function setupServiceEnvironments() {
 
 async function main() {
   console.log('🔍 Checking prerequisites...\n');
-  
+
   const vaultRunning = await checkVault();
   const redisRunning = await checkRedis();
-  
+
   if (!vaultRunning) {
     await startVault();
   } else {
@@ -137,7 +137,7 @@ async function main() {
   }
 
   await setupServiceEnvironments();
-  
+
   console.log('\n🚀 All systems ready!\n');
 }
 
