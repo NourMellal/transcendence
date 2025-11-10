@@ -35,17 +35,26 @@ export async function loadGatewayConfig(): Promise<GatewayConfig> {
     const vault = createAPIGatewayVault();
     let usingVault = false;
     let secrets: NormalizedGatewaySecrets = {};
+    let internalApiKeyFromVault: string | null = null;
 
     try {
         await vault.initialize();
-        secrets = normalizeGatewaySecrets(await vault.getServiceConfig());
+        const [serviceConfig, sharedInternalKey] = await Promise.all([
+            vault.getServiceConfig(),
+            vault.getInternalApiKey()
+        ]);
+        secrets = normalizeGatewaySecrets(serviceConfig);
+        internalApiKeyFromVault = sharedInternalKey;
         usingVault = true;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         console.warn(`⚠️  API Gateway falling back to environment variables (Vault unavailable): ${message}`);
     }
 
-    const internalApiKey = ensureInternalApiKey(secrets.internalApiKey, process.env.INTERNAL_API_KEY);
+    const internalApiKey = ensureInternalApiKey(
+        internalApiKeyFromVault ?? secrets.internalApiKey,
+        process.env.INTERNAL_API_KEY
+    );
     const corsOrigins =
         secrets.corsOrigins ??
         parseOriginsInput(process.env.CORS_ORIGINS) ??

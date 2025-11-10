@@ -64,27 +64,10 @@ if ! curl -s "${VAULT_ADDR}/v1/sys/health" > /dev/null 2>&1; then
     echo -e "${RED}❌ Vault is not accessible at ${VAULT_ADDR}${NC}"
     echo ""
     echo "Starting Vault with Docker..."
-    
-    # Check if vault-dev container exists
-    if docker ps -a --format '{{.Names}}' | grep -q '^vault-dev$'; then
-        if docker ps --format '{{.Names}}' | grep -q '^vault-dev$'; then
-            echo -e "${GREEN}✅ Vault is already running${NC}"
-        else
-            docker start vault-dev
-            echo -e "${GREEN}✅ Vault started${NC}"
-        fi
-    else
-        docker run -d \
-            --name vault-dev \
-            --cap-add=IPC_LOCK \
-            -e VAULT_DEV_ROOT_TOKEN_ID=dev-root-token \
-            -e VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200 \
-            -p 8200:8200 \
-            hashicorp/vault:1.18 server -dev
-        
-        echo -e "${GREEN}✅ Vault container created and started${NC}"
-    fi
-    
+
+    docker compose up -d vault
+    echo -e "${GREEN}✅ Vault container started via docker compose${NC}"
+
     # Wait for Vault to be ready
     echo "Waiting for Vault to be ready..."
     for i in {1..30}; do
@@ -92,12 +75,12 @@ if ! curl -s "${VAULT_ADDR}/v1/sys/health" > /dev/null 2>&1; then
             echo -e "${GREEN}✅ Vault is ready!${NC}"
             break
         fi
-        
+
         if [ $i -eq 30 ]; then
             echo -e "${RED}❌ Vault failed to start${NC}"
             exit 1
         fi
-        
+
         sleep 1
     done
 else
@@ -167,7 +150,7 @@ SERVICE_PORT=${USER_SERVICE_PORT:-3001}
 if lsof -Pi :${SERVICE_PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "${YELLOW}⚠️  Port ${SERVICE_PORT} is already in use${NC}"
     echo "Please stop the service using this port or change USER_SERVICE_PORT in .env"
-    
+
     # Show what's using the port
     echo ""
     echo "Process using port ${SERVICE_PORT}:"

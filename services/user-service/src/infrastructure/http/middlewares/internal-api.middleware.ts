@@ -7,7 +7,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { createUserServiceVault } from '@transcendence/shared-utils';
 
-const vaultHelper = createUserServiceVault();
+let vaultHelper: ReturnType<typeof createUserServiceVault> | null = null;
 let vaultInitialized = false;
 let cachedInternalApiKey: string | null = null;
 let fetchingInternalApiKey: Promise<string | null> | null = null;
@@ -22,13 +22,17 @@ async function loadInternalApiKey(): Promise<string | null> {
             let key: string | null = null;
 
             try {
+                // Lazy initialization of vaultHelper
+                if (!vaultHelper) {
+                    vaultHelper = createUserServiceVault();
+                }
+
                 if (!vaultInitialized) {
                     await vaultHelper.initialize();
                     vaultInitialized = true;
                 }
 
-                const config = await vaultHelper.getServiceConfig();
-                key = (config.internal_api_key ?? config.internalApiKey ?? process.env.INTERNAL_API_KEY ?? null) as string | null;
+                key = await vaultHelper.getInternalApiKey();
 
                 if (!key) {
                     console.warn('[Security] INTERNAL_API_KEY missing in Vault configuration and environment.');
@@ -60,13 +64,27 @@ export async function validateInternalApiKey(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    const INTERNAL_API_KEY = await loadInternalApiKey();
+    const apiKey = request.headers['x-internal-api-key'] as string;
 
-    // In development mode, allow requests without key
-    if (process.env.NODE_ENV === 'development' && !INTERNAL_API_KEY) {
-        request.log.debug('Skipping internal API key validation in development mode.');
-        return;
+    // If no API key is provided, check if we should allow it in development
+    if (!apiKey) {
+        // In development mode, allow requests without API key (for direct testing)
+        // But in production, always require the API key
+        // if (process.env.NODE_ENV === 'development' && process.env.SKIP_INTERNAL_API_CHECK !== 'false') {
+        //     request.log.debug('Skipping internal API key validation in development mode (no key provided).');
+        //     return;
+        // }
+
+        // Production or explicit check required - reject
+        return reply.code(403).send({
+            statusCode: 403,
+            error: 'Forbidden',
+            message: 'Missing internal API key',
+        });
     }
+
+    // If API key is provided, always validate it (even in development)
+    const INTERNAL_API_KEY = await loadInternalApiKey();
 
     if (!INTERNAL_API_KEY) {
         request.log.error('INTERNAL_API_KEY is not configured. Rejecting request.');
@@ -77,13 +95,18 @@ export async function validateInternalApiKey(
         });
     }
 
-    const apiKey = request.headers['x-internal-api-key'] as string;
-
-    if (!apiKey || apiKey !== INTERNAL_API_KEY) {
+    if (apiKey !== INTERNAL_API_KEY) {
+        request.log.warn({
+            providedKeyLength: apiKey.length,
+            expectedKeyLength: INTERNAL_API_KEY.length,
+        }, 'Invalid internal API key provided');
         return reply.code(403).send({
             statusCode: 403,
             error: 'Forbidden',
-            message: 'Invalid or missing internal API key',
+            message: 'Invalid internal API key',
         });
     }
+
+    // Valid API key - allow request
+    request.log.debug('Internal API key validated successfully');
 }

@@ -38,6 +38,10 @@ LoginRequest:
       type: string
       example: "SecurePass123!"
       description: User password
+    totpCode:
+      type: string
+      example: "123456"
+      description: Optional TOTP code when 2FA is enabled
   required: [email, password]
 
 LoginResponse:

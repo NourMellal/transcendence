@@ -16,9 +16,14 @@ export interface SignupRequestDTO {
 export interface LoginRequestDTO {
     email: string;
     password: string;
+    totpCode?: string;
 }
 
 export interface Enable2FARequestDTO {
+    token: string;
+}
+
+export interface Disable2FARequestDTO {
     token: string;
 }
 
@@ -58,6 +63,7 @@ export interface SignupUseCaseInput {
 export interface LoginUseCaseInput {
     email: string;
     password: string;
+    totpCode?: string;
 }
 
 export interface LoginUseCaseOutput {

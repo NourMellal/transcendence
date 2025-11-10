@@ -1,5 +1,5 @@
-import { Generate2FAUseCase, UserRepository, TwoFAService } from '../../domain/ports';
 import { NotFoundError } from '@transcendence/shared-utils';
+import type { Generate2FAUseCase, TwoFAService, UserRepository } from '../../domain/ports.js';
 
 export class Generate2FAUseCaseImpl implements Generate2FAUseCase {
     constructor(
@@ -7,7 +7,7 @@ export class Generate2FAUseCaseImpl implements Generate2FAUseCase {
         private readonly twoFAService: TwoFAService
     ) { }
 
-    async execute(userId: string): Promise<{ secret: string; qrCodeUrl: string; }> {
+    async execute(userId: string): Promise<{ secret: string; qrCode: string; }> {
         const user = await this.userRepository.findById(userId);
         if (!user) {
             throw new NotFoundError('User');
@@ -15,9 +15,8 @@ export class Generate2FAUseCaseImpl implements Generate2FAUseCase {
 
         const secret = this.twoFAService.generateSecret();
         const label = `Transcendence (${user.email})`;
-        const qrCodeUrl = await this.twoFAService.generateQRCode(secret, label);
+        const qrCode = await this.twoFAService.generateQRCode(secret, label);
 
-        // Save the secret temporarily (user needs to verify it to enable 2FA)
         await this.userRepository.update(userId, {
             twoFASecret: secret,
             updatedAt: new Date()
@@ -25,7 +24,7 @@ export class Generate2FAUseCaseImpl implements Generate2FAUseCase {
 
         return {
             secret,
-            qrCodeUrl
+            qrCode
         };
     }
 }

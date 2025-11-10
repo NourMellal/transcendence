@@ -145,6 +145,37 @@ export class ServiceVaultHelper {
     }
 
     /**
+     * Get shared internal API key (single source of truth)
+     */
+    async getInternalApiKey(): Promise<string | null> {
+        const path = this.serviceConfig.secretPaths.internalApiKey;
+
+        if (!path || !this.initialized) {
+            return this.getInternalApiKeyFromEnv();
+        }
+
+        try {
+            const secret = await this.client.getSecret(path);
+            const key = this.extractInternalApiKey(secret.data);
+
+            if (!key) {
+                console.warn(
+                    `[${this.serviceConfig.serviceName}] Internal API key missing at ${path}, using environment fallback.`
+                );
+                return this.getInternalApiKeyFromEnv();
+            }
+
+            return key;
+        } catch (error) {
+            console.warn(
+                `[${this.serviceConfig.serviceName}] Failed to get internal API key from Vault, using environment:`,
+                (error as Error).message
+            );
+            return this.getInternalApiKeyFromEnv();
+        }
+    }
+
+    /**
      * Check if Vault is healthy
      */
     async isVaultHealthy(): Promise<boolean> {
@@ -193,6 +224,24 @@ export class ServiceVaultHelper {
             '42_client_secret': process.env.OAUTH_42_CLIENT_SECRET || '',
         };
     }
+
+    private getInternalApiKeyFromEnv(): string | null {
+        const key = process.env.INTERNAL_API_KEY;
+        return key && key.trim().length > 0 ? key.trim() : null;
+    }
+
+    private extractInternalApiKey(data: Record<string, any>): string | null {
+        const candidates = ['key', 'internal_api_key', 'internalApiKey', 'INTERNAL_API_KEY'];
+
+        for (const candidate of candidates) {
+            const value = data[candidate];
+            if (typeof value === 'string' && value.trim().length > 0) {
+                return value.trim();
+            }
+        }
+
+        return null;
+    }
 }
 
 /**
@@ -212,36 +261,41 @@ export function createVaultHelper(
 
 export const createUserServiceVault = () =>
     createVaultHelper('user-service', {
-        database: 'secret/data/database/user-service',
-        jwt: 'secret/data/jwt/auth',
-        api: 'secret/data/api/oauth',
-        config: 'secret/data/security/config',
+        database: 'secret/database/user-service',
+        jwt: 'secret/jwt/auth',
+        api: 'secret/api/oauth',
+        config: 'secret/security/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createGameServiceVault = () =>
     createVaultHelper('game-service', {
-        database: 'secret/data/database/game-service',
-        jwt: 'secret/data/jwt/game',
-        config: 'secret/data/game/config',
+        database: 'secret/database/game-service',
+        jwt: 'secret/jwt/game',
+        config: 'secret/game/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createChatServiceVault = () =>
     createVaultHelper('chat-service', {
-        database: 'secret/data/database/chat-service',
-        jwt: 'secret/data/jwt/auth',
-        config: 'secret/data/chat/config',
+        database: 'secret/database/chat-service',
+        jwt: 'secret/jwt/auth',
+        config: 'secret/chat/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createTournamentServiceVault = () =>
     createVaultHelper('tournament-service', {
-        database: 'secret/data/database/tournament-service',
-        jwt: 'secret/data/jwt/auth',
-        config: 'secret/data/game/config',
+        database: 'secret/database/tournament-service',
+        jwt: 'secret/jwt/auth',
+        config: 'secret/game/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createAPIGatewayVault = () =>
     createVaultHelper('api-gateway', {
-        jwt: 'secret/data/jwt/auth',
-        api: 'secret/data/api/oauth',
-        config: 'secret/data/gateway/config',
+        jwt: 'secret/jwt/auth',
+        api: 'secret/api/oauth',
+        config: 'secret/gateway/config',
+        internalApiKey: 'secret/shared/internal-api-key',
     });
