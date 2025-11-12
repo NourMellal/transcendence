@@ -1,4 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import {
+    sendFriendRequestSchema,
+    respondFriendRequestSchema,
+    friendshipIdParamSchema,
+    userIdParamSchema,
+} from '@transcendence/shared-validation';
 import { SendFriendRequestUseCase } from '../../../application/use-cases/send-friend-request.usecase.js';
 import { RespondFriendRequestUseCase } from '../../../application/use-cases/respond-friend-request.usecase.js';
 import { ListFriendsUseCase } from '../../../application/use-cases/list-friends.usecase.js';
@@ -34,8 +40,16 @@ export class FriendController {
             return;
         }
 
+        let payload: AddFriendRequestDTO;
         try {
-            const friendship = await this.sendFriendRequestUseCase.execute(requesterId, request.body.friendId);
+            payload = sendFriendRequestSchema.parse(request.body);
+        } catch (error) {
+            this.handleValidationError(error, reply);
+            return;
+        }
+
+        try {
+            const friendship = await this.sendFriendRequestUseCase.execute(requesterId, payload.friendId);
             reply.code(201).send(FriendMapper.toFriendshipDTO(friendship));
         } catch (error: any) {
             request.log.error({ err: error }, 'Send friend request failed');
@@ -69,25 +83,32 @@ export class FriendController {
             return;
         }
 
-        const { friendshipId } = request.params;
-
-        const status = request.body?.status;
-
-        if (!status) {
-            reply.code(400).send({ error: 'Bad Request', message: 'Invalid status for respond' });
+        let params: RespondParams;
+        try {
+            params = friendshipIdParamSchema.parse(request.params) as RespondParams;
+        } catch (error) {
+            this.handleValidationError(error, reply);
             return;
         }
 
-        if (![FriendshipStatus.ACCEPTED, FriendshipStatus.REJECTED].includes(status)) {
-            reply.code(400).send({ error: 'Bad Request', message: 'Invalid status for respond' });
+        let body: UpdateFriendRequestDTO;
+        try {
+            body = respondFriendRequestSchema.parse(request.body) as UpdateFriendRequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
             return;
         }
+
+        const responseStatus =
+            body.status === 'accepted'
+                ? FriendshipStatus.ACCEPTED
+                : FriendshipStatus.REJECTED;
 
         try {
             const friendship = await this.respondFriendRequestUseCase.execute({
-                friendshipId,
+                friendshipId: params.friendshipId,
                 userId,
-                status,
+                status: responseStatus,
             });
 
             reply.code(200).send(FriendMapper.toFriendshipDTO(friendship));
@@ -145,8 +166,16 @@ export class FriendController {
             return;
         }
 
+        let params: BlockParams;
         try {
-            const friendship = await this.blockUserUseCase.execute(userId, request.params.userId);
+            params = userIdParamSchema.parse(request.params) as BlockParams;
+        } catch (error) {
+            this.handleValidationError(error, reply);
+            return;
+        }
+
+        try {
+            const friendship = await this.blockUserUseCase.execute(userId, params.userId);
             reply.code(200).send(FriendMapper.toFriendshipDTO(friendship));
         } catch (error: any) {
             request.log.error({ err: error }, 'Block user failed');
@@ -164,5 +193,25 @@ export class FriendController {
 
             reply.code(500).send({ error: 'Internal Server Error', message });
         }
+    }
+
+    private handleValidationError(error: unknown, reply: FastifyReply): void {
+        if (typeof error === 'object' && error !== null && 'issues' in error) {
+            const issues = (error as { issues: Array<{ path: (string | number)[]; message: string }> }).issues;
+            reply.code(400).send({
+                error: 'Bad Request',
+                message: 'Validation failed',
+                details: issues?.map((issue) => ({
+                    path: issue.path.join('.'),
+                    message: issue.message,
+                })),
+            });
+            return;
+        }
+
+        reply.code(400).send({
+            error: 'Bad Request',
+            message: (error as Error)?.message || 'Invalid request payload',
+        });
     }
 }

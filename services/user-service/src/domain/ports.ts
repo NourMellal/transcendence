@@ -1,4 +1,5 @@
 import { User, Session } from './entities/user.entity.js';
+import type { Friendship, FriendshipStatus } from './entities/friendship.entity.js';
 
 // Repository ports (outbound)
 export interface UserRepository {
@@ -16,6 +17,16 @@ export interface SessionRepository {
     save(session: Session): Promise<void>;
     delete(token: string): Promise<void>;
     deleteAllForUser(userId: string): Promise<void>;
+}
+
+export interface FriendshipRepository {
+    findById(id: string): Promise<Friendship | null>;
+    findBetweenUsers(userId: string, otherUserId: string): Promise<Friendship | null>;
+    listForUser(userId: string, statuses?: FriendshipStatus[]): Promise<Friendship[]>;
+    listPendingForUser(userId: string): Promise<Friendship[]>;
+    save(friendship: Friendship): Promise<void>;
+    update(id: string, updates: Partial<Friendship>): Promise<void>;
+    delete(id: string): Promise<void>;
 }
 
 // External service ports (outbound)
@@ -65,6 +76,16 @@ export interface Generate2FAUseCase {
         secret: string;
         qrCode: string;
     }>;
+}
+
+export interface FriendshipRepository {
+    findById(id: string): Promise<Friendship | null>;
+    findBetweenUsers(userId: string, otherUserId: string): Promise<Friendship | null>;
+    listForUser(userId: string, statuses?: FriendshipStatus[]): Promise<Friendship[]>;
+    listPendingForUser(userId: string): Promise<Friendship[]>;
+    save(friendship: Friendship): Promise<void>;
+    update(id: string, updates: Partial<Friendship>): Promise<void>;
+    delete(id: string): Promise<void>;
 }
 
 export interface Enable2FAUseCase {

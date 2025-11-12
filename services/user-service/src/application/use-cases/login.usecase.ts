@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { User, PasswordHelper } from '../../domain/entities/user.entity.js';
-import { UserRepository, TwoFAService } from '../../domain/ports.js';
+import { UserRepository, TwoFAService, SessionRepository } from '../../domain/ports.js';
 import type { JWTConfig } from '@transcendence/shared-utils';
 import { LoginUseCaseInput, LoginUseCaseOutput } from '../dto/auth.dto.js';
+import crypto from 'crypto';
 
 export interface JWTService {
     getJWTConfig(): Promise<JWTConfig>;
@@ -12,7 +13,8 @@ export class LoginUseCase {
     constructor(
         private userRepository: UserRepository,
         private jwtService: JWTService,
-        private twoFAService?: TwoFAService
+        private twoFAService?: TwoFAService,
+        private sessionRepository?: SessionRepository
     ) { }
 
     async execute(input: LoginUseCaseInput): Promise<LoginUseCaseOutput> {
@@ -57,6 +59,8 @@ export class LoginUseCase {
         // Generate JWT token using Vault secrets
         const accessToken = await this.generateToken(user);
 
+        await this.persistSession(user.id, accessToken);
+
         // Return user without password hash
         const { passwordHash: _, ...userWithoutPassword } = user;
 
@@ -85,6 +89,23 @@ export class LoginUseCase {
         return jwt.sign(payload, config.secretKey, {
             expiresIn: `${config.expirationHours}h`,
             issuer: config.issuer,
+        });
+    }
+
+    private async persistSession(userId: string, token: string): Promise<void> {
+        if (!this.sessionRepository) {
+            return;
+        }
+        const config = await this.jwtService.getJWTConfig();
+        const ttlHours = Number(config.expirationHours ?? 0);
+        const expiresAt = new Date(Date.now() + (ttlHours > 0 ? ttlHours : 1) * 60 * 60 * 1000);
+
+        await this.sessionRepository.save({
+            id: crypto.randomUUID(),
+            userId,
+            token,
+            expiresAt,
+            createdAt: new Date(),
         });
     }
 }

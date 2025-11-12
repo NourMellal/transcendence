@@ -21,6 +21,7 @@ import { loadGatewayConfig } from './config/gateway-config.js';
 // Import route handlers
 import { registerAuthRoutes } from './routes/auth.routes.js';
 import { registerUserRoutes } from './routes/users.routes.js';
+import { registerFriendRoutes } from './routes/friends.routes.js';
 import { registerGameRoutes } from './routes/games.routes.js';
 import { registerChatRoutes } from './routes/chat.routes.js';
 import { registerTournamentRoutes } from './routes/tournaments.routes.js';
@@ -191,6 +192,7 @@ async function createGateway() {
     // Register route handlers with new architecture
     await registerAuthRoutes(app, config.userServiceUrl, config.internalApiKey);
     await registerUserRoutes(app, config.userServiceUrl, config.internalApiKey);
+    await registerFriendRoutes(app, config.userServiceUrl, config.internalApiKey);
     await registerGameRoutes(app, config.gameServiceUrl, config.internalApiKey);
     await registerChatRoutes(app, config.chatServiceUrl, config.internalApiKey);
     await registerTournamentRoutes(app, config.tournamentServiceUrl, config.internalApiKey);

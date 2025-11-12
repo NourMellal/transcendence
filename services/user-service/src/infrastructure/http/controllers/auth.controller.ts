@@ -1,4 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import {
+    signUpSchema,
+    loginSchema,
+    enable2FASchema,
+} from '@transcendence/shared-validation';
+import { ZodError } from 'zod';
 import { SignupUseCase } from '../../../application/use-cases/signup.usecase.js';
 import { LoginUseCase } from '../../../application/use-cases/login.usecase.js';
 import { LogoutUseCase } from '../../../application/use-cases/logout.usecase.js';
@@ -48,8 +54,15 @@ export class AuthController {
         request: FastifyRequest<{ Body: SignupRequestDTO }>,
         reply: FastifyReply
     ): Promise<void> {
+        let payload: SignupRequestDTO;
         try {
-            const user = await this.signupUseCase.execute(request.body);
+            payload = signUpSchema.parse(request.body) as SignupRequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
+            return;
+        }
+        try {
+            const user = await this.signupUseCase.execute(payload);
             reply.code(201).send(AuthMapper.toSignupResponseDTO(user));
         } catch (error: any) {
             if (error.message.includes('already exists')) {
@@ -80,8 +93,15 @@ export class AuthController {
         request: FastifyRequest<{ Body: LoginRequestDTO }>,
         reply: FastifyReply
     ): Promise<void> {
+        let payload: LoginRequestDTO;
         try {
-            const result = await this.loginUseCase.execute(request.body);
+            payload = loginSchema.parse(request.body) as LoginRequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
+            return;
+        }
+        try {
+            const result = await this.loginUseCase.execute(payload);
             reply.code(200).send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken));
         } catch (error: any) {
             request.log.error({ err: error }, 'Login failed');
@@ -164,7 +184,12 @@ export class AuthController {
                 return;
             }
 
-            const result = await this.logoutUseCase.execute(userId);
+            const authHeader = request.headers.authorization;
+            const sessionToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+                ? authHeader.replace(/^Bearer\s+/i, '')
+                : undefined;
+
+            const result = await this.logoutUseCase.execute(userId, sessionToken);
             reply.code(200).send(result);
         } catch (error: any) {
             request.log.error({ err: error }, 'Logout failed');
@@ -254,16 +279,16 @@ export class AuthController {
             return;
         }
 
-        if (!request.body?.token) {
-            reply.code(400).send({
-                error: 'Bad Request',
-                message: '2FA token is required'
-            });
+        let payload: Enable2FARequestDTO;
+        try {
+            payload = enable2FASchema.parse(request.body) as Enable2FARequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
             return;
         }
 
         try {
-            await this.enable2FAUseCase.execute(userId, request.body.token);
+            await this.enable2FAUseCase.execute(userId, payload.token);
             reply.code(200).send({ message: 'Two-factor authentication enabled' });
         } catch (error: any) {
             request.log.error({ err: error }, 'Enable 2FA failed');
@@ -295,16 +320,16 @@ export class AuthController {
             return;
         }
 
-        if (!request.body?.token) {
-            reply.code(400).send({
-                error: 'Bad Request',
-                message: '2FA token is required'
-            });
+        let payload: Disable2FARequestDTO;
+        try {
+            payload = enable2FASchema.parse(request.body) as Disable2FARequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
             return;
         }
 
         try {
-            await this.disable2FAUseCase.execute(userId, request.body.token);
+            await this.disable2FAUseCase.execute(userId, payload.token);
             reply.code(200).send({ message: 'Two-factor authentication disabled' });
         } catch (error: any) {
             request.log.error({ err: error }, 'Disable 2FA failed');
@@ -334,5 +359,24 @@ export class AuthController {
         const url = new URL(this.failureRedirect);
         url.searchParams.set('error', reason);
         return url.toString();
+    }
+
+    private handleValidationError(error: unknown, reply: FastifyReply): void {
+        if (error instanceof ZodError) {
+            reply.code(400).send({
+                error: 'Bad Request',
+                message: 'Validation failed',
+                details: error.issues.map((issue) => ({
+                    path: issue.path.join('.'),
+                    message: issue.message,
+                })),
+            });
+            return;
+        }
+
+        reply.code(400).send({
+            error: 'Bad Request',
+            message: (error as Error)?.message || 'Invalid request payload',
+        });
     }
 }

@@ -10,6 +10,8 @@ dotenv.config({ path: join(__dirname, '../../../.env') });
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository.js';
+import { SQLiteFriendshipRepository } from './infrastructure/database/repositories/sqlite-friendship.repository.js';
+import { SQLiteSessionRepository } from './infrastructure/database/repositories/sqlite-session.repository.js';
 import { SignupUseCase } from './application/use-cases/signup.usecase.js';
 import { LoginUseCase } from './application/use-cases/login.usecase.js';
 import { LogoutUseCase } from './application/use-cases/logout.usecase.js';
@@ -25,9 +27,15 @@ import { AuthController } from './infrastructure/http/controllers/auth.controlle
 import { UserController } from './infrastructure/http/controllers/user.controller.js';
 import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes.js';
 import { registerUserRoutes } from './infrastructure/http/routes/user.routes.js';
+import { registerFriendRoutes } from './infrastructure/http/routes/friend.routes.js';
 import { initializeJWTService } from './infrastructure/services/jwt.service.js';
 import { createTwoFAService } from './infrastructure/services/two-fa.service.js';
 import { createOAuth42Service } from './infrastructure/services/oauth42.service.js';
+import { SendFriendRequestUseCase } from './application/use-cases/send-friend-request.usecase.js';
+import { RespondFriendRequestUseCase } from './application/use-cases/respond-friend-request.usecase.js';
+import { ListFriendsUseCase } from './application/use-cases/list-friends.usecase.js';
+import { BlockUserUseCase } from './application/use-cases/block-user.usecase.js';
+import { FriendController } from './infrastructure/http/controllers/friend.controller.js';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
@@ -44,11 +52,15 @@ async function main() {
     // Initialize database
     const userRepository = new SQLiteUserRepository();
     await userRepository.initialize(DB_PATH);
+    const friendshipRepository = new SQLiteFriendshipRepository();
+    await friendshipRepository.initialize(DB_PATH);
+    const sessionRepository = new SQLiteSessionRepository();
+    await sessionRepository.initialize(DB_PATH);
 
     // Initialize use cases with Vault JWT Service
     const signupUseCase = new SignupUseCase(userRepository);
-    const loginUseCase = new LoginUseCase(userRepository, jwtService, twoFAService);
-    const logoutUseCase = new LogoutUseCase(userRepository);
+    const loginUseCase = new LoginUseCase(userRepository, jwtService, twoFAService, sessionRepository);
+    const logoutUseCase = new LogoutUseCase(userRepository, sessionRepository);
     const updateProfileUseCase = new UpdateProfileUseCase(userRepository);
     const getUserUseCase = new GetUserUseCase(userRepository);
     const generate2FAUseCase = new Generate2FAUseCaseImpl(userRepository, twoFAService);
@@ -61,6 +73,10 @@ async function main() {
         jwtService,
         oauthStateManager
     );
+    const sendFriendRequestUseCase = new SendFriendRequestUseCase(friendshipRepository, userRepository);
+    const respondFriendRequestUseCase = new RespondFriendRequestUseCase(friendshipRepository);
+    const listFriendsUseCase = new ListFriendsUseCase(friendshipRepository, userRepository);
+    const blockUserUseCase = new BlockUserUseCase(friendshipRepository, userRepository);
 
     // Initialize controllers
     const authController = new AuthController(
@@ -75,6 +91,12 @@ async function main() {
         disable2FAUseCase
     );
     const userController = new UserController(updateProfileUseCase, getUserUseCase);
+    const friendController = new FriendController(
+        sendFriendRequestUseCase,
+        respondFriendRequestUseCase,
+        listFriendsUseCase,
+        blockUserUseCase
+    );
 
     // Initialize Fastify
     const fastify = Fastify({
@@ -108,6 +130,7 @@ async function main() {
     // Register routes
     registerAuthRoutes(fastify, authController);
     registerUserRoutes(fastify, userController);
+    registerFriendRoutes(fastify, friendController);
 
     // Graceful shutdown
     const shutdown = async () => {

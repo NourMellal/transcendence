@@ -1,4 +1,4 @@
-import { UserRepository } from '../../domain/ports.js';
+import { UserRepository, SessionRepository } from '../../domain/ports.js';
 
 /**
  * Logout Use Case
@@ -12,9 +12,12 @@ import { UserRepository } from '../../domain/ports.js';
  * - Refresh token revocation
  */
 export class LogoutUseCase {
-    constructor(private userRepository: UserRepository) { }
+    constructor(
+        private userRepository: UserRepository,
+        private sessionRepository?: SessionRepository
+    ) { }
 
-    async execute(userId: string): Promise<{ message: string }> {
+    async execute(userId: string, sessionToken?: string): Promise<{ message: string }> {
         // Verify user exists
         const user = await this.userRepository.findById(userId);
 
@@ -22,11 +25,13 @@ export class LogoutUseCase {
             throw new Error('User not found');
         }
 
-        // TODO: Future enhancements:
-        // 1. Add token to blacklist (Redis)
-        // 2. Delete refresh token from database
-        // 3. Clear any active sessions
-        // 4. Emit logout event for other services
+        if (this.sessionRepository) {
+            if (sessionToken) {
+                await this.sessionRepository.delete(sessionToken);
+            } else {
+                await this.sessionRepository.deleteAllForUser(userId);
+            }
+        }
 
         return {
             message: 'Logged out successfully'

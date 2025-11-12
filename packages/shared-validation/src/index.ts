@@ -92,6 +92,17 @@ export const sendMessageSchema = z.object({
     type: z.enum(['text', 'system']).default('text')
 });
 
+// Friend validation schemas
+export const sendFriendRequestSchema = z.object({
+    friendId: z.string().uuid('Friend ID must be a valid UUID'),
+});
+
+export const respondFriendRequestSchema = z.object({
+    status: z.enum(['accepted', 'rejected'], {
+        errorMap: () => ({ message: 'Status must be accepted or rejected' })
+    })
+});
+
 // Tournament validation schemas (placeholder for future use)
 export const createTournamentSchema = z.object({
     name: z.string()
@@ -117,6 +128,10 @@ export const tournamentIdParamSchema = z.object({
 
 export const userIdParamSchema = z.object({
     userId: z.string().min(1, 'User ID is required'),
+});
+
+export const friendshipIdParamSchema = z.object({
+    friendshipId: z.string().uuid('friendshipId must be a valid UUID'),
 });
 
 // Export types inferred from schemas
