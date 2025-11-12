@@ -76,6 +76,18 @@ components:
       $ref: './components/schemas/stats.yaml#/UserStats'
     Leaderboard:
       $ref: './components/schemas/stats.yaml#/Leaderboard'
+
+    # Friend schemas
+    Friendship:
+      $ref: './components/schemas/friend.yaml#/Friendship'
+    Friend:
+      $ref: './components/schemas/friend.yaml#/Friend'
+    FriendListResponse:
+      $ref: './components/schemas/friend.yaml#/FriendListResponse'
+    SendFriendRequest:
+      $ref: './components/schemas/friend.yaml#/SendFriendRequest'
+    RespondFriendRequest:
+      $ref: './components/schemas/friend.yaml#/RespondFriendRequest'
     
     # Common schemas
     Error:
@@ -106,6 +118,14 @@ paths:
   # User endpoints
   /users/me:
     $ref: './paths/users.yaml#/~1users~1me'
+  /friends:
+    $ref: './paths/friends.yaml#/~1friends'
+  /friends/requests:
+    $ref: './paths/friends.yaml#/~1friends~1requests'
+  /friends/requests/{friendshipId}:
+    $ref: './paths/friends.yaml#/~1friends~1requests~1{friendshipId}'
+  /friends/{userId}/block:
+    $ref: './paths/friends.yaml#/~1friends~1{userId}~1block'
   
   # Game endpoints
   /games:
