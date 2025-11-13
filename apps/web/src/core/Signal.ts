@@ -1,4 +1,4 @@
-class Signal<T> {
+export class Signal<T> {
   private value: T;
   private subscribers: Set<(value: T) => void> = new Set();
 
