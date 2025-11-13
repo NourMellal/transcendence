@@ -1,22 +1,32 @@
-// /domHandler/signal.ts
-export class Signal<T> {
+type Tracker = { run: () => void; addUnsub: (u: () => void) => void };
+
+export default class Signal<T> {
     private value: T;
     private subscribers: Set<(value: T) => void> = new Set();
+    private static trackerStack: Array<Tracker> = [];
 
-    // runtime hook used by effect() to collect dependencies
-    static activeTracker: { run: () => void; addUnsub: (u: () => void) => void } | null = null;
+    static pushTracker(t: Tracker) {
+        Signal.trackerStack.push(t);
+    }
 
-    constructor(initialValue: T) {
+    static popTracker() {
+        Signal.trackerStack.pop();
+    }
+
+    static getActiveTracker(): Tracker | null {
+        return Signal.trackerStack[Signal.trackerStack.length - 1] ?? null;
+    }
+
+    constructor(initialValue: T ) {
         this.value = initialValue;
     }
 
     get() {
-        // If an effect is active, subscribe it to this signal
-        if (Signal.activeTracker) {
-            // callback ignores incoming value, only triggers the effect runner
-            const cb = () => Signal.activeTracker!.run();
+        const active = Signal.getActiveTracker();
+        if (active) {
+            const cb = () => active.run();
             const unsub = this.subscribe(cb as (value: T) => void);
-            Signal.activeTracker.addUnsub(unsub);
+            active.addUnsub(unsub);
         }
         return this.value;
     }
@@ -34,45 +44,38 @@ export class Signal<T> {
     }
 
     private notify() {
-        // copy to avoid mutation during iteration
         Array.from(this.subscribers).forEach(cb => cb(this.value));
     }
 }
 
-// convenience API returning [get, set]
 export function createSignal<T>(initial: T): [() => T, (v: T) => void] {
     const s = new Signal<T>(initial);
     return [() => s.get(), (v: T) => s.set(v)];
 }
 
-// effect that auto-tracks signals used during fn
 export function effect(fn: () => void) {
     let unsubs: (() => void)[] = [];
 
     const run = () => {
-        // cleanup previous subscriptions
         unsubs.forEach(u => u());
         unsubs = [];
-
-        // Install tracker so signals register this effect during their .get()
         const tracker = {
             run,
             addUnsub: (u: () => void) => unsubs.push(u),
         };
 
-        Signal.activeTracker = tracker;
+        Signal.pushTracker(tracker);
         try {
             fn();
         } finally {
-            Signal.activeTracker = null;
+            Signal.popTracker();
         }
     };
-
     run();
-
-    // return cleanup
     return () => {
         unsubs.forEach(u => u());
         unsubs = [];
     };
 }
+
+export const globalCounter = new Signal<number>(0);
