@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { User, UpdateUserRequest } from '../models/User';
+import type { User } from '../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../models/Auth';
 import {
   mockUser,
@@ -21,9 +21,11 @@ export const handlers = [
         id: crypto.randomUUID(),
         username: body.username,
         email: body.email,
-        avatar: null,
-        is2FAEnabled: false,
+        avatar: undefined,
+        isTwoFAEnabled: false,
         status: 'ONLINE',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       // Set as current user
@@ -41,7 +43,8 @@ export const handlers = [
   // POST /auth/login - Login with email and password
   http.post(`${API_BASE}/auth/login`, async ({ request }) => {
     try {
-      const body = (await request.json()) as LoginRequest;
+      // Parse login credentials (mock accepts any credentials)
+      await request.json() as LoginRequest;
 
       // Mock login validation (accept any credentials)
       // In real implementation, would validate against stored credentials
@@ -99,7 +102,7 @@ export const handlers = [
 
       if (contentType?.includes('application/json')) {
         // Handle JSON updates
-        const body = (await request.json()) as Partial<UpdateUserRequest>;
+        const body = (await request.json()) as Partial<User>;
         if (body.username) {
           updates.username = body.username;
         }

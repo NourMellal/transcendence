@@ -56,14 +56,7 @@ export class UserService {
    * Search users by username or email
    */
   async searchUsers(query: string, limit = 10): Promise<User[]> {
-    const response = await httpClient.get<User[]>('/users/search', {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-    
-    // Note: In a real implementation, search params would be in query string
-    // For now, we'll assume the endpoint handles the search internally
+    const response = await httpClient.get<User[]>(`/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
     return response.data!;
   }
 

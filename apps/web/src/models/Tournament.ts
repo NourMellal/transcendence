@@ -1,5 +1,5 @@
 import { User } from './User';
-import { Game, Match } from './Game';
+import { Match } from './Game';
 
 /**
  * Frontend Tournament model

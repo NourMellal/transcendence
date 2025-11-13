@@ -2,8 +2,7 @@ import { httpClient } from './client';
 import { 
   Tournament, 
   TournamentDTOs, 
-  TournamentMatch,
-  TournamentLeaderboard 
+  TournamentMatch
 } from '../../models';
 
 /**
