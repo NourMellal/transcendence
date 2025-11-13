@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced HttpClient Test - Transcendence</title>
+  <style>
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    
+    .test-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .test-section {
+      background: white;
+      margin: 20px 0;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .test-section h3 {
+      color: #1f2937;
+      margin: 0 0 16px 0;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 8px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-secondary { background: #6b7280; color: white; }
+    
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    
+    .status-display {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 16px 0;
+      font-family: monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+    
+    .auth-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+    }
+    
+    .auth-status.authenticated {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .auth-status.unauthenticated {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    
+    .loading-indicator {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e5e7eb;
+      border-top: 2px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .log-entry {
+      margin: 4px 0;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    .log-success { background: #f0fdf4; color: #166534; }
+    .log-error { background: #fef2f2; color: #991b1b; }
+    .log-info { background: #f0f9ff; color: #1e40af; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🌐 Enhanced HttpClient Test Suite</h1>
+    <p>Testing Signal-integrated HttpClient with reactive authentication and loading states</p>
+
+    <!-- Authentication Status -->
+    <div class="test-section">
+      <h3>🔐 Authentication State (Reactive)</h3>
+      <div id="auth-status" class="auth-status unauthenticated">
+        ❌ Not authenticated
+      </div>
+      <div id="loading-status" style="display: none;">
+        <div class="loading-indicator"></div> Loading...
+      </div>
+      <div class="controls">
+        <button class="btn btn-success" onclick="testLogin()">Test Login</button>
+        <button class="btn btn-warning" onclick="testRefreshToken()">Refresh Token</button>
+        <button class="btn btn-danger" onclick="testLogout()">Test Logout</button>
+        <button class="btn btn-secondary" onclick="clearLogs()">Clear Logs</button>
+      </div>
+    </div>
+
+    <!-- API Request Testing -->
+    <div class="test-section">
+      <h3>📡 API Requests</h3>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="testGet()">GET Request</button>
+        <button class="btn btn-primary" onclick="testPost()">POST Request</button>
+        <button class="btn btn-primary" onclick="testProtected()">Protected Endpoint</button>
+        <button class="btn btn-danger" onclick="testError()">Test Error (404)</button>
+        <button class="btn btn-danger" onclick="testAuthError()">Test 401 Error</button>
+      </div>
+    </div>
+
+    <!-- Signal Subscriptions -->
+    <div class="test-section">
+      <h3>🔄 Reactive State Monitoring</h3>
+      <div class="status-display" id="signal-log">
+        Signal subscriptions will appear here...
+      </div>
+    </div>
+
+    <!-- Request Logs -->
+    <div class="test-section">
+      <h3>📋 Request Logs</h3>
+      <div id="request-logs" class="status-display">
+        Request activity will appear here...
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { HttpClient } from './src/services/api/HttpClient.ts';
+    
+    // Create HttpClient instance
+    const httpClient = new HttpClient('/api');
+    
+    // Logs for display
+    let signalLogs = [];
+    let requestLogs = [];
+    
+    // Subscribe to authentication state changes
+    const unsubscribeAuth = httpClient.onAuthStateChange((authState) => {
+      logSignal('Auth State Changed', authState);
+      updateAuthDisplay(authState);
+    });
+    
+    // Subscribe to loading state changes  
+    const unsubscribeLoading = httpClient.onLoadingStateChange((loadingState) => {
+      logSignal('Loading State Changed', loadingState);
+      updateLoadingDisplay(loadingState);
+    });
+    
+    // Update authentication display
+    function updateAuthDisplay(authState) {
+      const authStatusEl = document.getElementById('auth-status');
+      if (authState.isAuthenticated) {
+        authStatusEl.className = 'auth-status authenticated';
+        authStatusEl.innerHTML = `✅ Authenticated as: ${authState.user?.email || 'User'}`;
+      } else {
+        authStatusEl.className = 'auth-status unauthenticated';
+        authStatusEl.innerHTML = '❌ Not authenticated';
+      }
+    }
+    
+    // Update loading display
+    function updateLoadingDisplay(loadingState) {
+      const loadingEl = document.getElementById('loading-status');
+      if (loadingState.isLoading) {
+        loadingEl.style.display = 'block';
+      } else {
+        loadingEl.style.display = 'none';
+      }
+    }
+    
+    // Logging functions
+    function logSignal(event, data) {
+      const timestamp = new Date().toLocaleTimeString();
+      signalLogs.push(`[${timestamp}] ${event}: ${JSON.stringify(data, null, 2)}`);
+      updateSignalDisplay();
+    }
+    
+    function logRequest(type, message, data = null) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logClass = type === 'error' ? 'log-error' : type === 'success' ? 'log-success' : 'log-info';
+      const entry = `<div class="${logClass}">[${timestamp}] ${message}${data ? '\\n' + JSON.stringify(data, null, 2) : ''}</div>`;
+      requestLogs.push(entry);
+      updateRequestDisplay();
+    }
+    
+    function updateSignalDisplay() {
+      document.getElementById('signal-log').textContent = signalLogs.slice(-10).join('\\n\\n');
+    }
+    
+    function updateRequestDisplay() {
+      document.getElementById('request-logs').innerHTML = requestLogs.slice(-10).join('');
+    }
+    
+    // Test functions
+    window.testLogin = async function() {
+      try {
+        logRequest('info', 'Attempting login...');
+        
+        // Simulate login with mock credentials
+        const response = await httpClient.safeRequest(
+          () => httpClient.post('/auth/login', {
+            email: 'test@example.com',
+            password: 'password123'
+          }),
+          (error) => {
+            // For demo, simulate successful login even if API fails
+            console.log('Login API failed, simulating success for demo');
+            httpClient.setAuthToken('demo_token_' + Date.now(), {
+              email: 'test@example.com',
+              name: 'Demo User'
+            });
+          }
+        );
+        
+        if (!response) {
+          // Fallback: simulate successful login for demo
+          httpClient.setAuthToken('demo_token_' + Date.now(), {
+            email: 'test@example.com',
+            name: 'Demo User'
+          });
+          logRequest('success', 'Demo login successful (simulated)');
+        } else {
+          logRequest('success', 'Login successful', response);
+        }
+        
+      } catch (error) {
+        logRequest('error', 'Login failed', error.message);
+      }
+    };
+    
+    window.testLogout = async function() {
+      try {
+        logRequest('info', 'Logging out...');
+        await httpClient.logout();
+        logRequest('success', 'Logout successful');
+      } catch (error) {
+        logRequest('error', 'Logout failed', error.message);
+      }
+    };
+    
+    window.testRefreshToken = async function() {
+      try {
+        logRequest('info', 'Refreshing token...');
+        const response = await httpClient.safeRequest(
+          () => httpClient.refreshToken(),
+          (error) => {
+            // Simulate refresh for demo
+            if (httpClient.isAuthenticated()) {
+              httpClient.setAuthToken('refreshed_token_' + Date.now(), httpClient.getCurrentUser());
+            }
+          }
+        );
+        
+        if (!response && httpClient.isAuthenticated()) {
+          logRequest('success', 'Token refresh successful (simulated)');
+        } else if (response) {
+          logRequest('success', 'Token refresh successful', response);
+        } else {
+          logRequest('error', 'Token refresh failed - not authenticated');
+        }
+        
+      } catch (error) {
+        logRequest('error', 'Token refresh failed', error.message);
+      }
+    };
+    
+    window.testGet = async function() {
+      try {
+        logRequest('info', 'Testing GET request...');
+        const response = await httpClient.safeRequest(
+          () => httpClient.get('/users/profile'),
+          (error) => logRequest('error', 'GET request failed', error.message)
+        );
+        
+        if (response) {
+          logRequest('success', 'GET request successful', response);
+        }
+        
+      } catch (error) {
+        logRequest('error', 'GET request failed', error.message);
+      }
+    };
+    
+    window.testPost = async function() {
+      try {
+        logRequest('info', 'Testing POST request...');
+        const response = await httpClient.safeRequest(
+          () => httpClient.post('/users/update', { name: 'Updated Name' }),
+          (error) => logRequest('error', 'POST request failed', error.message)
+        );
+        
+        if (response) {
+          logRequest('success', 'POST request successful', response);
+        }
+        
+      } catch (error) {
+        logRequest('error', 'POST request failed', error.message);
+      }
+    };
+    
+    window.testProtected = async function() {
+      if (!httpClient.isAuthenticated()) {
+        logRequest('error', 'Cannot access protected endpoint - not authenticated');
+        return;
+      }
+      
+      try {
+        logRequest('info', 'Testing protected endpoint...');
+        const response = await httpClient.safeRequest(
+          () => httpClient.get('/protected/data'),
+          (error) => logRequest('error', 'Protected request failed', error.message)
+        );
+        
+        if (response) {
+          logRequest('success', 'Protected request successful', response);
+        }
+        
+      } catch (error) {
+        logRequest('error', 'Protected request failed', error.message);
+      }
+    };
+    
+    window.testError = async function() {
+      try {
+        logRequest('info', 'Testing 404 error...');
+        const response = await httpClient.safeRequest(
+          () => httpClient.get('/nonexistent/endpoint'),
+          (error) => logRequest('error', '404 Error caught correctly', { status: error.status, message: error.message })
+        );
+        
+      } catch (error) {
+        logRequest('error', 'Unexpected error', error.message);
+      }
+    };
+    
+    window.testAuthError = async function() {
+      try {
+        logRequest('info', 'Testing 401 authentication error...');
+        
+        // Temporarily corrupt the token to trigger 401
+        const originalToken = httpClient.getAuthToken();
+        httpClient.setAuthToken('invalid_token_for_test');
+        
+        const response = await httpClient.safeRequest(
+          () => httpClient.get('/protected/data'),
+          (error) => {
+            logRequest('error', '401 Error caught - token cleared', { status: error.status, message: error.message });
+            // Restore original token if we had one
+            if (originalToken && originalToken !== 'invalid_token_for_test') {
+              httpClient.setAuthToken(originalToken);
+            }
+          }
+        );
+        
+      } catch (error) {
+        logRequest('error', 'Unexpected error', error.message);
+      }
+    };
+    
+    window.clearLogs = function() {
+      signalLogs = [];
+      requestLogs = [];
+      updateSignalDisplay();
+      updateRequestDisplay();
+      logRequest('info', 'Logs cleared');
+    };
+    
+    // Initialize display
+    updateAuthDisplay(httpClient.getAuthState().get());
+    updateLoadingDisplay(httpClient.getLoadingState().get());
+    logRequest('info', 'Enhanced HttpClient test initialized');
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      unsubscribeAuth();
+      unsubscribeLoading();
+    });
+  </script>
+</body>
+</html>
