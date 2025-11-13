@@ -1,6 +1,6 @@
 import { UserRepository } from '../../domain/ports';
-import { User } from '../../domain/entities/user.entity';
-import { PasswordHelper } from '../../domain/entities/user.entity';
+import { User } from '../../domain/entities/user.entity.js';
+import { PasswordHelper } from '../../domain/entities/user.entity.js';
 import { UpdateProfileInput } from '../dto/user.dto.js';
 
 export class UpdateProfileUseCase {

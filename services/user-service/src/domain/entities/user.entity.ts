@@ -24,6 +24,40 @@ export interface Session {
     createdAt: Date;
 }
 
+// Friends System Entities
+export interface Friendship {
+    id: string;
+    requesterId: string;  // User who sent the friend request
+    addresseeId: string;  // User who received the friend request
+    status: FriendshipStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface FriendRequest {
+    id: string;
+    fromUserId: string;
+    toUserId: string;
+    message?: string;
+    status: FriendRequestStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export enum FriendshipStatus {
+    PENDING = 'PENDING',
+    ACCEPTED = 'ACCEPTED',
+    BLOCKED = 'BLOCKED',
+    DECLINED = 'DECLINED'
+}
+
+export enum FriendRequestStatus {
+    PENDING = 'PENDING',
+    ACCEPTED = 'ACCEPTED',
+    DECLINED = 'DECLINED',
+    CANCELLED = 'CANCELLED'
+}
+
 // Domain Value Objects
 export class UserId {
     constructor(public readonly value: string) {

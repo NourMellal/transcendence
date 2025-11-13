@@ -10,6 +10,7 @@ dotenv.config({ path: join(__dirname, '../../../.env') });
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository.js';
+import { SQLiteFriendshipRepository } from './infrastructure/database/repositories/sqlite-friendship.repository.js';
 import { SignupUseCase } from './application/use-cases/signup.usecase.js';
 import { LoginUseCase } from './application/use-cases/login.usecase.js';
 import { LogoutUseCase } from './application/use-cases/logout.usecase.js';
@@ -21,10 +22,20 @@ import { Disable2FAUseCaseImpl } from './application/use-cases/disable-2fa.useca
 import { OAuth42LoginUseCaseImpl } from './application/use-cases/oauth42-login.usecase.js';
 import { OAuth42CallbackUseCaseImpl } from './application/use-cases/oauth42-callback.usecase.js';
 import { OAuthStateManager } from './application/services/oauth-state.manager.js';
+import { SendFriendRequestUseCaseImpl } from './application/use-cases/friends/send-friend-request.usecase.js';
+import { AcceptFriendRequestUseCaseImpl } from './application/use-cases/friends/accept-friend-request.usecase.js';
+import { DeclineFriendRequestUseCaseImpl } from './application/use-cases/friends/decline-friend-request.usecase.js';
+import { RemoveFriendUseCaseImpl } from './application/use-cases/friends/remove-friend.usecase.js';
+import { GetFriendsListUseCaseImpl } from './application/use-cases/friends/get-friends-list.usecase.js';
+import { GetPendingFriendRequestsUseCaseImpl } from './application/use-cases/friends/get-pending-requests.usecase.js';
+import { GetSentFriendRequestsUseCaseImpl } from './application/use-cases/friends/get-sent-requests.usecase.js';
+import { SearchUsersUseCaseImpl } from './application/use-cases/friends/search-users.usecase.js';
 import { AuthController } from './infrastructure/http/controllers/auth.controller.js';
 import { UserController } from './infrastructure/http/controllers/user.controller.js';
+import { FriendsController } from './infrastructure/http/controllers/friends.controller.js';
 import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes.js';
 import { registerUserRoutes } from './infrastructure/http/routes/user.routes.js';
+import { registerFriendsRoutes } from './infrastructure/http/routes/friends.routes.js';
 import { initializeJWTService } from './infrastructure/services/jwt.service.js';
 import { createTwoFAService } from './infrastructure/services/two-fa.service.js';
 import { createOAuth42Service } from './infrastructure/services/oauth42.service.js';
@@ -44,6 +55,9 @@ async function main() {
     // Initialize database
     const userRepository = new SQLiteUserRepository();
     await userRepository.initialize(DB_PATH);
+    
+    const friendshipRepository = new SQLiteFriendshipRepository();
+    await friendshipRepository.initialize(DB_PATH);
 
     // Initialize use cases with Vault JWT Service
     const signupUseCase = new SignupUseCase(userRepository);
@@ -62,6 +76,16 @@ async function main() {
         oauthStateManager
     );
 
+    // Initialize friends use cases
+    const sendFriendRequestUseCase = new SendFriendRequestUseCaseImpl(friendshipRepository, userRepository);
+    const acceptFriendRequestUseCase = new AcceptFriendRequestUseCaseImpl(friendshipRepository);
+    const declineFriendRequestUseCase = new DeclineFriendRequestUseCaseImpl(friendshipRepository);
+    const removeFriendUseCase = new RemoveFriendUseCaseImpl(friendshipRepository);
+    const getFriendsListUseCase = new GetFriendsListUseCaseImpl(friendshipRepository);
+    const getPendingFriendRequestsUseCase = new GetPendingFriendRequestsUseCaseImpl(friendshipRepository);
+    const getSentFriendRequestsUseCase = new GetSentFriendRequestsUseCaseImpl(friendshipRepository);
+    const searchUsersUseCase = new SearchUsersUseCaseImpl(userRepository);
+
     // Initialize controllers
     const authController = new AuthController(
         signupUseCase,
@@ -75,6 +99,16 @@ async function main() {
         disable2FAUseCase
     );
     const userController = new UserController(updateProfileUseCase, getUserUseCase);
+    const friendsController = new FriendsController(
+        sendFriendRequestUseCase,
+        acceptFriendRequestUseCase,
+        declineFriendRequestUseCase,
+        removeFriendUseCase,
+        getFriendsListUseCase,
+        getPendingFriendRequestsUseCase,
+        getSentFriendRequestsUseCase,
+        searchUsersUseCase
+    );
 
     // Initialize Fastify
     const fastify = Fastify({
@@ -108,6 +142,7 @@ async function main() {
     // Register routes
     registerAuthRoutes(fastify, authController);
     registerUserRoutes(fastify, userController);
+    registerFriendsRoutes(fastify, friendsController);
 
     // Graceful shutdown
     const shutdown = async () => {

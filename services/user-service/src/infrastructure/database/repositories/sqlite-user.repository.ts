@@ -139,6 +139,27 @@ export class SQLiteUserRepository implements UserRepository {
         );
     }
 
+    async search(query: string, excludeUserId?: string): Promise<User[]> {
+        if (!this.db) throw new Error('Database not initialized');
+
+        const searchTerm = `%${query}%`;
+        let sql = `
+            SELECT * FROM users 
+            WHERE (username LIKE ? OR display_name LIKE ? OR email LIKE ?)
+        `;
+        const params: any[] = [searchTerm, searchTerm, searchTerm];
+
+        if (excludeUserId) {
+            sql += ' AND id != ?';
+            params.push(excludeUserId);
+        }
+
+        sql += ' ORDER BY username LIMIT 20';
+
+        const rows = await this.db.all(sql, params);
+        return rows.map(this.mapRowToUser);
+    }
+
     async delete(id: string): Promise<void> {
         if (!this.db) throw new Error('Database not initialized');
         await this.db.run('DELETE FROM users WHERE id = ?', [id]);

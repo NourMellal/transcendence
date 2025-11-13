@@ -1,5 +1,5 @@
 import { UserRepository } from '../../domain/ports';
-import { User } from '../../domain/entities/user.entity';
+import { User } from '../../domain/entities/user.entity.js';
 
 export class GetUserUseCase {
     constructor(private userRepository: UserRepository) { }
