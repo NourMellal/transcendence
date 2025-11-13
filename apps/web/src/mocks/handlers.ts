@@ -10,6 +10,54 @@ import {
 
 const API_BASE = '/api';
 
+// Mock friends data (using Friends model types) - mutable arrays
+let mockFriends = [
+  {
+    id: '1',
+    username: 'alice_doe',
+    email: 'alice@example.com',
+    status: 'ONLINE' as const,
+    is2FAEnabled: false
+  },
+  {
+    id: '2', 
+    username: 'bob_smith',
+    email: 'bob@example.com',
+    status: 'OFFLINE' as const,
+    is2FAEnabled: true
+  }
+];
+
+let mockPendingRequests = [
+  {
+    id: '1',
+    requesterId: '3',
+    addresseeId: mockUser.id,
+    status: 'PENDING' as const,
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
+  }
+];
+
+let mockSentRequests: any[] = [];
+
+let mockSearchUsers = [
+  {
+    id: '4',
+    username: 'diana_jones',
+    email: 'diana@example.com',
+    status: 'ONLINE' as const,
+    is2FAEnabled: false
+  },
+  {
+    id: '5',
+    username: 'eve_brown',
+    email: 'eve@example.com',
+    status: 'OFFLINE' as const,
+    is2FAEnabled: true
+  }
+];
+
 export const handlers = [
   // POST /auth/signup - Register a new user
   http.post(`${API_BASE}/auth/signup`, async ({ request }) => {
@@ -169,5 +217,145 @@ export const handlers = [
     };
 
     return HttpResponse.json(response, { status: 200 });
+  }),
+
+  // Friends API endpoints
+  
+  // GET /friends - Get user's friends list
+  http.get(`${API_BASE}/friends`, () => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    return HttpResponse.json(mockFriends, { status: 200 });
+  }),
+
+  // GET /friends/requests/pending - Get pending friend requests
+  http.get(`${API_BASE}/friends/requests/pending`, () => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    return HttpResponse.json(mockPendingRequests, { status: 200 });
+  }),
+
+  // GET /friends/requests/sent - Get sent friend requests  
+  http.get(`${API_BASE}/friends/requests/sent`, () => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    return HttpResponse.json(mockSentRequests, { status: 200 });
+  }),
+
+  // POST /friends/requests - Send friend request
+  http.post(`${API_BASE}/friends/requests`, async ({ request }) => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    try {
+      const body = await request.json() as { toUserId: string; message?: string };
+      
+      // Mock successful friend request
+      const newRequest = {
+        id: crypto.randomUUID(),
+        requesterId: getCurrentUser()!.id,
+        addresseeId: body.toUserId,
+        status: 'PENDING' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      mockSentRequests.push(newRequest);
+      
+      return HttpResponse.json(newRequest, { status: 201 });
+    } catch (error) {
+      return HttpResponse.json({ error: 'Invalid request' }, { status: 400 });
+    }
+  }),
+
+  // POST /friends/requests/:id/accept - Accept friend request
+  http.post(`${API_BASE}/friends/requests/:id/accept`, ({ params }) => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    const requestId = params.id;
+    const requestIndex = mockPendingRequests.findIndex(req => req.id === requestId);
+    
+    if (requestIndex === -1) {
+      return HttpResponse.json({ error: 'Friend request not found' }, { status: 404 });
+    }
+
+    // Move to friends list and remove from pending
+    const request = mockPendingRequests[requestIndex];
+    // Add a mock friend based on the requester ID
+    mockFriends.push({
+      id: request.requesterId,
+      username: `user_${request.requesterId}`,
+      email: `user_${request.requesterId}@example.com`,
+      status: 'ONLINE' as const,
+      is2FAEnabled: false
+    });
+    mockPendingRequests.splice(requestIndex, 1);
+
+    return HttpResponse.json({ message: 'Friend request accepted' }, { status: 200 });
+  }),
+
+  // POST /friends/requests/:id/decline - Decline friend request
+  http.post(`${API_BASE}/friends/requests/:id/decline`, ({ params }) => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    const requestId = params.id;
+    const requestIndex = mockPendingRequests.findIndex(req => req.id === requestId);
+    
+    if (requestIndex === -1) {
+      return HttpResponse.json({ error: 'Friend request not found' }, { status: 404 });
+    }
+
+    // Remove from pending requests
+    mockPendingRequests.splice(requestIndex, 1);
+
+    return HttpResponse.json({ message: 'Friend request declined' }, { status: 200 });
+  }),
+
+  // DELETE /friends/:id - Remove friend
+  http.delete(`${API_BASE}/friends/:id`, ({ params }) => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    const friendId = params.id;
+    const friendIndex = mockFriends.findIndex(friend => friend.id === friendId);
+    
+    if (friendIndex === -1) {
+      return HttpResponse.json({ error: 'Friend not found' }, { status: 404 });
+    }
+
+    // Remove from friends list
+    mockFriends.splice(friendIndex, 1);
+
+    return HttpResponse.json({ message: 'Friend removed' }, { status: 200 });
+  }),
+
+  // GET /users/search - Search users
+  http.get(`${API_BASE}/users/search`, ({ request }) => {
+    if (!getIsAuthenticated()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const query = url.searchParams.get('q') || '';
+    
+    // Filter mock users by query
+    const filteredUsers = mockSearchUsers.filter(user => 
+      user.username.toLowerCase().includes(query.toLowerCase()) ||
+      user.email.toLowerCase().includes(query.toLowerCase())
+    );
+
+    return HttpResponse.json(filteredUsers, { status: 200 });
   }),
 ];

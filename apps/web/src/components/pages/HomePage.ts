@@ -89,7 +89,29 @@ export class HomePage extends Component {
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             border: 1px solid #e5e7eb;
           ">
-            <h3 style="color: #1f2937; margin: 0 0 12px 0;">💬 Chat</h3>
+            <h3 style="color: #1f2937; margin: 0 0 12px 0;">� Friends</h3>
+            <p style="color: #6b7280; margin: 0 0 16px 0;">
+              Connect with friends and manage your social network
+            </p>
+            <button onclick="window.location.hash = '/friends'" style="
+              background: #3b82f6;
+              color: white;
+              border: none;
+              padding: 8px 16px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 500;
+            ">Manage Friends</button>
+          </div>
+
+          <div class="feature-card" style="
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+          ">
+            <h3 style="color: #1f2937; margin: 0 0 12px 0;">�💬 Chat</h3>
             <p style="color: #6b7280; margin: 0 0 16px 0;">
               Connect with other players and join the community
             </p>

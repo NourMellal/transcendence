@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MSW Debug Test</title>
+</head>
+<body>
+  <h1>MSW Debug Test</h1>
+  <button id="test-msw">Test MSW</button>
+  <button id="login-test">Test Login</button>
+  <div id="output"></div>
+
+  <script type="module">
+    import { worker } from './src/mocks/browser.js';
+    
+    console.log('Starting MSW worker...');
+    
+    // Start MSW
+    await worker.start({
+      serviceWorker: {
+        url: '/mockServiceWorker.js',
+      },
+      onUnhandledRequest: 'bypass',
+    });
+    
+    console.log('✅ MSW worker started');
+    
+    // Test buttons
+    document.getElementById('test-msw').addEventListener('click', async () => {
+      const output = document.getElementById('output');
+      output.innerHTML = '<p>Testing MSW...</p>';
+      
+      try {
+        // Test auth status endpoint
+        const response = await fetch('/api/auth/status');
+        const result = await response.text();
+        output.innerHTML += `<p>Auth Status Response: ${response.status} - ${result}</p>`;
+        
+        // Test friends endpoint
+        const friendsResponse = await fetch('/api/friends');
+        const friendsResult = await friendsResponse.text();
+        output.innerHTML += `<p>Friends Response: ${friendsResponse.status} - ${friendsResult}</p>`;
+        
+      } catch (error) {
+        output.innerHTML += `<p>Error: ${error.message}</p>`;
+      }
+    });
+    
+    document.getElementById('login-test').addEventListener('click', async () => {
+      const output = document.getElementById('output');
+      
+      // Simulate login
+      localStorage.setItem('auth_token', 'test_token_' + Date.now());
+      output.innerHTML = '<p>✅ Login token set in localStorage</p>';
+      
+      // Test authenticated request
+      try {
+        const response = await fetch('/api/friends');
+        const result = await response.text();
+        output.innerHTML += `<p>Friends after login: ${response.status} - ${result}</p>`;
+      } catch (error) {
+        output.innerHTML += `<p>Error after login: ${error.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

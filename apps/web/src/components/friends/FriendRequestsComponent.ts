@@ -117,11 +117,12 @@ export class FriendRequestsComponent extends Component {
     const userInfo = this.createElement('div', 'request-user-info');
     
     const avatar = this.createElement('div', 'request-avatar');
-    // Use first letter of requester ID as placeholder
-    avatar.textContent = request.requesterId.charAt(0).toUpperCase();
+    // Use first letter of requester ID as placeholder - safe check for undefined
+    const requesterId = request.requesterId || '';
+    avatar.textContent = requesterId.charAt(0).toUpperCase() || '?';
     
     const details = this.createElement('div', 'request-details');
-    const name = this.createElement('h4', 'request-name', `User ${request.requesterId.substring(0, 8)}...`);
+    const name = this.createElement('h4', 'request-name', `User ${requesterId.substring(0, 8)}...`);
     const requestId = this.createElement('p', 'request-id', `Request ID: ${request.id}`);
     const timestamp = this.createElement('p', 'request-timestamp', 
       `Received ${this.formatDate(request.createdAt)}`

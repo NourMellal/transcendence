@@ -22,9 +22,17 @@ export function setCurrentUser(user: User | null) {
 }
 
 export function getCurrentUser(): User | null {
-  return currentUser;
+  // If authenticated via localStorage but no currentUser set, return mockUser
+  if (currentUser) {
+    return currentUser;
+  }
+  if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_token') !== null) {
+    return mockUser;
+  }
+  return null;
 }
 
 export function getIsAuthenticated(): boolean {
-  return isAuthenticated;
+  // Check both MSW internal state and localStorage token (for simulate login)
+  return isAuthenticated || (typeof localStorage !== 'undefined' && localStorage.getItem('auth_token') !== null);
 }

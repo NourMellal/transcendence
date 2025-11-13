@@ -1,0 +1,498 @@
+/**
+ * Friends System Styles
+ * Phase 2: Friends System - CSS styling for all friends components
+ */
+
+/* Main Friends Component */
+.friends-component {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+/* Friends Header */
+.friends-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 20px 0;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.friends-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.notification-badge {
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+/* Tab Navigation */
+.tab-buttons {
+  display: flex;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  font-family: inherit;
+}
+
+.tab-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.tab-button.active {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.tab-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* Tab Contents */
+.tab-contents {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Friends List Styles */
+.friends-list {
+  padding: 24px;
+}
+
+.friends-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.friend-card {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.friend-card:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.friend-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin-right: 16px;
+}
+
+.friend-info {
+  flex: 1;
+}
+
+.friend-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.friend-email {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.friend-status {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.friend-status.online {
+  color: #059669;
+}
+
+.friend-status.offline {
+  color: #6b7280;
+}
+
+.friend-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.friend-status.online::before {
+  background: #10b981;
+}
+
+.friend-status.offline::before {
+  background: #9ca3af;
+}
+
+.friend-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.action-btn.danger {
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.action-btn.danger:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.action-btn.primary {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.action-btn.primary:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+/* Friend Requests Styles */
+.friend-requests {
+  padding: 24px;
+}
+
+.requests-section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.request-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.request-card:hover {
+  background: #f3f4f6;
+  transform: translateX(2px);
+}
+
+.request-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* User Search Styles */
+.user-search {
+  padding: 24px;
+}
+
+.search-container {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 1.2rem;
+}
+
+.search-results {
+  display: grid;
+  gap: 12px;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.user-card:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  margin-right: 12px;
+}
+
+.user-details h4 {
+  margin: 0 0 2px 0;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.user-details p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6b7280;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.empty-state-description {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Loading States */
+.loading-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6b7280;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.error-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #dc2626;
+}
+
+.error-state-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .friends-component {
+    padding: 12px;
+  }
+
+  .friends-header {
+    padding: 16px 0;
+  }
+
+  .friends-title {
+    font-size: 1.5rem;
+  }
+
+  .tab-buttons {
+    margin-bottom: 16px;
+  }
+
+  .tab-button {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+  }
+
+  .friend-card,
+  .request-card,
+  .user-card {
+    padding: 12px;
+  }
+
+  .friend-info,
+  .user-details {
+    margin-right: 8px;
+  }
+
+  .friend-actions,
+  .request-actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .action-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Focus and accessibility */
+.action-btn:focus,
+.tab-button:focus,
+.search-input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Animation for notifications */
+.notification-badge,
+.tab-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}

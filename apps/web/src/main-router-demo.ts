@@ -1,10 +1,12 @@
 import './styles/login-page.css';
+import './styles/friends.css';
 import { Router } from './core/Router';
 import { LoginPage } from './components/LoginPage';
 import { AuthManager } from './components/auth/AuthManager';
 import { HomePage } from './components/pages/HomePage';
 import { GamePage } from './components/pages/GamePage';
 import { ProfilePage } from './components/pages/ProfilePage';
+import { FriendsComponent } from './components/friends/FriendsComponent';
 
 /**
  * Main application entry point with SPA Router integration
@@ -101,6 +103,12 @@ async function initializeApp(): Promise<void> {
           constructor() { super('register'); }
         },
         title: 'Transcendence - Register'
+      })
+      .addRoute({
+        path: '/friends',
+        component: FriendsComponent,
+        guard: authGuard,
+        title: 'Transcendence - Friends'
       });
 
     // Add demo authentication functionality
