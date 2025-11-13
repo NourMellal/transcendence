@@ -1,1 +1,1 @@
-export type { default as IComponent } from "./Icomponent";
+export { default as Component } from "./Component"
