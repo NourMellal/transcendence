@@ -169,6 +169,24 @@
   <script type="module">
     import { HttpClient } from './src/services/api/HttpClient.ts';
     
+    // Initialize MSW for API mocking
+    async function startMockServer() {
+      try {
+        const { worker } = await import('./src/mocks/browser.ts');
+        await worker.start({
+          serviceWorker: {
+            url: '/mockServiceWorker.js',
+          },
+          onUnhandledRequest: 'bypass',
+        });
+        console.log('🛠️ MSW worker started - API mocking enabled');
+        return true;
+      } catch (error) {
+        console.warn('⚠️ Failed to start MSW worker:', error);
+        return false;
+      }
+    }
+    
     // Create HttpClient instance
     const httpClient = new HttpClient('/api');
     
@@ -407,10 +425,22 @@
       logRequest('info', 'Logs cleared');
     };
     
-    // Initialize display
-    updateAuthDisplay(httpClient.getAuthState().get());
-    updateLoadingDisplay(httpClient.getLoadingState().get());
-    logRequest('info', 'Enhanced HttpClient test initialized');
+    // Initialize MSW and display
+    async function initializeTest() {
+      const mswStarted = await startMockServer();
+      
+      updateAuthDisplay(httpClient.getAuthState().get());
+      updateLoadingDisplay(httpClient.getLoadingState().get());
+      
+      if (mswStarted) {
+        logRequest('info', 'Enhanced HttpClient test initialized with MSW mocking');
+      } else {
+        logRequest('info', 'Enhanced HttpClient test initialized (MSW failed - using fallback simulation)');
+      }
+    }
+    
+    // Start initialization
+    initializeTest();
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal & Component Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-title {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">Signal & Component System Test</h1>
+        <div id="test-results"></div>
+        <div id="counter-demo"></div>
+        <div id="signal-demo"></div>
+    </div>
+
+    <script type="module">
+        const testResults = document.getElementById('test-results');
+        const counterDemo = document.getElementById('counter-demo');
+        const signalDemo = document.getElementById('signal-demo');
+
+        function showResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = isSuccess ? 'success' : 'error';
+            div.textContent = message;
+            testResults.appendChild(div);
+        }
+
+        try {
+            // Test 1: Import and basic Signal functionality
+            import('./core/Signal.js').then(({ Signal }) => {
+                showResult('✓ Signal module imported successfully');
+
+                // Test Signal creation
+                const testSignal = new Signal(42);
+                if (testSignal.get() === 42) {
+                    showResult('✓ Signal creation and get() works');
+                } else {
+                    showResult('✗ Signal creation failed', false);
+                }
+
+                // Test Signal set and subscription
+                let callbackValue = null;
+                const unsubscribe = testSignal.subscribe(value => {
+                    callbackValue = value;
+                });
+                
+                testSignal.set(100);
+                
+                if (callbackValue === 100 && testSignal.get() === 100) {
+                    showResult('✓ Signal set() and subscribe() work correctly');
+                } else {
+                    showResult('✗ Signal set/subscribe failed', false);
+                }
+
+                // Test unsubscribe
+                unsubscribe();
+                testSignal.set(200);
+                
+                if (callbackValue === 100) { // Should still be old value
+                    showResult('✓ Signal unsubscribe works correctly');
+                } else {
+                    showResult('✗ Signal unsubscribe failed', false);
+                }
+
+                // Test Component integration
+                return import('./components/base/Component.js');
+            }).then(({ Component }) => {
+                showResult('✓ Component module imported successfully');
+
+                // Test CounterExample
+                return import('./components/examples/CounterExample.js');
+            }).then(({ CounterExample }) => {
+                showResult('✓ CounterExample module imported successfully');
+
+                // Create and mount counter component
+                const counter = new CounterExample();
+                counter.mount(counterDemo);
+                showResult('✓ CounterExample component mounted successfully');
+
+                // Create a separate Signal demo
+                createSignalDemo();
+                
+            }).catch(error => {
+                showResult(`✗ Import failed: ${error.message}`, false);
+                console.error('Full error:', error);
+            });
+
+        } catch (error) {
+            showResult(`✗ Test setup failed: ${error.message}`, false);
+        }
+
+        function createSignalDemo() {
+            const demoContainer = document.createElement('div');
+            demoContainer.innerHTML = `
+                <h3>Direct Signal Demo</h3>
+                <p>Count: <span id="direct-count">0</span></p>
+                <button id="direct-inc">Increment</button>
+                <button id="direct-dec">Decrement</button>
+                <p><small>This tests Signal directly without Component wrapper</small></p>
+            `;
+            signalDemo.appendChild(demoContainer);
+
+            // This will test once Signal is loaded
+            setTimeout(() => {
+                import('./core/Signal.js').then(({ Signal }) => {
+                    const count = new Signal(0);
+                    const display = document.getElementById('direct-count');
+                    
+                    count.subscribe(value => {
+                        display.textContent = value;
+                    });
+                    
+                    document.getElementById('direct-inc').addEventListener('click', () => {
+                        count.set(count.get() + 1);
+                    });
+                    
+                    document.getElementById('direct-dec').addEventListener('click', () => {
+                        count.set(count.get() - 1);
+                    });
+                    
+                    showResult('✓ Direct Signal demo initialized');
+                });
+            }, 100);
+        }
+    </script>
+</body>
+</html>

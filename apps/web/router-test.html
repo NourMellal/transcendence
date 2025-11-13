@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPA Router Test - Transcendence</title>
+  
+  <!-- Import Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #f8fafc;
+    }
+    
+    /* Navigation Bar */
+    .nav-bar {
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+    }
+    
+    .nav-brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+      text-decoration: none;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    
+    .nav-link {
+      color: #6b7280;
+      text-decoration: none;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    
+    .nav-link:hover {
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+    
+    .nav-link.active {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    
+    /* Router test controls */
+    .router-controls {
+      background: white;
+      padding: 20px;
+      margin: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .router-controls h3 {
+      margin: 0 0 16px 0;
+      color: #1f2937;
+    }
+    
+    .control-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .control-btn {
+      padding: 8px 16px;
+      border: 1px solid #d1d5db;
+      background: white;
+      color: #374151;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .control-btn:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+    
+    .route-info {
+      background: #f3f4f6;
+      padding: 16px;
+      border-radius: 6px;
+      margin-top: 16px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="nav-bar">
+    <div class="nav-container">
+      <a href="#/" class="nav-brand">🏓 Transcendence</a>
+      <div class="nav-links">
+        <a href="#/" class="nav-link">Home</a>
+        <a href="#/game" class="nav-link">Game</a>
+        <a href="#/profile" class="nav-link">Profile</a>
+        <a href="#/auth/login" class="nav-link">Login</a>
+        <a href="#/auth/register" class="nav-link">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Router Test Controls -->
+  <div class="router-controls">
+    <h3>🧪 SPA Router Testing</h3>
+    <p>Use the buttons below to test router navigation, or click the navigation links above.</p>
+    
+    <div class="control-buttons">
+      <button class="control-btn" onclick="testNavigate('/')">Go to Home</button>
+      <button class="control-btn" onclick="testNavigate('/game')">Go to Game</button>
+      <button class="control-btn" onclick="testNavigate('/profile')">Go to Profile</button>
+      <button class="control-btn" onclick="testNavigate('/auth/login')">Go to Login</button>
+      <button class="control-btn" onclick="testNavigate('/auth/register')">Go to Register</button>
+      <button class="control-btn" onclick="testNavigate('/nonexistent')">Test 404</button>
+    </div>
+
+    <div class="control-buttons" style="margin-top: 12px;">
+      <button class="control-btn" onclick="simulateLogin()">Simulate Login</button>
+      <button class="control-btn" onclick="simulateLogout()">Simulate Logout</button>
+      <button class="control-btn" onclick="showRouteInfo()">Show Route Info</button>
+    </div>
+
+    <div id="route-info" class="route-info" style="display: none;">
+      Current route information will appear here...
+    </div>
+  </div>
+
+  <!-- Application Container -->
+  <div id="app">
+    <div style="text-align: center; padding: 40px; color: #6b7280;">
+      <div style="font-size: 1.5rem; margin-bottom: 16px;">⏳</div>
+      <p>Loading SPA Router...</p>
+    </div>
+  </div>
+
+  <!-- Load the router demo -->
+  <script type="module" src="./src/main-router-demo.ts"></script>
+
+  <script>
+    // Test functions
+    function testNavigate(path) {
+      console.log('Navigating to:', path);
+      window.location.hash = path;
+    }
+    
+    function simulateLogin() {
+      localStorage.setItem('auth_token', 'demo_token_' + Date.now());
+      console.log('✅ Simulated login');
+      alert('Login simulated! Try accessing protected routes.');
+    }
+    
+    function simulateLogout() {
+      localStorage.removeItem('auth_token');
+      console.log('🚪 Simulated logout');
+      alert('Logout simulated! Protected routes will redirect to login.');
+      window.location.hash = '/auth/login';
+    }
+    
+    function showRouteInfo() {
+      const routeInfo = document.getElementById('route-info');
+      const currentHash = window.location.hash;
+      const isAuthenticated = localStorage.getItem('auth_token') !== null;
+      
+      routeInfo.innerHTML = `
+        <strong>Current Hash:</strong> ${currentHash || '#/'}<br>
+        <strong>Authenticated:</strong> ${isAuthenticated}<br>
+        <strong>Timestamp:</strong> ${new Date().toLocaleTimeString()}
+      `;
+      routeInfo.style.display = 'block';
+    }
+    
+    // Update active navigation links
+    function updateActiveNav() {
+      const currentHash = window.location.hash || '#/';
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === currentHash) {
+          link.classList.add('active');
+        }
+      });
+    }
+    
+    // Listen for hash changes to update nav
+    window.addEventListener('hashchange', updateActiveNav);
+    window.addEventListener('load', updateActiveNav);
+  </script>
+</body>
+</html>

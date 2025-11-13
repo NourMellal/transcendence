@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Signal Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        button {
+            padding: 8px 16px;
+            margin: 0 4px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Signal & Component Test</h1>
+    
+    <div class="test-box">
+        <h2>Manual Signal Test</h2>
+        <div id="manual-test-results"></div>
+        <p>Counter: <span id="counter-display">0</span></p>
+        <button class="btn-primary" onclick="increment()">+</button>
+        <button class="btn-secondary" onclick="decrement()">-</button>
+        <button onclick="reset()">Reset</button>
+    </div>
+
+    <div class="test-box">
+        <h2>Component Integration Test</h2>
+        <div id="component-test"></div>
+    </div>
+
+    <script type="module">
+        // Import our classes
+        import { Signal } from '/src/core/Signal.ts';
+        import { CounterExample } from '/src/components/examples/CounterExample.ts';
+
+        const results = document.getElementById('manual-test-results');
+        const counterDisplay = document.getElementById('counter-display');
+        const componentTest = document.getElementById('component-test');
+
+        function log(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = isSuccess ? 'success' : 'error';
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        // Test Signal functionality
+        let testCounter;
+        try {
+            testCounter = new Signal(0);
+            log('✓ Signal created successfully');
+
+            // Test subscription
+            testCounter.subscribe(value => {
+                counterDisplay.textContent = value;
+                log(`✓ Signal updated: ${value}`);
+            });
+
+            log('✓ Signal subscription working');
+        } catch (error) {
+            log(`✗ Signal test failed: ${error.message}`, false);
+        }
+
+        // Make functions global for button clicks
+        window.increment = () => {
+            testCounter.set(testCounter.get() + 1);
+        };
+
+        window.decrement = () => {
+            testCounter.set(testCounter.get() - 1);
+        };
+
+        window.reset = () => {
+            testCounter.set(0);
+        };
+
+        // Test Component
+        try {
+            const counter = new CounterExample();
+            counter.mount(componentTest);
+            log('✓ Component mounted successfully');
+        } catch (error) {
+            log(`✗ Component test failed: ${error.message}`, false);
+            console.error('Component error:', error);
+        }
+    </script>
+</body>
+</html>
