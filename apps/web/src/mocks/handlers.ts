@@ -11,12 +11,9 @@ import {
 const API_BASE = 'http://localhost:3000';
 
 export const handlers = [
-  // POST /auth/signup - Register a new user
   http.post(`${API_BASE}/auth/signup`, async ({ request }) => {
     try {
       const body = (await request.json()) as SignUpRequest;
-
-      // Create new user based on signup data
       const newUser: User = {
         id: crypto.randomUUID(),
         username: body.username,
@@ -25,10 +22,7 @@ export const handlers = [
         is2FAEnabled: false,
         status: 'ONLINE',
       };
-
-      // Set as current user
       setCurrentUser(newUser);
-
       return HttpResponse.json(newUser, { status: 201 });
     } catch (error) {
       return HttpResponse.json(
@@ -38,13 +32,9 @@ export const handlers = [
     }
   }),
 
-  // POST /auth/login - Login with email and password
   http.post(`${API_BASE}/auth/login`, async ({ request }) => {
     try {
       const body = (await request.json()) as LoginRequest;
-
-      // Mock login validation (accept any credentials)
-      // In real implementation, would validate against stored credentials
       const user = mockUser;
       setCurrentUser(user);
 
@@ -62,7 +52,6 @@ export const handlers = [
     }
   }),
 
-  // GET /auth/status - Get current authentication status
   http.get(`${API_BASE}/auth/status`, () => {
     if (!getIsAuthenticated() || !getCurrentUser()) {
       return new HttpResponse(null, { status: 401 });
