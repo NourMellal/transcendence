@@ -1,6 +1,6 @@
 import Component from '../Component';
 
-type Props = { start?: number; label?: string };
+type Props = { start?: number; label?: string  };
 type State = { count: number };
 
 export default class TestComponent extends Component<Props, State> {
@@ -12,14 +12,12 @@ export default class TestComponent extends Component<Props, State> {
     return { count: this.props.start ?? 0 };
   }
 
-  // Return an HTMLElement so the base class can use it as the root directly
   render() {
     return [
       '<p>This is  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 '+  this.props.label + ' the root component rendering mixed content (HTML string + child component)</p>',
     ];
   }
   protected attachEventListeners(): void {
-    // clear previous subscriptions to avoid duplicate listeners on re-render
     this.subscriptions.forEach(u => u());
     this.subscriptions = [];
 
@@ -30,7 +28,6 @@ export default class TestComponent extends Component<Props, State> {
 
     const incHandler = () => {
       this.state = { count: this.state.count + 1 };
-      // trigger a re-render; no prop change, so pass empty partial
       this.update({} as Partial<Props>);
     };
 
