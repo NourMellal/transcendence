@@ -88,7 +88,34 @@ export async function registerFriendRoutes(
         return reply.code(response.status).send(data);
     });
 
-    fastify.patch('/api/friends/:userId/block', {
+    fastify.delete('/api/friends/requests/:friendshipId', {
+        preHandler: [
+            requireAuth,
+            validateRequestParams(friendshipIdParamSchema),
+        ],
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { friendshipId } = request.params as { friendshipId: string };
+
+        const response = await fetch(`${userServiceUrl}/friends/requests/${friendshipId}`, {
+            method: 'DELETE',
+            headers: {
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+        });
+
+        if (response.status === 204) {
+            return reply.code(204).send();
+        }
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    fastify.post('/api/friends/:userId/block', {
         preHandler: [
             requireAuth,
             validateRequestParams(userIdParamSchema),
@@ -106,6 +133,56 @@ export async function registerFriendRoutes(
                 'Authorization': request.headers.authorization || '',
             },
         });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    fastify.delete('/api/friends/:userId/block', {
+        preHandler: [
+            requireAuth,
+            validateRequestParams(userIdParamSchema),
+        ],
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { userId } = request.params as { userId: string };
+
+        const response = await fetch(`${userServiceUrl}/friends/${userId}/block`, {
+            method: 'DELETE',
+            headers: {
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    fastify.delete('/api/friends/:userId', {
+        preHandler: [
+            requireAuth,
+            validateRequestParams(userIdParamSchema),
+        ],
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { userId } = request.params as { userId: string };
+
+        const response = await fetch(`${userServiceUrl}/friends/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+        });
+
+        if (response.status === 204) {
+            return reply.code(204).send();
+        }
 
         const data = await response.json();
         return reply.code(response.status).send(data);

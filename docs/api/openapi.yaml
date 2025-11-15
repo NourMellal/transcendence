@@ -102,6 +102,8 @@ paths:
     $ref: './paths/auth.yaml#/~1auth~1signup'
   /auth/login:
     $ref: './paths/auth.yaml#/~1auth~1login'
+  /auth/refresh:
+    $ref: './paths/auth.yaml#/~1auth~1refresh'
   /auth/42/login:
     $ref: './paths/auth.yaml#/~1auth~142~1login'
   /auth/42/callback:

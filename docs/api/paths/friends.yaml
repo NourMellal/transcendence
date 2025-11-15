@@ -80,6 +80,27 @@
       '404':
         description: Friend request not found
 
+  delete:
+    tags: [Friends]
+    operationId: Friends_cancelRequest
+    summary: Cancel a pending friend request
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: friendshipId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Friend request cancelled
+      '401':
+        description: Not authenticated
+      '404':
+        description: Friend request not found
+
 /friends/{userId}/block:
   post:
     tags: [Friends]
@@ -107,3 +128,50 @@
         description: Not authenticated
       '404':
         description: Target user not found
+
+  delete:
+    tags: [Friends]
+    operationId: Friends_unblockUser
+    summary: Remove an existing block from a user
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Friendship updated with block removed
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/friend.yaml#/Friendship'
+      '401':
+        description: Not authenticated
+      '404':
+        description: Friendship not found
+
+/friends/{userId}:
+  delete:
+    tags: [Friends]
+    operationId: Friends_removeUser
+    summary: Remove a user from the friend list
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Friendship removed
+      '401':
+        description: Not authenticated
+      '404':
+        description: Friendship not found

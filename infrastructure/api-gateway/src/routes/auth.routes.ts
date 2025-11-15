@@ -4,7 +4,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { signUpSchema, loginSchema, enable2FASchema } from '@transcendence/shared-validation';
+import { signUpSchema, loginSchema, enable2FASchema, refreshTokenSchema } from '@transcendence/shared-validation';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { requireAuth, publicEndpoint, getUser } from '../middleware/auth.middleware.js';
 
@@ -48,6 +48,30 @@ export async function registerAuthRoutes(
         ]
     }, async (request, reply) => {
         const response = await fetch(`${userServiceUrl}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+            },
+            body: JSON.stringify(request.body),
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
+     * POST /api/auth/refresh
+     * Public endpoint - Refresh access token
+     */
+    fastify.post('/api/auth/refresh', {
+        preHandler: [
+            publicEndpoint,
+            validateRequestBody(refreshTokenSchema)
+        ]
+    }, async (request, reply) => {
+        const response = await fetch(`${userServiceUrl}/auth/refresh`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -148,11 +172,13 @@ export async function registerAuthRoutes(
         const response = await fetch(`${userServiceUrl}/auth/logout`, {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'x-internal-api-key': internalApiKey,
                 'x-request-id': request.id,
                 'x-user-id': user?.userId || user?.sub || '',
                 'Authorization': request.headers.authorization || '',
             },
+            body: JSON.stringify(request.body ?? {}),
         });
 
         if (response.status === 204) {

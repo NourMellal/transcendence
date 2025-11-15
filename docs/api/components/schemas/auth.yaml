@@ -49,10 +49,28 @@ LoginResponse:
   properties:
     user:
       $ref: './user.yaml#/User'
+    accessToken:
+      type: string
+      description: Short-lived JWT used for authenticated requests
+    refreshToken:
+      type: string
+      description: Long-lived token used to obtain new access tokens
     message:
       type: string
       example: "Login successful"
-  required: [user]
+  required: [user, accessToken, refreshToken]
+
+RefreshTokenRequest:
+  type: object
+  properties:
+    refreshToken:
+      type: string
+      description: Refresh token issued during login
+      example: "1a2b3c4d5e6f..."
+  required: [refreshToken]
+
+RefreshTokenResponse:
+  $ref: '#/LoginResponse'
 
 TwoFactorSecret:
   type: object

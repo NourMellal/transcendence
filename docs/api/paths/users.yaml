@@ -13,6 +13,53 @@
       '401':
         description: Not authenticated
 
+/users/presence:
+  post:
+    tags: [Users]
+    operationId: Users_updatePresence
+    summary: Update the authenticated user's presence state
+    security:
+      - jwtAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/user.yaml#/PresenceUpdateRequest'
+    responses:
+      '204':
+        description: Presence updated successfully
+      '400':
+        description: Invalid presence payload
+      '401':
+        description: Not authenticated
+
+/users/{userId}/presence:
+  get:
+    tags: [Users]
+    operationId: Users_getPresence
+    summary: Get last known presence for a user
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Presence information
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/UserPresence'
+      '401':
+        description: Not authenticated
+      '404':
+        description: Presence not found
+
   patch:
     tags: [Users]
     operationId: Users_updateMe
