@@ -27,6 +27,17 @@ export function registerFriendRoutes(
         }
     );
 
+    fastify.delete<{ Params: { friendshipId: string } }>(
+        '/friends/requests/:friendshipId', {
+            preHandler: [validateInternalApiKey]
+        }, async (
+            request: FastifyRequest<{ Params: { friendshipId: string } }>,
+            reply: FastifyReply
+        ) => {
+            return friendController.cancelRequest(request, reply);
+        }
+    );
+
     fastify.get('/friends', {
         preHandler: [validateInternalApiKey]
     }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -37,6 +48,18 @@ export function registerFriendRoutes(
         preHandler: [validateInternalApiKey]
     }, async (request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply) => {
         return friendController.blockUser(request, reply);
+    });
+
+    fastify.delete<{ Params: { userId: string } }>('/friends/:userId/block', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply) => {
+        return friendController.unblockUser(request, reply);
+    });
+
+    fastify.delete<{ Params: { userId: string } }>('/friends/:userId', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply) => {
+        return friendController.removeFriend(request, reply);
     });
 
     fastify.log.info('✅ Friend routes registered');

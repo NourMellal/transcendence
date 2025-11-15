@@ -6,11 +6,11 @@ import { UserRepository } from '../../../domain/ports';
 export class SQLiteUserRepository implements UserRepository {
     private db: Database | null = null;
 
-    async initialize(dbPath: string = './data/users.db'): Promise<void> {
-        this.db = await open({
+    async initialize(dbPath: string = './data/users.db', existingDb?: Database): Promise<void> {
+        this.db = existingDb ?? (await open({
             filename: dbPath,
             driver: sqlite3.Database
-        });
+        }));
 
         // Create users table
         await this.db.exec(`

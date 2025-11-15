@@ -6,11 +6,11 @@ import type { SessionRepository } from '../../../domain/ports.js';
 export class SQLiteSessionRepository implements SessionRepository {
     private db: Database | null = null;
 
-    async initialize(dbPath: string = './data/users.db'): Promise<void> {
-        this.db = await open({
+    async initialize(dbPath: string = './data/users.db', existingDb?: Database): Promise<void> {
+        this.db = existingDb ?? (await open({
             filename: dbPath,
             driver: sqlite3.Database
-        });
+        }));
 
         await this.db.exec(`
             CREATE TABLE IF NOT EXISTS sessions (
@@ -18,8 +18,7 @@ export class SQLiteSessionRepository implements SessionRepository {
                 user_id TEXT NOT NULL,
                 token TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(id)
+                created_at TEXT NOT NULL
             );
 
             CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);

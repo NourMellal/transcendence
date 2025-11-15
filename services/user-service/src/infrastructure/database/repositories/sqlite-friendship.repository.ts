@@ -9,11 +9,11 @@ import { FriendshipRepository } from '../../../domain/ports.js';
 export class SQLiteFriendshipRepository implements FriendshipRepository {
     private db: Database | null = null;
 
-    async initialize(dbPath: string = './data/users.db'): Promise<void> {
-        this.db = await open({
+    async initialize(dbPath: string = './data/users.db', existingDb?: Database): Promise<void> {
+        this.db = existingDb ?? (await open({
             filename: dbPath,
             driver: sqlite3.Database,
-        });
+        }));
 
         await this.db.exec(`
             CREATE TABLE IF NOT EXISTS friendships (
@@ -27,9 +27,7 @@ export class SQLiteFriendshipRepository implements FriendshipRepository {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 CHECK (requester_id <> addressee_id),
-                CHECK (status IN ('pending','accepted','rejected','blocked')),
-                FOREIGN KEY(requester_id) REFERENCES users(id),
-                FOREIGN KEY(addressee_id) REFERENCES users(id)
+                CHECK (status IN ('pending','accepted','rejected','blocked'))
             );
 
             CREATE UNIQUE INDEX IF NOT EXISTS idx_friendships_pair
@@ -166,6 +164,18 @@ export class SQLiteFriendshipRepository implements FriendshipRepository {
     async delete(id: string): Promise<void> {
         const db = this.ensureDb();
         await db.run('DELETE FROM friendships WHERE id = ?', [id]);
+    }
+
+    async deleteAllForUser(userId: string): Promise<void> {
+        const db = this.ensureDb();
+        await db.run(
+            `
+            DELETE FROM friendships
+            WHERE requester_id = ?
+               OR addressee_id = ?
+            `,
+            [userId, userId]
+        );
     }
 
     private ensureDb(): Database {

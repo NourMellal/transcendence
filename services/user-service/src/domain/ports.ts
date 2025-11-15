@@ -1,5 +1,6 @@
 import { User, Session } from './entities/user.entity.js';
 import type { Friendship, FriendshipStatus } from './entities/friendship.entity.js';
+import type { UserPresence, PresenceStatus } from './entities/presence.entity.js';
 
 // Repository ports (outbound)
 export interface UserRepository {
@@ -27,6 +28,17 @@ export interface FriendshipRepository {
     save(friendship: Friendship): Promise<void>;
     update(id: string, updates: Partial<Friendship>): Promise<void>;
     delete(id: string): Promise<void>;
+    deleteAllForUser(userId: string): Promise<void>;
+}
+
+export interface UnitOfWork {
+    withTransaction<T>(handler: () => Promise<T>): Promise<T>;
+}
+
+export interface UserPresenceRepository {
+    upsert(userId: string, status: PresenceStatus, lastSeenAt: Date): Promise<void>;
+    findByUserId(userId: string): Promise<UserPresence | null>;
+    markOffline(userId: string, lastSeenAt: Date): Promise<void>;
 }
 
 // External service ports (outbound)
@@ -76,16 +88,6 @@ export interface Generate2FAUseCase {
         secret: string;
         qrCode: string;
     }>;
-}
-
-export interface FriendshipRepository {
-    findById(id: string): Promise<Friendship | null>;
-    findBetweenUsers(userId: string, otherUserId: string): Promise<Friendship | null>;
-    listForUser(userId: string, statuses?: FriendshipStatus[]): Promise<Friendship[]>;
-    listPendingForUser(userId: string): Promise<Friendship[]>;
-    save(friendship: Friendship): Promise<void>;
-    update(id: string, updates: Partial<Friendship>): Promise<void>;
-    delete(id: string): Promise<void>;
 }
 
 export interface Enable2FAUseCase {
