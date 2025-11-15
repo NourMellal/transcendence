@@ -44,7 +44,15 @@ export const updateUserSchema = z.object({
 // Authentication validation schemas
 export const loginSchema = z.object({
     email: z.string().email('Invalid email format'),
-    password: z.string().min(8, 'Password must be at least 8 characters')
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    totpCode: z.string()
+        .length(6, '2FA token must be exactly 6 digits')
+        .regex(/^\d{6}$/, '2FA token must contain only digits')
+        .optional(),
+});
+
+export const refreshTokenSchema = z.object({
+    refreshToken: z.string().min(16, 'Refresh token is required'),
 });
 
 export const enable2FASchema = z.object({
