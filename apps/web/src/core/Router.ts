@@ -1,37 +1,28 @@
+import Component from "./Component";
+import { Route, ComponentConstructor } from "./types";
+import { viewSignal } from "./utils";
 
+export default class Router {
+   private _routes: Route[];
+   private _location: string;
 
-export type Route = {
-  path: string;
-  element: () => HTMLElement; 
-};
+   constructor(routes: Route[]) {
+      this._routes = routes;
+      this._location = "";
+   }
 
-export default  class Router {
-  private _routes: Route[];
-  private _location: string;
-  private _renderCallback: (element: HTMLElement) => void;
-
-  constructor(options: {
-    routes: Route[];
-    render: (element: HTMLElement) => void;
-  })
-   {  
-      this._routes  =  options.routes  ;  
-      this._renderCallback =    options.render ;     
-      this._location = "" ;   
-  };
-
-
-  navigate(path: string): void  { 
+navigate(path: string): void  { 
      if (!path) return;
      if (path === this._location) return;
-     history.pushState(null, '', path);
+     history.pushState(null, '', path); 
      this.handleNavigation(path);
   };
   start(): void  
-   {  
+   {    
+      console.log("Router started")
       this._location =  window.location.pathname  ;    
       window.addEventListener('popstate', this.onPopState.bind(this));
-      this.handleNavigation(this._location)  ;
+      this.handleNavigation(this._location)  ;  
    };
 
   destroy(): void {
@@ -44,12 +35,13 @@ export default  class Router {
       const path = window.location.pathname;
       if (path === this._location) return;
       this.handleNavigation(path);
-   };
+   };  
+
 /**
  * 
  * @param path 
  * @returns 
- */
+**/
 private match(path: string): Route | null {
    const normalize = (p: string) => {
       if (!p) return '/';
@@ -97,7 +89,7 @@ private match(path: string): Route | null {
    return null;
 }     
 
-private handleNavigation(path: string): void {
+private handleNavigation(path: string): void {   
    const route = this.match(path);
    if (!route) {
       console.warn(`No route matched for path: ${path}`);
@@ -105,24 +97,41 @@ private handleNavigation(path: string): void {
    }
 
    const params = this.extractParams(route, path);
-   let element: HTMLElement;
-   try {
-      element = route.element();
-   } catch (err) {
-      console.error('Error creating route element for', path, err);
-      return;
-   }
+      let compInstance: Component<{}, {}> | null = null;
+      try {
+         if (!route.component) {
+            console.error('No component defined for route:', path);
+            return;
+         }
 
-   (element as any).params = params;
+         // If a constructor was provided, instantiate with props if any
+         if (typeof route.component === 'function') {
+            const Ctor = route.component as ComponentConstructor;
+            compInstance = new Ctor(route.props);
+         } else {
+            // component is an instance
+            compInstance = route.component as Component<{}, {}>;
+         }
+      } catch (err) {
+         console.error('Error creating route component for', path, err);
+         return;
+      }
 
-   this._location = path;
-   this.render(element);
+      // attach params to the component instance so it can access them
+      try {
+         (compInstance as any).params = params;
+      } catch (e) {}
+
+      this._location = path;
+      this.render(compInstance);
 }
 
-private render(element: HTMLElement): void {
-   if (!element) return;
+private render(componentInstance: Component<{}, {}>): void {
+   if (!componentInstance) return;    
    try {
-      this._renderCallback(element);
+      // Router provides a component instance to the viewSignal; the root will call .render()
+      console.log("heeere")
+      viewSignal.set(componentInstance as any);
    } catch (err) {
       console.error('Router render error:', err);
    }
