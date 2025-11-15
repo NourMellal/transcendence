@@ -1,3 +1,7 @@
 export {default as Signal} from "./signal"  
 export {default as Component } from "./Component"  
 export {default as Router }  from "./Router"   
+export {default as RootComponent} from "./root"
+export {mountRoot as initApp} from "./utils"  
+export {rootSignal} from "./utils" 
+export {viewSignal} from "./utils"
