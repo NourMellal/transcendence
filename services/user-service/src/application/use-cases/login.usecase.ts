@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { User, PasswordHelper } from '../../domain/entities/user.entity.js';
-import { UserRepository, TwoFAService, SessionRepository } from '../../domain/ports.js';
+import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository } from '../../domain/ports.js';
+import { PresenceStatus } from '../../domain/entities/presence.entity.js';
 import type { JWTConfig } from '@transcendence/shared-utils';
 import { LoginUseCaseInput, LoginUseCaseOutput } from '../dto/auth.dto.js';
 import crypto from 'crypto';
@@ -14,7 +15,8 @@ export class LoginUseCase {
         private userRepository: UserRepository,
         private jwtService: JWTService,
         private twoFAService?: TwoFAService,
-        private sessionRepository?: SessionRepository
+        private sessionRepository?: SessionRepository,
+        private presenceRepository?: UserPresenceRepository
     ) { }
 
     async execute(input: LoginUseCaseInput): Promise<LoginUseCaseOutput> {
@@ -56,10 +58,10 @@ export class LoginUseCase {
             }
         }
 
-        // Generate JWT token using Vault secrets
+        // Generate JWT and refresh token
         const accessToken = await this.generateToken(user);
-
-        await this.persistSession(user.id, accessToken);
+        const { refreshToken } = await this.createRefreshSession(user.id);
+        await this.presenceRepository?.upsert(user.id, PresenceStatus.ONLINE, new Date());
 
         // Return user without password hash
         const { passwordHash: _, ...userWithoutPassword } = user;
@@ -67,6 +69,7 @@ export class LoginUseCase {
         return {
             user: userWithoutPassword as User,
             accessToken,
+            refreshToken,
         };
     }
 
@@ -92,20 +95,23 @@ export class LoginUseCase {
         });
     }
 
-    private async persistSession(userId: string, token: string): Promise<void> {
+    private async createRefreshSession(userId: string): Promise<{ refreshToken: string; expiresAt: Date }> {
         if (!this.sessionRepository) {
-            return;
+            throw new Error('Session repository not configured');
         }
-        const config = await this.jwtService.getJWTConfig();
-        const ttlHours = Number(config.expirationHours ?? 0);
-        const expiresAt = new Date(Date.now() + (ttlHours > 0 ? ttlHours : 1) * 60 * 60 * 1000);
+
+        const refreshToken = crypto.randomBytes(48).toString('hex');
+        const ttlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7');
+        const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
 
         await this.sessionRepository.save({
             id: crypto.randomUUID(),
             userId,
-            token,
+            token: refreshToken,
             expiresAt,
             createdAt: new Date(),
         });
+
+        return { refreshToken, expiresAt };
     }
 }

@@ -31,6 +31,7 @@ export interface Disable2FARequestDTO {
 export interface AuthResponseDTO {
     user: UserInfoDTO;
     accessToken: string;
+    refreshToken: string;
     message: string;
 }
 
@@ -69,4 +70,11 @@ export interface LoginUseCaseInput {
 export interface LoginUseCaseOutput {
     user: User;
     accessToken: string;
+    refreshToken: string;
 }
+
+export interface RefreshTokenRequestDTO {
+    refreshToken: string;
+}
+
+export type RefreshTokenResponseDTO = AuthResponseDTO;

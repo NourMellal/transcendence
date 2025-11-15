@@ -3,18 +3,21 @@ import {
     signUpSchema,
     loginSchema,
     enable2FASchema,
+    refreshTokenSchema,
 } from '@transcendence/shared-validation';
 import { ZodError } from 'zod';
 import { SignupUseCase } from '../../../application/use-cases/signup.usecase.js';
 import { LoginUseCase } from '../../../application/use-cases/login.usecase.js';
 import { LogoutUseCase } from '../../../application/use-cases/logout.usecase.js';
 import { GetUserUseCase } from '../../../application/use-cases/get-user.usecase.js';
+import { RefreshTokenUseCase } from '../../../application/use-cases/refresh-token.usecase.js';
 import { AuthMapper } from '../../../application/mappers/auth.mapper.js';
 import {
     SignupRequestDTO,
     LoginRequestDTO,
     Enable2FARequestDTO,
-    Disable2FARequestDTO
+    Disable2FARequestDTO,
+    RefreshTokenRequestDTO
 } from '../../../application/dto/auth.dto.js';
 import type {
     Disable2FAUseCase,
@@ -42,6 +45,7 @@ export class AuthController {
         private readonly signupUseCase: SignupUseCase,
         private readonly loginUseCase: LoginUseCase,
         private readonly logoutUseCase: LogoutUseCase,
+        private readonly refreshTokenUseCase: RefreshTokenUseCase,
         private readonly getUserUseCase: GetUserUseCase,
         private readonly oauth42LoginUseCase: OAuth42LoginUseCase,
         private readonly oauth42CallbackUseCase: OAuth42CallbackUseCase,
@@ -102,7 +106,7 @@ export class AuthController {
         }
         try {
             const result = await this.loginUseCase.execute(payload);
-            reply.code(200).send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken));
+            reply.code(200).send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken, result.refreshToken));
         } catch (error: any) {
             request.log.error({ err: error }, 'Login failed');
             const message = error.message || '';
@@ -170,7 +174,7 @@ export class AuthController {
     }
 
     async logout(
-        request: FastifyRequest,
+        request: FastifyRequest<{ Body: { refreshToken?: string } }>,
         reply: FastifyReply
     ): Promise<void> {
         try {
@@ -184,12 +188,14 @@ export class AuthController {
                 return;
             }
 
+            const body = (request.body ?? {}) as { refreshToken?: string };
+            const refreshTokenFromBody = body.refreshToken;
             const authHeader = request.headers.authorization;
             const sessionToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
                 ? authHeader.replace(/^Bearer\s+/i, '')
                 : undefined;
 
-            const result = await this.logoutUseCase.execute(userId, sessionToken);
+            const result = await this.logoutUseCase.execute(userId, refreshTokenFromBody ?? sessionToken);
             reply.code(200).send(result);
         } catch (error: any) {
             request.log.error({ err: error }, 'Logout failed');
@@ -198,6 +204,33 @@ export class AuthController {
                 return;
             }
             reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to logout' });
+        }
+    }
+
+    async refresh(
+        request: FastifyRequest<{ Body: RefreshTokenRequestDTO }>,
+        reply: FastifyReply
+    ): Promise<void> {
+        try {
+            const payload = refreshTokenSchema.parse(request.body) as RefreshTokenRequestDTO;
+            const result = await this.refreshTokenUseCase.execute(payload.refreshToken);
+            reply
+                .code(200)
+                .send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken, result.refreshToken, 'Token refreshed'));
+        } catch (error: any) {
+            if (error instanceof ZodError) {
+                this.handleValidationError(error, reply);
+                return;
+            }
+            request.log.error({ err: error }, 'Refresh token failed');
+            const message = error.message || 'Failed to refresh token';
+
+            if (message.includes('Invalid refresh token') || message.includes('expired')) {
+                reply.code(401).send({ error: 'Unauthorized', message });
+                return;
+            }
+
+            reply.code(500).send({ error: 'Internal Server Error', message });
         }
     }
 

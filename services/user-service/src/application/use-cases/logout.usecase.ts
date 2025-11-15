@@ -1,4 +1,4 @@
-import { UserRepository, SessionRepository } from '../../domain/ports.js';
+import { UserRepository, SessionRepository, UserPresenceRepository } from '../../domain/ports.js';
 
 /**
  * Logout Use Case
@@ -14,10 +14,11 @@ import { UserRepository, SessionRepository } from '../../domain/ports.js';
 export class LogoutUseCase {
     constructor(
         private userRepository: UserRepository,
-        private sessionRepository?: SessionRepository
+        private sessionRepository?: SessionRepository,
+        private presenceRepository?: UserPresenceRepository
     ) { }
 
-    async execute(userId: string, sessionToken?: string): Promise<{ message: string }> {
+    async execute(userId: string, refreshToken?: string): Promise<{ message: string }> {
         // Verify user exists
         const user = await this.userRepository.findById(userId);
 
@@ -26,11 +27,15 @@ export class LogoutUseCase {
         }
 
         if (this.sessionRepository) {
-            if (sessionToken) {
-                await this.sessionRepository.delete(sessionToken);
+            if (refreshToken) {
+                await this.sessionRepository.delete(refreshToken);
             } else {
                 await this.sessionRepository.deleteAllForUser(userId);
             }
+        }
+
+        if (this.presenceRepository) {
+            await this.presenceRepository.markOffline(userId, new Date());
         }
 
         return {

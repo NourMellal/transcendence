@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AuthController } from '../controllers/auth.controller.js';
 import { validateInternalApiKey } from '../middlewares/internal-api.middleware.js';
-import { SignupRequestDTO, LoginRequestDTO, Enable2FARequestDTO, Disable2FARequestDTO } from '../../../application/dto/auth.dto.js';
+import { SignupRequestDTO, LoginRequestDTO, Enable2FARequestDTO, Disable2FARequestDTO, RefreshTokenRequestDTO } from '../../../application/dto/auth.dto.js';
 
 export function registerAuthRoutes(
     fastify: FastifyInstance,
@@ -43,10 +43,20 @@ export function registerAuthRoutes(
     });
 
     // POST /auth/logout - Logout user (expects x-user-id header)
-    fastify.post('/auth/logout', {
+    fastify.post<{ Body: { refreshToken?: string } }>('/auth/logout', {
         preHandler: [validateInternalApiKey]
-    }, async (request: FastifyRequest, reply: FastifyReply) => {
+    }, async (request: FastifyRequest<{ Body: { refreshToken?: string } }>, reply: FastifyReply) => {
         return authController.logout(request, reply);
+    });
+
+    // POST /auth/refresh - Refresh access token
+    fastify.post<{ Body: RefreshTokenRequestDTO }>('/auth/refresh', {
+        preHandler: [validateInternalApiKey]
+    }, async (
+        request: FastifyRequest<{ Body: RefreshTokenRequestDTO }>,
+        reply: FastifyReply
+    ) => {
+        return authController.refresh(request, reply);
     });
 
     // POST /auth/2fa/generate - Generate 2FA secret

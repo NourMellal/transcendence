@@ -41,11 +41,12 @@ export class AuthMapper {
     /**
      * Convert to login response
      */
-    static toLoginResponseDTO(user: User, accessToken: string): AuthResponseDTO {
+    static toLoginResponseDTO(user: User, accessToken: string, refreshToken: string, message = 'Login successful'): AuthResponseDTO {
         return {
             user: this.toUserInfoDTO(user),
             accessToken,
-            message: 'Login successful',
+            refreshToken,
+            message,
         };
     }
 }

@@ -2,7 +2,9 @@ import { User, createUser, PasswordHelper } from '../../domain/entities/user.ent
 import { UserRepository } from '../../domain/ports.js';
 import { SignupUseCaseInput } from '../dto/auth.dto.js';
 export class SignupUseCase {
-    constructor(private userRepository: UserRepository) { }
+    constructor(
+        private userRepository: UserRepository
+    ) { }
 
     async execute(input: SignupUseCaseInput): Promise<User> {
         // Validate input
@@ -53,7 +55,6 @@ export class SignupUseCase {
 
         // Save user
         await this.userRepository.save(user);
-
 
         // Return user without password hash
         const { passwordHash: _, ...userWithoutPassword } = user;
