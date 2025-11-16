@@ -169,16 +169,20 @@ export async function registerAuthRoutes(
         preHandler: [requireAuth]
     }, async (request, reply) => {
         const user = getUser(request);
+        const hasBody = typeof request.body === 'object' && request.body !== null;
+        const headers: Record<string, string> = {
+            'x-internal-api-key': internalApiKey,
+            'x-request-id': request.id,
+            'x-user-id': user?.userId || user?.sub || '',
+            'Authorization': request.headers.authorization || '',
+        };
+        if (hasBody) {
+            headers['Content-Type'] = 'application/json';
+        }
         const response = await fetch(`${userServiceUrl}/auth/logout`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-internal-api-key': internalApiKey,
-                'x-request-id': request.id,
-                'x-user-id': user?.userId || user?.sub || '',
-                'Authorization': request.headers.authorization || '',
-            },
-            body: JSON.stringify(request.body ?? {}),
+            headers,
+            body: hasBody ? JSON.stringify(request.body) : undefined,
         });
 
         if (response.status === 204) {
