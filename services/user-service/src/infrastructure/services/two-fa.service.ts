@@ -7,11 +7,13 @@ export class TotpTwoFAService implements TwoFAService {
         authenticator.options = {
             step: 30,
             digits: 6,
-        };
+            window: 1,
+        } as any;
     }
 
     generateSecret(): string {
-        return authenticator.generateSecret(32);
+        // Let otplib choose the default secure length/encoding for the secret
+        return authenticator.generateSecret();
     }
 
     async generateQRCode(secret: string, label: string): Promise<string> {
@@ -20,7 +22,20 @@ export class TotpTwoFAService implements TwoFAService {
     }
 
     verifyToken(secret: string, token: string): boolean {
-        return authenticator.verify({ secret, token });
+        if (!secret || !token) return false;
+
+        // Normalize token: ensure it's a string and trim whitespace
+        const t = String(token).trim();
+
+        // Basic format check to avoid passing invalid values to otplib
+        if (!/^\d{6}$/.test(t)) return false;
+
+        try {
+            return authenticator.verify({ secret, token: t });
+        } catch (err) {
+            // Any unexpected error should be treated as a failed verification
+            return false;
+        }
     }
 }
 

@@ -5,13 +5,13 @@ import {
     friendshipIdParamSchema,
     userIdParamSchema,
 } from '@transcendence/shared-validation';
-import { SendFriendRequestUseCase } from '../../../application/use-cases/send-friend-request.usecase.js';
-import { RespondFriendRequestUseCase } from '../../../application/use-cases/respond-friend-request.usecase.js';
-import { ListFriendsUseCase } from '../../../application/use-cases/list-friends.usecase.js';
-import { BlockUserUseCase } from '../../../application/use-cases/block-user.usecase.js';
-import { RemoveFriendUseCase } from '../../../application/use-cases/remove-friend.usecase.js';
-import { UnblockUserUseCase } from '../../../application/use-cases/unblock-user.usecase.js';
-import { CancelFriendRequestUseCase } from '../../../application/use-cases/cancel-friend-request.usecase.js';
+import { SendFriendRequestUseCase } from '../../../application/use-cases/friends/send-friend-request.usecase.js';
+import { RespondFriendRequestUseCase } from '../../../application/use-cases/friends/respond-friend-request.usecase.js';
+import { ListFriendsUseCase } from '../../../application/use-cases/friends/list-friends.usecase.js';
+import { BlockUserUseCase } from '../../../application/use-cases/friends/block-user.usecase.js';
+import { RemoveFriendUseCase } from '../../../application/use-cases/friends/remove-friend.usecase.js';
+import { UnblockUserUseCase } from '../../../application/use-cases/friends/unblock-user.usecase.js';
+import { CancelFriendRequestUseCase } from '../../../application/use-cases/friends/cancel-friend-request.usecase.js';
 import type { AddFriendRequestDTO, UpdateFriendRequestDTO } from '../../../application/dto/friend.dto.js';
 import { FriendshipStatus } from '../../../domain/entities/friendship.entity.js';
 import { FriendMapper } from '../../../application/mappers/friend.mapper.js';

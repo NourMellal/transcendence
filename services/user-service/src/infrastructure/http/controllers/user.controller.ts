@@ -1,9 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { updateUserSchema, userIdParamSchema, idParamSchema } from '@transcendence/shared-validation';
-import { UpdateProfileUseCase } from '../../../application/use-cases/update-profile.usecase';
-import { GetUserUseCase } from '../../../application/use-cases/get-user.usecase';
-import { DeleteUserUseCase } from '../../../application/use-cases/delete-user.usecase';
+import { UpdateProfileUseCase } from '../../../application/use-cases/users/update-profile.usecase';
+import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase';
+import { DeleteUserUseCase } from '../../../application/use-cases/users/delete-user.usecase';
 import { UpdateProfileRequestDTO } from '../../../application/dto/user.dto.js';
 import { UserMapper } from '../../../application/mappers/user.mapper.js';
 import { ErrorHandler } from '../utils/error-handler.js';

@@ -6,11 +6,11 @@ import {
     refreshTokenSchema,
 } from '@transcendence/shared-validation';
 import { ZodError } from 'zod';
-import { SignupUseCase } from '../../../application/use-cases/signup.usecase.js';
-import { LoginUseCase } from '../../../application/use-cases/login.usecase.js';
-import { LogoutUseCase } from '../../../application/use-cases/logout.usecase.js';
-import { GetUserUseCase } from '../../../application/use-cases/get-user.usecase.js';
-import { RefreshTokenUseCase } from '../../../application/use-cases/refresh-token.usecase.js';
+import { SignupUseCase } from '../../../application/use-cases/auth/signup.usecase.js';
+import { LoginUseCase } from '../../../application/use-cases/auth/login.usecase.js';
+import { LogoutUseCase } from '../../../application/use-cases/auth/logout.usecase.js';
+import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase.js';
+import { RefreshTokenUseCase } from '../../../application/use-cases/auth/refresh-token.usecase.js';
 import { AuthMapper } from '../../../application/mappers/auth.mapper.js';
 import {
     SignupRequestDTO,

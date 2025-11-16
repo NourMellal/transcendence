@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { PresenceStatus } from '../../../domain/entities/presence.entity.js';
-import { UpdatePresenceUseCase } from '../../../application/use-cases/update-presence.usecase.js';
-import { GetPresenceUseCase } from '../../../application/use-cases/get-presence.usecase.js';
+import { UpdatePresenceUseCase } from '../../../application/use-cases/presence/update-presence.usecase.js';
+import { GetPresenceUseCase } from '../../../application/use-cases/presence/get-presence.usecase.js';
 
 interface UpdatePresenceBody {
     status: PresenceStatus;
