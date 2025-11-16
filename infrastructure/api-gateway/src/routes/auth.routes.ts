@@ -238,5 +238,32 @@ export async function registerAuthRoutes(
         return reply.code(response.status).send(data);
     });
 
+    /**
+     * POST /api/auth/2fa/disable
+     * Protected - Disable 2FA with verification code
+     */
+    fastify.post('/api/auth/2fa/disable', {
+        preHandler: [
+            requireAuth,
+            validateRequestBody(enable2FASchema)
+        ]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const response = await fetch(`${userServiceUrl}/auth/2fa/disable`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+            body: JSON.stringify(request.body),
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
     fastify.log.info('✅ Auth routes registered');
 }
