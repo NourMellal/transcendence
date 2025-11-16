@@ -1,6 +1,7 @@
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import type { TwoFAService } from '../../domain/ports.js';
+import type { AuthenticatorOptions } from 'otplib/core';
 
 export class TotpTwoFAService implements TwoFAService {
     constructor(private readonly issuer = 'Transcendence') {
@@ -8,7 +9,7 @@ export class TotpTwoFAService implements TwoFAService {
             step: 30,
             digits: 6,
             window: 1,
-        } as any;
+        } as AuthenticatorOptions;
     }
 
     generateSecret(): string {
