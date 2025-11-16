@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { User, PasswordHelper } from '../../domain/entities/user.entity.js';
-import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository } from '../../domain/ports.js';
-import { PresenceStatus } from '../../domain/entities/presence.entity.js';
+import { User, PasswordHelper } from '../../../domain/entities/user.entity.js';
+import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository } from '../../../domain/ports.js';
+import { PresenceStatus } from '../../../domain/entities/presence.entity.js';
 import type { JWTConfig } from '@transcendence/shared-utils';
-import { LoginUseCaseInput, LoginUseCaseOutput } from '../dto/auth.dto.js';
+import { LoginUseCaseInput, LoginUseCaseOutput } from '../../dto/auth.dto.js';
 import crypto from 'crypto';
 
 export interface JWTService {

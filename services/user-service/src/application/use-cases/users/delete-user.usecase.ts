@@ -3,7 +3,7 @@ import {
     SessionRepository,
     UserRepository,
     UnitOfWork,
-} from '../../domain/ports.js';
+} from '../../../domain/ports.js';
 
 interface DeleteUserOptions {
     reason?: string;

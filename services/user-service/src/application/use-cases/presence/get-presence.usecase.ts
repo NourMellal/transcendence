@@ -1,5 +1,5 @@
-import type { UserPresenceRepository } from '../../domain/ports.js';
-import type { UserPresence } from '../../domain/entities/presence.entity.js';
+import type { UserPresenceRepository } from '../../../domain/ports.js';
+import type { UserPresence } from '../../../domain/entities/presence.entity.js';
 
 export class GetPresenceUseCase {
     constructor(private readonly presenceRepository: UserPresenceRepository) {}

@@ -1,6 +1,6 @@
-import { User, createUser, PasswordHelper } from '../../domain/entities/user.entity.js';
-import { UserRepository } from '../../domain/ports.js';
-import { SignupUseCaseInput } from '../dto/auth.dto.js';
+import { User, createUser, PasswordHelper } from '../../../domain/entities/user.entity.js';
+import { UserRepository } from '../../../domain/ports.js';
+import { SignupUseCaseInput } from '../../dto/auth.dto.js';
 export class SignupUseCase {
     constructor(
         private userRepository: UserRepository

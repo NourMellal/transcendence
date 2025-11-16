@@ -2,8 +2,8 @@ import {
     FriendshipDomain,
     FriendshipStatus,
     type Friendship,
-} from '../../domain/entities/friendship.entity.js';
-import type { FriendshipRepository } from '../../domain/ports.js';
+} from '../../../domain/entities/friendship.entity.js';
+import type { FriendshipRepository } from '../../../domain/ports.js';
 
 interface RespondFriendRequestInput {
     friendshipId: string;

@@ -2,8 +2,8 @@ import {
     FriendshipDomain,
     FriendshipStatus,
     type Friendship,
-} from '../../domain/entities/friendship.entity.js';
-import type { FriendshipRepository, UserRepository } from '../../domain/ports.js';
+} from '../../../domain/entities/friendship.entity.js';
+import type { FriendshipRepository, UserRepository } from '../../../domain/ports.js';
 
 export class BlockUserUseCase {
     constructor(

@@ -1,5 +1,5 @@
-import { PresenceStatus } from '../../domain/entities/presence.entity.js';
-import type { UserPresenceRepository } from '../../domain/ports.js';
+import { PresenceStatus } from '../../../domain/entities/presence.entity.js';
+import type { UserPresenceRepository } from '../../../domain/ports.js';
 
 interface UpdatePresenceInput {
     userId: string;

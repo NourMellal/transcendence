@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
-import { createUser } from '../../domain/entities/user.entity.js';
+import { createUser } from '../../../domain/entities/user.entity.js';
 import type {
     OAuth42CallbackUseCase,
     OAuthService,
     UserRepository
-} from '../../domain/ports.js';
-import type { User } from '../../domain/entities/user.entity.js';
-import { OAuthStateManager } from '../services/oauth-state.manager.js';
+} from '../../../domain/ports.js';
+import type { User } from '../../../domain/entities/user.entity.js';
+import { OAuthStateManager } from '../../services/oauth-state.manager.js';
 import type { JWTConfig } from '@transcendence/shared-utils';
 
 export interface JWTProvider {

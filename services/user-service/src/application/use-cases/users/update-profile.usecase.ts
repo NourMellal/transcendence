@@ -1,7 +1,7 @@
-import { UserRepository } from '../../domain/ports.js';
-import { User } from '../../domain/entities/user.entity.js';
-import { PasswordHelper } from '../../domain/entities/user.entity.js';
-import { UpdateProfileInput } from '../dto/user.dto.js';
+import { UserRepository } from '../../../domain/ports.js';
+import { User } from '../../../domain/entities/user.entity.js';
+import { PasswordHelper } from '../../../domain/entities/user.entity.js';
+import { UpdateProfileInput } from '../../dto/user.dto.js';
 
 export class UpdateProfileUseCase {
     constructor(

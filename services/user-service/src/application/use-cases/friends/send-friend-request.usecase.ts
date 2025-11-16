@@ -1,5 +1,5 @@
-import { FriendshipDomain, FriendshipStatus, type Friendship } from '../../domain/entities/friendship.entity.js';
-import type { FriendshipRepository, UserRepository } from '../../domain/ports.js';
+import { FriendshipDomain, FriendshipStatus, type Friendship } from '../../../domain/entities/friendship.entity.js';
+import type { FriendshipRepository, UserRepository } from '../../../domain/ports.js';
 
 export class SendFriendRequestUseCase {
     constructor(
