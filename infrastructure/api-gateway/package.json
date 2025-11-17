@@ -3,7 +3,6 @@
     "version": "1.0.0",
     "description": "API Gateway for Transcendence microservices",
     "main": "dist/server.js",
-    "type": "module",
     "scripts": {
         "bundle:openapi": "redocly bundle ../../docs/api/openapi.yaml -o openapi.bundled.json",
         "types:generate": "openapi-typescript ../../docs/api/openapi.yaml -o src/types/openapi.d.ts",
