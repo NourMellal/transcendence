@@ -1,6 +1,6 @@
-import { User, Session } from './entities/user.entity.js';
-import type { Friendship, FriendshipStatus } from './entities/friendship.entity.js';
-import type { UserPresence, PresenceStatus } from './entities/presence.entity.js';
+import { User, Session } from './entities/user.entity';
+import type { Friendship, FriendshipStatus } from './entities/friendship.entity';
+import type { UserPresence, PresenceStatus } from './entities/presence.entity';
 
 // Repository ports (outbound)
 export interface UserRepository {

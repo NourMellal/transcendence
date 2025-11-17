@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
-import type { Session } from '../../../domain/entities/user.entity.js';
-import type { SessionRepository } from '../../../domain/ports.js';
+import type { Session } from '../../../domain/entities/user.entity';
+import type { SessionRepository } from '../../../domain/ports';
 
 export class SQLiteSessionRepository implements SessionRepository {
     private db: Database | null = null;

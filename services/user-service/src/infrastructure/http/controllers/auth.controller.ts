@@ -6,26 +6,26 @@ import {
     refreshTokenSchema,
 } from '@transcendence/shared-validation';
 import { ZodError } from 'zod';
-import { SignupUseCase } from '../../../application/use-cases/auth/signup.usecase.js';
-import { LoginUseCase } from '../../../application/use-cases/auth/login.usecase.js';
-import { LogoutUseCase } from '../../../application/use-cases/auth/logout.usecase.js';
-import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase.js';
-import { RefreshTokenUseCase } from '../../../application/use-cases/auth/refresh-token.usecase.js';
-import { AuthMapper } from '../../../application/mappers/auth.mapper.js';
+import { SignupUseCase } from '../../../application/use-cases/auth/signup.usecase';
+import { LoginUseCase } from '../../../application/use-cases/auth/login.usecase';
+import { LogoutUseCase } from '../../../application/use-cases/auth/logout.usecase';
+import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase';
+import { RefreshTokenUseCase } from '../../../application/use-cases/auth/refresh-token.usecase';
+import { AuthMapper } from '../../../application/mappers/auth.mapper';
 import {
     SignupRequestDTO,
     LoginRequestDTO,
     Enable2FARequestDTO,
     Disable2FARequestDTO,
     RefreshTokenRequestDTO
-} from '../../../application/dto/auth.dto.js';
+} from '../../../application/dto/auth.dto';
 import type {
     Disable2FAUseCase,
     Enable2FAUseCase,
     Generate2FAUseCase,
     OAuth42CallbackUseCase,
     OAuth42LoginUseCase
-} from '../../../domain/ports.js';
+} from '../../../domain/ports';
 
 type OAuthCallbackQuery = {
     code?: string;
@@ -190,12 +190,8 @@ export class AuthController {
 
             const body = (request.body ?? {}) as { refreshToken?: string };
             const refreshTokenFromBody = body.refreshToken;
-            const authHeader = request.headers.authorization;
-            const sessionToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
-                ? authHeader.replace(/^Bearer\s+/i, '')
-                : undefined;
 
-            const result = await this.logoutUseCase.execute(userId, refreshTokenFromBody ?? sessionToken);
+            const result = await this.logoutUseCase.execute(userId, refreshTokenFromBody);
             reply.code(200).send(result);
         } catch (error: any) {
             request.log.error({ err: error }, 'Logout failed');

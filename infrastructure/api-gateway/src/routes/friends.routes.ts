@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
-import { requireAuth, getUser } from '../middleware/auth.middleware.js';
+import { requireAuth, getUser } from '../middleware/auth.middleware';
 import {
     validateRequestBody,
     validateRequestParams,
     validateContentType,
-} from '../middleware/validation.middleware.js';
+} from '../middleware/validation.middleware';
 import {
     sendFriendRequestSchema,
     respondFriendRequestSchema,

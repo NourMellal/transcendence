@@ -1,10 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { validateInternalApiKey } from '../middlewares/internal-api.middleware.js';
-import { FriendController } from '../controllers/friend.controller.js';
+import { validateInternalApiKey } from '../middlewares/internal-api.middleware';
+import { FriendController } from '../controllers/friend.controller';
 import type {
     AddFriendRequestDTO,
     UpdateFriendRequestDTO,
-} from '../../../application/dto/friend.dto.js';
+} from '../../../application/dto/friend.dto';
 
 export function registerFriendRoutes(
     fastify: FastifyInstance,

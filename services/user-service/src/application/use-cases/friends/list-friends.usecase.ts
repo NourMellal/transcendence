@@ -1,6 +1,6 @@
-import type { User } from '../../../domain/entities/user.entity.js';
-import { FriendshipStatus, type Friendship } from '../../../domain/entities/friendship.entity.js';
-import type { FriendshipRepository, UserRepository } from '../../../domain/ports.js';
+import type { User } from '../../../domain/entities/user.entity';
+import { FriendshipStatus, type Friendship } from '../../../domain/entities/friendship.entity';
+import type { FriendshipRepository, UserRepository } from '../../../domain/ports';
 
 export interface FriendListItem {
     friendship: Friendship;

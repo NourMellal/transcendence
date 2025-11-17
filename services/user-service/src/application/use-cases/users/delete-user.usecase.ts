@@ -3,7 +3,8 @@ import {
     SessionRepository,
     UserRepository,
     UnitOfWork,
-} from '../../../domain/ports.js';
+    UserPresenceRepository,
+} from '../../../domain/ports';
 
 interface DeleteUserOptions {
     reason?: string;
@@ -15,6 +16,7 @@ export class DeleteUserUseCase {
         private readonly userRepository: UserRepository,
         private readonly sessionRepository: SessionRepository,
         private readonly friendshipRepository: FriendshipRepository,
+        private readonly presenceRepository: UserPresenceRepository,
         private readonly unitOfWork: UnitOfWork
     ) {}
 
@@ -32,6 +34,7 @@ export class DeleteUserUseCase {
             // Cleanup sessions and friendships first to avoid orphaned references
             await this.sessionRepository.deleteAllForUser(userId);
             await this.friendshipRepository.deleteAllForUser(userId);
+            await this.presenceRepository.markOffline(userId, new Date());
 
             await this.userRepository.delete(userId);
 

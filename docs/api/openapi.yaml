@@ -116,10 +116,18 @@ paths:
     $ref: './paths/auth.yaml#/~1auth~12fa~1generate'
   /auth/2fa/enable:
     $ref: './paths/auth.yaml#/~1auth~12fa~1enable'
+  /auth/2fa/disable:
+    $ref: './paths/auth.yaml#/~1auth~12fa~1disable'
   
   # User endpoints
   /users/me:
     $ref: './paths/users.yaml#/~1users~1me'
+  /users/presence:
+    $ref: './paths/users.yaml#/~1users~1presence'
+  /users/{userId}/presence:
+    $ref: './paths/users.yaml#/~1users~1{userId}~1presence'
+  /users/{userId}:
+    $ref: './paths/users.yaml#/~1users~1{userId}'
   /friends:
     $ref: './paths/friends.yaml#/~1friends'
   /friends/requests:
@@ -128,6 +136,8 @@ paths:
     $ref: './paths/friends.yaml#/~1friends~1requests~1{friendshipId}'
   /friends/{userId}/block:
     $ref: './paths/friends.yaml#/~1friends~1{userId}~1block'
+  /friends/{userId}:
+    $ref: './paths/friends.yaml#/~1friends~1{userId}'
   
   # Game endpoints
   /games:

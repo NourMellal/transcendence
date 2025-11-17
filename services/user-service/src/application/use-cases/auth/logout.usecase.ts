@@ -1,4 +1,4 @@
-import { UserRepository, SessionRepository, UserPresenceRepository } from '../../../domain/ports.js';
+import { UserRepository, SessionRepository, UserPresenceRepository } from '../../../domain/ports';
 
 /**
  * Logout Use Case

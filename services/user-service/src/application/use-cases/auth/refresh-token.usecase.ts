@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { User } from '../../../domain/entities/user.entity.js';
-import { SessionRepository, UserRepository } from '../../../domain/ports.js';
-import type { JWTService } from './login.usecase.js';
-import type { LoginUseCaseOutput } from '../../dto/auth.dto.js';
+import { User } from '../../../domain/entities/user.entity';
+import { SessionRepository, UserRepository } from '../../../domain/ports';
+import type { JWTService } from './login.usecase';
+import type { LoginUseCaseOutput } from '../../dto/auth.dto';
 
 export class RefreshTokenUseCase {
     constructor(

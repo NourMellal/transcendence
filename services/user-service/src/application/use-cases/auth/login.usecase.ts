@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { User, PasswordHelper } from '../../../domain/entities/user.entity.js';
-import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository } from '../../../domain/ports.js';
-import { PresenceStatus } from '../../../domain/entities/presence.entity.js';
+import { User, PasswordHelper } from '../../../domain/entities/user.entity';
+import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository } from '../../../domain/ports';
+import { PresenceStatus } from '../../../domain/entities/presence.entity';
 import type { JWTConfig } from '@transcendence/shared-utils';
-import { LoginUseCaseInput, LoginUseCaseOutput } from '../../dto/auth.dto.js';
+import { LoginUseCaseInput, LoginUseCaseOutput } from '../../dto/auth.dto';
 import crypto from 'crypto';
 
 export interface JWTService {
@@ -14,8 +14,8 @@ export class LoginUseCase {
     constructor(
         private userRepository: UserRepository,
         private jwtService: JWTService,
+        private sessionRepository: SessionRepository,
         private twoFAService?: TwoFAService,
-        private sessionRepository?: SessionRepository,
         private presenceRepository?: UserPresenceRepository
     ) { }
 
@@ -96,10 +96,6 @@ export class LoginUseCase {
     }
 
     private async createRefreshSession(userId: string): Promise<{ refreshToken: string; expiresAt: Date }> {
-        if (!this.sessionRepository) {
-            throw new Error('Session repository not configured');
-        }
-
         const refreshToken = crypto.randomBytes(48).toString('hex');
         const ttlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7');
         const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);

@@ -11,44 +11,44 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
-import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository.js';
-import { SQLiteFriendshipRepository } from './infrastructure/database/repositories/sqlite-friendship.repository.js';
-import { SQLiteSessionRepository } from './infrastructure/database/repositories/sqlite-session.repository.js';
-import { SQLitePresenceRepository } from './infrastructure/database/repositories/sqlite-presence.repository.js';
-import { SignupUseCase } from './application/use-cases/auth/signup.usecase.js';
-import { LoginUseCase } from './application/use-cases/auth/login.usecase.js';
-import { LogoutUseCase } from './application/use-cases/auth/logout.usecase.js';
-import { RefreshTokenUseCase } from './application/use-cases/auth/refresh-token.usecase.js';
-import { UpdateProfileUseCase } from './application/use-cases/users/update-profile.usecase.js';
-import { GetUserUseCase } from './application/use-cases/users/get-user.usecase.js';
-import { DeleteUserUseCase } from './application/use-cases/users/delete-user.usecase.js';
-import { Generate2FAUseCaseImpl } from './application/use-cases/two-fa/generate-2fa.usecase.js';
-import { Enable2FAUseCaseImpl } from './application/use-cases/two-fa/enable-2fa.usecase.js';
-import { Disable2FAUseCaseImpl } from './application/use-cases/two-fa/disable-2fa.usecase.js';
-import { OAuth42LoginUseCaseImpl } from './application/use-cases/auth/oauth42-login.usecase.js';
-import { OAuth42CallbackUseCaseImpl } from './application/use-cases/auth/oauth42-callback.usecase.js';
-import { OAuthStateManager } from './application/services/oauth-state.manager.js';
-import { AuthController } from './infrastructure/http/controllers/auth.controller.js';
-import { UserController } from './infrastructure/http/controllers/user.controller.js';
-import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes.js';
-import { registerUserRoutes } from './infrastructure/http/routes/user.routes.js';
-import { registerFriendRoutes } from './infrastructure/http/routes/friend.routes.js';
-import { registerPresenceRoutes } from './infrastructure/http/routes/presence.routes.js';
-import { initializeJWTService } from './infrastructure/services/jwt.service.js';
-import { createTwoFAService } from './infrastructure/services/two-fa.service.js';
-import { createOAuth42Service } from './infrastructure/services/oauth42.service.js';
-import { SendFriendRequestUseCase } from './application/use-cases/friends/send-friend-request.usecase.js';
-import { RespondFriendRequestUseCase } from './application/use-cases/friends/respond-friend-request.usecase.js';
-import { ListFriendsUseCase } from './application/use-cases/friends/list-friends.usecase.js';
-import { BlockUserUseCase } from './application/use-cases/friends/block-user.usecase.js';
-import { RemoveFriendUseCase } from './application/use-cases/friends/remove-friend.usecase.js';
-import { UnblockUserUseCase } from './application/use-cases/friends/unblock-user.usecase.js';
-import { CancelFriendRequestUseCase } from './application/use-cases/friends/cancel-friend-request.usecase.js';
-import { UpdatePresenceUseCase } from './application/use-cases/presence/update-presence.usecase.js';
-import { GetPresenceUseCase } from './application/use-cases/presence/get-presence.usecase.js';
-import { PresenceController } from './infrastructure/http/controllers/presence.controller.js';
-import { FriendController } from './infrastructure/http/controllers/friend.controller.js';
-import { SQLiteUnitOfWork } from './infrastructure/database/sqlite-unit-of-work.js';
+import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository';
+import { SQLiteFriendshipRepository } from './infrastructure/database/repositories/sqlite-friendship.repository';
+import { SQLiteSessionRepository } from './infrastructure/database/repositories/sqlite-session.repository';
+import { SQLitePresenceRepository } from './infrastructure/database/repositories/sqlite-presence.repository';
+import { SignupUseCase } from './application/use-cases/auth/signup.usecase';
+import { LoginUseCase } from './application/use-cases/auth/login.usecase';
+import { LogoutUseCase } from './application/use-cases/auth/logout.usecase';
+import { RefreshTokenUseCase } from './application/use-cases/auth/refresh-token.usecase';
+import { UpdateProfileUseCase } from './application/use-cases/users/update-profile.usecase';
+import { GetUserUseCase } from './application/use-cases/users/get-user.usecase';
+import { DeleteUserUseCase } from './application/use-cases/users/delete-user.usecase';
+import { Generate2FAUseCaseImpl } from './application/use-cases/two-fa/generate-2fa.usecase';
+import { Enable2FAUseCaseImpl } from './application/use-cases/two-fa/enable-2fa.usecase';
+import { Disable2FAUseCaseImpl } from './application/use-cases/two-fa/disable-2fa.usecase';
+import { OAuth42LoginUseCaseImpl } from './application/use-cases/auth/oauth42-login.usecase';
+import { OAuth42CallbackUseCaseImpl } from './application/use-cases/auth/oauth42-callback.usecase';
+import { OAuthStateManager } from './application/services/oauth-state.manager';
+import { AuthController } from './infrastructure/http/controllers/auth.controller';
+import { UserController } from './infrastructure/http/controllers/user.controller';
+import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes';
+import { registerUserRoutes } from './infrastructure/http/routes/user.routes';
+import { registerFriendRoutes } from './infrastructure/http/routes/friend.routes';
+import { registerPresenceRoutes } from './infrastructure/http/routes/presence.routes';
+import { initializeJWTService } from './infrastructure/services/jwt.service';
+import { createTwoFAService } from './infrastructure/services/two-fa.service';
+import { createOAuth42Service } from './infrastructure/services/oauth42.service';
+import { SendFriendRequestUseCase } from './application/use-cases/friends/send-friend-request.usecase';
+import { RespondFriendRequestUseCase } from './application/use-cases/friends/respond-friend-request.usecase';
+import { ListFriendsUseCase } from './application/use-cases/friends/list-friends.usecase';
+import { BlockUserUseCase } from './application/use-cases/friends/block-user.usecase';
+import { RemoveFriendUseCase } from './application/use-cases/friends/remove-friend.usecase';
+import { UnblockUserUseCase } from './application/use-cases/friends/unblock-user.usecase';
+import { CancelFriendRequestUseCase } from './application/use-cases/friends/cancel-friend-request.usecase';
+import { UpdatePresenceUseCase } from './application/use-cases/presence/update-presence.usecase';
+import { GetPresenceUseCase } from './application/use-cases/presence/get-presence.usecase';
+import { PresenceController } from './infrastructure/http/controllers/presence.controller';
+import { FriendController } from './infrastructure/http/controllers/friend.controller';
+import { SQLiteUnitOfWork } from './infrastructure/database/sqlite-unit-of-work';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
@@ -83,8 +83,8 @@ async function main() {
     const loginUseCase = new LoginUseCase(
         userRepository,
         jwtService,
-        twoFAService,
         sessionRepository,
+        twoFAService,
         presenceRepository
     );
     const logoutUseCase = new LogoutUseCase(userRepository, sessionRepository, presenceRepository);
@@ -95,6 +95,7 @@ async function main() {
         userRepository,
         sessionRepository,
         friendshipRepository,
+        presenceRepository,
         unitOfWork
     );
     const generate2FAUseCase = new Generate2FAUseCaseImpl(userRepository, twoFAService);

@@ -1,4 +1,4 @@
-import type { User } from '../../domain/entities/user.entity.js';
+import type { User } from '../../domain/entities/user.entity';
 
 /**
  * Authentication DTOs

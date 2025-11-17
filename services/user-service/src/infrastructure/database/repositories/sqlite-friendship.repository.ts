@@ -3,8 +3,8 @@ import { open, Database } from 'sqlite';
 import {
     Friendship,
     FriendshipStatus,
-} from '../../../domain/entities/friendship.entity.js';
-import { FriendshipRepository } from '../../../domain/ports.js';
+} from '../../../domain/entities/friendship.entity';
+import { FriendshipRepository } from '../../../domain/ports';
 
 export class SQLiteFriendshipRepository implements FriendshipRepository {
     private db: Database | null = null;

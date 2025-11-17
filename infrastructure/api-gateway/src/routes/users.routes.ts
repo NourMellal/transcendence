@@ -5,8 +5,8 @@
 
 import type { FastifyInstance } from 'fastify';
 import { updateUserSchema } from '@transcendence/shared-validation';
-import { validateRequestBody } from '../middleware/validation.middleware.js';
-import { requireAuth, getUser } from '../middleware/auth.middleware.js';
+import { validateRequestBody } from '../middleware/validation.middleware';
+import { requireAuth, getUser } from '../middleware/auth.middleware';
 
 export async function registerUserRoutes(
     fastify: FastifyInstance,

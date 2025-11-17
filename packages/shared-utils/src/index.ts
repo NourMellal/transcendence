@@ -102,4 +102,4 @@ export class UnauthorizedError extends AppError {
 }
 
 // Vault integration exports
-export * from './vault/index.js';
+export * from './vault/index';

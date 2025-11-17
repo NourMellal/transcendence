@@ -9,7 +9,7 @@
  */
 
 // Core client and types
-export { VaultClient } from './client.js';
+export { VaultClient } from './client';
 export {
     ServiceVaultHelper,
     createUserServiceVault,
@@ -17,7 +17,7 @@ export {
     createChatServiceVault,
     createTournamentServiceVault,
     createAPIGatewayVault
-} from './service-helper.js';
+} from './service-helper';
 
 // Type definitions
 export type {
@@ -27,4 +27,4 @@ export type {
     DatabaseConfig,
     JWTConfig,
     APIConfig
-} from './types.js';
+} from './types';

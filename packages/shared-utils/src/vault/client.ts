@@ -3,7 +3,7 @@
  */
 
 import vault from 'node-vault';
-import type { VaultConfig, VaultSecret } from './types.js';
+import type { VaultConfig, VaultSecret } from './types';
 
 export class VaultClient {
     private vault: ReturnType<typeof vault>;

@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { validateInternalApiKey } from '../middlewares/internal-api.middleware.js';
-import { PresenceController } from '../controllers/presence.controller.js';
-import { PresenceStatus } from '../../../domain/entities/presence.entity.js';
+import { validateInternalApiKey } from '../middlewares/internal-api.middleware';
+import { PresenceController } from '../controllers/presence.controller';
+import { PresenceStatus } from '../../../domain/entities/presence.entity';
 
 export function registerPresenceRoutes(
     fastify: FastifyInstance,

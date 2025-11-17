@@ -4,12 +4,12 @@ import { updateUserSchema, userIdParamSchema, idParamSchema } from '@transcenden
 import { UpdateProfileUseCase } from '../../../application/use-cases/users/update-profile.usecase';
 import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase';
 import { DeleteUserUseCase } from '../../../application/use-cases/users/delete-user.usecase';
-import { UpdateProfileRequestDTO } from '../../../application/dto/user.dto.js';
-import { UserMapper } from '../../../application/mappers/user.mapper.js';
-import { ErrorHandler } from '../utils/error-handler.js';
+import { UpdateProfileRequestDTO } from '../../../application/dto/user.dto';
+import { UserMapper } from '../../../application/mappers/user.mapper';
+import { ErrorHandler } from '../utils/error-handler';
 
 interface GetUserParams {
-    id: string;
+    userId: string;
 }
 
 interface DeleteUserRequestBody {

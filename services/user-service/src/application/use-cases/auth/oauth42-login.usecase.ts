@@ -1,5 +1,5 @@
-import type { OAuth42LoginUseCase, OAuthService } from '../../../domain/ports.js';
-import { OAuthStateManager } from '../../services/oauth-state.manager.js';
+import type { OAuth42LoginUseCase, OAuthService } from '../../../domain/ports';
+import { OAuthStateManager } from '../../services/oauth-state.manager';
 
 export class OAuth42LoginUseCaseImpl implements OAuth42LoginUseCase {
     constructor(

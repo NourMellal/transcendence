@@ -1,5 +1,5 @@
-import { FriendshipRepository } from '../../../domain/ports.js';
-import { FriendshipStatus } from '../../../domain/entities/friendship.entity.js';
+import { FriendshipRepository } from '../../../domain/ports';
+import { FriendshipStatus } from '../../../domain/entities/friendship.entity';
 
 export class RemoveFriendUseCase {
     constructor(private readonly friendshipRepository: FriendshipRepository) {}

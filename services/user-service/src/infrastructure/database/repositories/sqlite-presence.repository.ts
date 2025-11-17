@@ -1,8 +1,8 @@
 import type { Database } from 'sqlite';
 import { open } from 'sqlite';
 import sqlite3 from 'sqlite3';
-import type { UserPresenceRepository } from '../../../domain/ports.js';
-import { PresenceStatus, type UserPresence } from '../../../domain/entities/presence.entity.js';
+import type { UserPresenceRepository } from '../../../domain/ports';
+import { PresenceStatus, type UserPresence } from '../../../domain/entities/presence.entity';
 
 export class SQLitePresenceRepository implements UserPresenceRepository {
     private db: Database | null = null;

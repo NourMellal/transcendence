@@ -1,5 +1,5 @@
 import type { Database } from 'sqlite';
-import type { UnitOfWork } from '../../domain/ports.js';
+import type { UnitOfWork } from '../../domain/ports';
 
 export class SQLiteUnitOfWork implements UnitOfWork {
     private transactionDepth = 0;

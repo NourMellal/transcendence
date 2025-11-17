@@ -1,7 +1,7 @@
-import type { User } from '../../domain/entities/user.entity.js';
-import type { Friendship } from '../../domain/entities/friendship.entity.js';
-import type { FriendDTO, FriendListResponseDTO, FriendshipDTO } from '../dto/friend.dto.js';
-import type { FriendListItem } from '../use-cases/friends/list-friends.usecase.js';
+import type { User } from '../../domain/entities/user.entity';
+import type { Friendship } from '../../domain/entities/friendship.entity';
+import type { FriendDTO, FriendListResponseDTO, FriendshipDTO } from '../dto/friend.dto';
+import type { FriendListItem } from '../use-cases/friends/list-friends.usecase';
 
 export class FriendMapper {
     static toFriendshipDTO(friendship: Friendship): FriendshipDTO {

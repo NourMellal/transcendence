@@ -1,6 +1,6 @@
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
-import type { TwoFAService } from '../../domain/ports.js';
+import type { TwoFAService } from '../../domain/ports';
 import type { AuthenticatorOptions } from 'otplib/core';
 
 export class TotpTwoFAService implements TwoFAService {

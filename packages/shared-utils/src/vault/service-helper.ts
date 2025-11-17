@@ -4,13 +4,13 @@
  * with automatic fallback to environment variables
  */
 
-import { VaultClient, createVaultClientFromEnv } from './client.js';
+import { VaultClient, createVaultClientFromEnv } from './client';
 import type {
     ServiceVaultConfig,
     DatabaseConfig,
     JWTConfig,
     APIConfig,
-} from './types.js';
+} from './types';
 
 export class ServiceVaultHelper {
     private client: VaultClient;

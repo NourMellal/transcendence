@@ -38,7 +38,17 @@ export const updateUserSchema = z.object({
         .min(1, 'Display name is required')
         .max(50, 'Display name must not exceed 50 characters')
         .optional(),
-    avatar: z.string().url('Invalid avatar URL').optional()
+    avatar: z.string().url('Invalid avatar URL').optional(),
+    email: z.string()
+        .email('Invalid email format')
+        .optional(),
+    password: z.string()
+        .min(8, 'Password must be at least 8 characters')
+        .refine((value) => /[A-Z]/.test(value), 'Password must contain at least one uppercase letter')
+        .refine((value) => /[a-z]/.test(value), 'Password must contain at least one lowercase letter')
+        .refine((value) => /[0-9]/.test(value), 'Password must contain at least one number')
+        .refine((value) => /[!@#$%^&*(),.?":{}|<>]/.test(value), 'Password must contain at least one special character')
+        .optional(),
 });
 
 // Authentication validation schemas

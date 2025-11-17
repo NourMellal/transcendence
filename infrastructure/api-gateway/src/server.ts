@@ -15,17 +15,17 @@ import websocket from '@fastify/websocket';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { readFileSync } from 'fs';
-import { initializeVaultJWTService } from './utils/vault-jwt.service.js';
-import { loadGatewayConfig } from './config/gateway-config.js';
+import { initializeVaultJWTService } from './utils/vault-jwt.service';
+import { loadGatewayConfig } from './config/gateway-config';
 
 // Import route handlers
-import { registerAuthRoutes } from './routes/auth.routes.js';
-import { registerUserRoutes } from './routes/users.routes.js';
-import { registerFriendRoutes } from './routes/friends.routes.js';
-import { registerGameRoutes } from './routes/games.routes.js';
-import { registerChatRoutes } from './routes/chat.routes.js';
-import { registerTournamentRoutes } from './routes/tournaments.routes.js';
-import { registerStatsRoutes } from './routes/stats.routes.js';
+import { registerAuthRoutes } from './routes/auth.routes';
+import { registerUserRoutes } from './routes/users.routes';
+import { registerFriendRoutes } from './routes/friends.routes';
+import { registerGameRoutes } from './routes/games.routes';
+import { registerChatRoutes } from './routes/chat.routes';
+import { registerTournamentRoutes } from './routes/tournaments.routes';
+import { registerStatsRoutes } from './routes/stats.routes';
 
 // Load bundled OpenAPI specification
 const openApiSpec = JSON.parse(

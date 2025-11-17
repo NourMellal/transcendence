@@ -1,5 +1,5 @@
-import { FriendshipDomain, FriendshipStatus } from '../../../domain/entities/friendship.entity.js';
-import type { FriendshipRepository } from '../../../domain/ports.js';
+import { FriendshipDomain, FriendshipStatus } from '../../../domain/entities/friendship.entity';
+import type { FriendshipRepository } from '../../../domain/ports';
 
 export class UnblockUserUseCase {
     constructor(private readonly friendshipRepository: FriendshipRepository) {}

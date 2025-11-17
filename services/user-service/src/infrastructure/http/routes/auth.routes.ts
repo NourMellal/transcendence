@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { AuthController } from '../controllers/auth.controller.js';
-import { validateInternalApiKey } from '../middlewares/internal-api.middleware.js';
-import { SignupRequestDTO, LoginRequestDTO, Enable2FARequestDTO, Disable2FARequestDTO, RefreshTokenRequestDTO } from '../../../application/dto/auth.dto.js';
+import { AuthController } from '../controllers/auth.controller';
+import { validateInternalApiKey } from '../middlewares/internal-api.middleware';
+import { SignupRequestDTO, LoginRequestDTO, Enable2FARequestDTO, Disable2FARequestDTO, RefreshTokenRequestDTO } from '../../../application/dto/auth.dto';
 
 export function registerAuthRoutes(
     fastify: FastifyInstance,

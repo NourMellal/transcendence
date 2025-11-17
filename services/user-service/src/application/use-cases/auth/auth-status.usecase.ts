@@ -1,4 +1,4 @@
-import { UserRepository } from '../../../domain/ports.js';
+import { UserRepository } from '../../../domain/ports';
 
 export class AuthStatusUseCase {
     constructor(private userRepository: UserRepository) { }

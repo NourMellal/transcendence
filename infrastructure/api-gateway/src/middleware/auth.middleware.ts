@@ -6,7 +6,7 @@
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { getVaultJWTService, type JWTPayload } from '../utils/vault-jwt.service.js';
+import { getVaultJWTService, type JWTPayload } from '../utils/vault-jwt.service';
 
 // Type augmentation is automatically loaded from ../types/fastify.d.ts
 

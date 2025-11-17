@@ -3,8 +3,8 @@
  * Maps between Domain Entities and Auth DTOs
  */
 
-import { User } from '../../domain/entities/user.entity.js';
-import { AuthResponseDTO, UserInfoDTO } from '../dto/auth.dto.js';
+import { User } from '../../domain/entities/user.entity';
+import { AuthResponseDTO, UserInfoDTO } from '../dto/auth.dto';
 
 export class AuthMapper {
     /**
