@@ -38,13 +38,31 @@ export const updateUserSchema = z.object({
         .min(1, 'Display name is required')
         .max(50, 'Display name must not exceed 50 characters')
         .optional(),
-    avatar: z.string().url('Invalid avatar URL').optional()
+    avatar: z.string().url('Invalid avatar URL').optional(),
+    email: z.string()
+        .email('Invalid email format')
+        .optional(),
+    password: z.string()
+        .min(8, 'Password must be at least 8 characters')
+        .refine((value) => /[A-Z]/.test(value), 'Password must contain at least one uppercase letter')
+        .refine((value) => /[a-z]/.test(value), 'Password must contain at least one lowercase letter')
+        .refine((value) => /[0-9]/.test(value), 'Password must contain at least one number')
+        .refine((value) => /[!@#$%^&*(),.?":{}|<>]/.test(value), 'Password must contain at least one special character')
+        .optional(),
 });
 
 // Authentication validation schemas
 export const loginSchema = z.object({
     email: z.string().email('Invalid email format'),
-    password: z.string().min(8, 'Password must be at least 8 characters')
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    totpCode: z.string()
+        .length(6, '2FA token must be exactly 6 digits')
+        .regex(/^\d{6}$/, '2FA token must contain only digits')
+        .optional(),
+});
+
+export const refreshTokenSchema = z.object({
+    refreshToken: z.string().min(16, 'Refresh token is required'),
 });
 
 export const enable2FASchema = z.object({
@@ -92,6 +110,17 @@ export const sendMessageSchema = z.object({
     type: z.enum(['text', 'system']).default('text')
 });
 
+// Friend validation schemas
+export const sendFriendRequestSchema = z.object({
+    friendId: z.string().uuid('Friend ID must be a valid UUID'),
+});
+
+export const respondFriendRequestSchema = z.object({
+    status: z.enum(['accepted', 'rejected'], {
+        errorMap: () => ({ message: 'Status must be accepted or rejected' })
+    })
+});
+
 // Tournament validation schemas (placeholder for future use)
 export const createTournamentSchema = z.object({
     name: z.string()
@@ -117,6 +146,10 @@ export const tournamentIdParamSchema = z.object({
 
 export const userIdParamSchema = z.object({
     userId: z.string().min(1, 'User ID is required'),
+});
+
+export const friendshipIdParamSchema = z.object({
+    friendshipId: z.string().uuid('friendshipId must be a valid UUID'),
 });
 
 // Export types inferred from schemas

@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Transcendence - Microservices Architecture for Real-time Pong Game",
   "private": true,
-  "type": "module",
   "directories": {
     "doc": "docs"
   },

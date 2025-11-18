@@ -1,22 +1,31 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { SignupUseCase } from '../../../application/use-cases/signup.usecase.js';
-import { LoginUseCase } from '../../../application/use-cases/login.usecase.js';
-import { LogoutUseCase } from '../../../application/use-cases/logout.usecase.js';
-import { GetUserUseCase } from '../../../application/use-cases/get-user.usecase.js';
-import { AuthMapper } from '../../../application/mappers/auth.mapper.js';
+import {
+    signUpSchema,
+    loginSchema,
+    enable2FASchema,
+    refreshTokenSchema,
+} from '@transcendence/shared-validation';
+import { ZodError } from 'zod';
+import { SignupUseCase } from '../../../application/use-cases/auth/signup.usecase';
+import { LoginUseCase } from '../../../application/use-cases/auth/login.usecase';
+import { LogoutUseCase } from '../../../application/use-cases/auth/logout.usecase';
+import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase';
+import { RefreshTokenUseCase } from '../../../application/use-cases/auth/refresh-token.usecase';
+import { AuthMapper } from '../../../application/mappers/auth.mapper';
 import {
     SignupRequestDTO,
     LoginRequestDTO,
     Enable2FARequestDTO,
-    Disable2FARequestDTO
-} from '../../../application/dto/auth.dto.js';
+    Disable2FARequestDTO,
+    RefreshTokenRequestDTO
+} from '../../../application/dto/auth.dto';
 import type {
     Disable2FAUseCase,
     Enable2FAUseCase,
     Generate2FAUseCase,
     OAuth42CallbackUseCase,
     OAuth42LoginUseCase
-} from '../../../domain/ports.js';
+} from '../../../domain/ports';
 
 type OAuthCallbackQuery = {
     code?: string;
@@ -36,6 +45,7 @@ export class AuthController {
         private readonly signupUseCase: SignupUseCase,
         private readonly loginUseCase: LoginUseCase,
         private readonly logoutUseCase: LogoutUseCase,
+        private readonly refreshTokenUseCase: RefreshTokenUseCase,
         private readonly getUserUseCase: GetUserUseCase,
         private readonly oauth42LoginUseCase: OAuth42LoginUseCase,
         private readonly oauth42CallbackUseCase: OAuth42CallbackUseCase,
@@ -48,8 +58,15 @@ export class AuthController {
         request: FastifyRequest<{ Body: SignupRequestDTO }>,
         reply: FastifyReply
     ): Promise<void> {
+        let payload: SignupRequestDTO;
         try {
-            const user = await this.signupUseCase.execute(request.body);
+            payload = signUpSchema.parse(request.body) as SignupRequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
+            return;
+        }
+        try {
+            const user = await this.signupUseCase.execute(payload);
             reply.code(201).send(AuthMapper.toSignupResponseDTO(user));
         } catch (error: any) {
             if (error.message.includes('already exists')) {
@@ -80,9 +97,16 @@ export class AuthController {
         request: FastifyRequest<{ Body: LoginRequestDTO }>,
         reply: FastifyReply
     ): Promise<void> {
+        let payload: LoginRequestDTO;
         try {
-            const result = await this.loginUseCase.execute(request.body);
-            reply.code(200).send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken));
+            payload = loginSchema.parse(request.body) as LoginRequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
+            return;
+        }
+        try {
+            const result = await this.loginUseCase.execute(payload);
+            reply.code(200).send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken, result.refreshToken));
         } catch (error: any) {
             request.log.error({ err: error }, 'Login failed');
             const message = error.message || '';
@@ -150,7 +174,7 @@ export class AuthController {
     }
 
     async logout(
-        request: FastifyRequest,
+        request: FastifyRequest<{ Body: { refreshToken?: string } }>,
         reply: FastifyReply
     ): Promise<void> {
         try {
@@ -164,7 +188,10 @@ export class AuthController {
                 return;
             }
 
-            const result = await this.logoutUseCase.execute(userId);
+            const body = (request.body ?? {}) as { refreshToken?: string };
+            const refreshTokenFromBody = body.refreshToken;
+
+            const result = await this.logoutUseCase.execute(userId, refreshTokenFromBody);
             reply.code(200).send(result);
         } catch (error: any) {
             request.log.error({ err: error }, 'Logout failed');
@@ -173,6 +200,33 @@ export class AuthController {
                 return;
             }
             reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to logout' });
+        }
+    }
+
+    async refresh(
+        request: FastifyRequest<{ Body: RefreshTokenRequestDTO }>,
+        reply: FastifyReply
+    ): Promise<void> {
+        try {
+            const payload = refreshTokenSchema.parse(request.body) as RefreshTokenRequestDTO;
+            const result = await this.refreshTokenUseCase.execute(payload.refreshToken);
+            reply
+                .code(200)
+                .send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken, result.refreshToken, 'Token refreshed'));
+        } catch (error: any) {
+            if (error instanceof ZodError) {
+                this.handleValidationError(error, reply);
+                return;
+            }
+            request.log.error({ err: error }, 'Refresh token failed');
+            const message = error.message || 'Failed to refresh token';
+
+            if (message.includes('Invalid refresh token') || message.includes('expired')) {
+                reply.code(401).send({ error: 'Unauthorized', message });
+                return;
+            }
+
+            reply.code(500).send({ error: 'Internal Server Error', message });
         }
     }
 
@@ -254,16 +308,16 @@ export class AuthController {
             return;
         }
 
-        if (!request.body?.token) {
-            reply.code(400).send({
-                error: 'Bad Request',
-                message: '2FA token is required'
-            });
+        let payload: Enable2FARequestDTO;
+        try {
+            payload = enable2FASchema.parse(request.body) as Enable2FARequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
             return;
         }
 
         try {
-            await this.enable2FAUseCase.execute(userId, request.body.token);
+            await this.enable2FAUseCase.execute(userId, payload.token);
             reply.code(200).send({ message: 'Two-factor authentication enabled' });
         } catch (error: any) {
             request.log.error({ err: error }, 'Enable 2FA failed');
@@ -295,16 +349,16 @@ export class AuthController {
             return;
         }
 
-        if (!request.body?.token) {
-            reply.code(400).send({
-                error: 'Bad Request',
-                message: '2FA token is required'
-            });
+        let payload: Disable2FARequestDTO;
+        try {
+            payload = enable2FASchema.parse(request.body) as Disable2FARequestDTO;
+        } catch (error) {
+            this.handleValidationError(error, reply);
             return;
         }
 
         try {
-            await this.disable2FAUseCase.execute(userId, request.body.token);
+            await this.disable2FAUseCase.execute(userId, payload.token);
             reply.code(200).send({ message: 'Two-factor authentication disabled' });
         } catch (error: any) {
             request.log.error({ err: error }, 'Disable 2FA failed');
@@ -334,5 +388,24 @@ export class AuthController {
         const url = new URL(this.failureRedirect);
         url.searchParams.set('error', reason);
         return url.toString();
+    }
+
+    private handleValidationError(error: unknown, reply: FastifyReply): void {
+        if (error instanceof ZodError) {
+            reply.code(400).send({
+                error: 'Bad Request',
+                message: 'Validation failed',
+                details: error.issues.map((issue) => ({
+                    path: issue.path.join('.'),
+                    message: issue.message,
+                })),
+            });
+            return;
+        }
+
+        reply.code(400).send({
+            error: 'Bad Request',
+            message: (error as Error)?.message || 'Invalid request payload',
+        });
     }
 }

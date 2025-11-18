@@ -4,7 +4,7 @@
  */
 
 import 'fastify';
-import type { JWTPayload } from '../utils/vault-jwt.service.js';
+import type { JWTPayload } from '../utils/vault-jwt.service';
 
 declare module 'fastify' {
     interface FastifyRequest {

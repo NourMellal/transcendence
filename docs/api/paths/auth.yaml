@@ -90,6 +90,32 @@
       '400':
         description: Invalid input
 
+/auth/refresh:
+  post:
+    tags: [Auth]
+    operationId: Auth_refresh
+    summary: Exchange a refresh token for a new access token
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/RefreshTokenRequest'
+    responses:
+      '200':
+        description: Access token refreshed
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/auth.yaml#/RefreshTokenResponse'
+      '401':
+        description: Invalid or expired refresh token
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+
 /auth/status:
   get:
     tags: [Auth]

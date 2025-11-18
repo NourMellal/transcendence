@@ -3,8 +3,6 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 // Load .env from project root
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../../../.env') });
 
 import fastify from 'fastify';
@@ -15,16 +13,17 @@ import websocket from '@fastify/websocket';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { readFileSync } from 'fs';
-import { initializeVaultJWTService } from './utils/vault-jwt.service.js';
-import { loadGatewayConfig } from './config/gateway-config.js';
+import { initializeVaultJWTService } from './utils/vault-jwt.service';
+import { loadGatewayConfig } from './config/gateway-config';
 
 // Import route handlers
-import { registerAuthRoutes } from './routes/auth.routes.js';
-import { registerUserRoutes } from './routes/users.routes.js';
-import { registerGameRoutes } from './routes/games.routes.js';
-import { registerChatRoutes } from './routes/chat.routes.js';
-import { registerTournamentRoutes } from './routes/tournaments.routes.js';
-import { registerStatsRoutes } from './routes/stats.routes.js';
+import { registerAuthRoutes } from './routes/auth.routes';
+import { registerUserRoutes } from './routes/users.routes';
+import { registerFriendRoutes } from './routes/friends.routes';
+import { registerGameRoutes } from './routes/games.routes';
+import { registerChatRoutes } from './routes/chat.routes';
+import { registerTournamentRoutes } from './routes/tournaments.routes';
+import { registerStatsRoutes } from './routes/stats.routes';
 
 // Load bundled OpenAPI specification
 const openApiSpec = JSON.parse(
@@ -191,6 +190,7 @@ async function createGateway() {
     // Register route handlers with new architecture
     await registerAuthRoutes(app, config.userServiceUrl, config.internalApiKey);
     await registerUserRoutes(app, config.userServiceUrl, config.internalApiKey);
+    await registerFriendRoutes(app, config.userServiceUrl, config.internalApiKey);
     await registerGameRoutes(app, config.gameServiceUrl, config.internalApiKey);
     await registerChatRoutes(app, config.chatServiceUrl, config.internalApiKey);
     await registerTournamentRoutes(app, config.tournamentServiceUrl, config.internalApiKey);
@@ -343,4 +343,4 @@ async function start() {
     }
 }
 
-await start();
+start();

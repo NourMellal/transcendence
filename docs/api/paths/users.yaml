@@ -12,15 +12,16 @@
               $ref: '../components/schemas/user.yaml#/User'
       '401':
         description: Not authenticated
-
   patch:
     tags: [Users]
     operationId: Users_updateMe
     summary: Update current user profile
+    security:
+      - jwtAuth: []
     requestBody:
       required: true
       content:
-        multipart/form-data:
+        application/json:
           schema:
             $ref: '../components/schemas/user.yaml#/UpdateUserRequest'
     responses:
@@ -34,3 +35,142 @@
         description: Invalid input
       '401':
         description: Not authenticated
+
+/users/presence:
+  post:
+    tags: [Users]
+    operationId: Users_updatePresence
+    summary: Update the authenticated user's presence state
+    security:
+      - jwtAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/user.yaml#/PresenceUpdateRequest'
+    responses:
+      '204':
+        description: Presence updated successfully
+      '400':
+        description: Invalid presence payload
+      '401':
+        description: Not authenticated
+
+/users/{userId}/presence:
+  get:
+    tags: [Users]
+    operationId: Users_getPresence
+    summary: Get last known presence for a user
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Presence information
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/UserPresence'
+      '401':
+        description: Not authenticated
+      '404':
+        description: Presence not found
+
+/users/{userId}:
+  get:
+    tags: [Users]
+    operationId: Users_getById
+    summary: Get a user profile by ID
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: User profile
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '401':
+        description: Not authenticated
+      '404':
+        description: User not found
+  patch:
+    tags: [Users]
+    operationId: Users_updateById
+    summary: Update a specific user profile
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/user.yaml#/UpdateUserRequest'
+    responses:
+      '200':
+        description: Updated user profile
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '400':
+        description: Invalid input
+      '401':
+        description: Not authenticated
+      '403':
+        description: Forbidden
+      '404':
+        description: User not found
+  delete:
+    tags: [Users]
+    operationId: Users_deleteById
+    summary: Delete a user account
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reason:
+                type: string
+                description: Optional audit reason
+    responses:
+      '204':
+        description: User deleted
+      '401':
+        description: Not authenticated
+      '403':
+        description: Forbidden
+      '404':
+        description: User not found

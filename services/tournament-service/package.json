@@ -3,7 +3,6 @@
     "version": "1.0.0",
     "description": "Tournament organization and management service",
     "main": "dist/server.js",
-    "type": "module",
     "scripts": {
         "dev": "tsx src/server.ts",
         "build": "tsc",

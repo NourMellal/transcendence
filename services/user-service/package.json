@@ -3,7 +3,6 @@
     "version": "1.0.0",
     "description": "User management microservice",
     "main": "dist/server.js",
-    "type": "module",
     "scripts": {
         "dev": "tsx src/server.ts",
         "build": "tsc",
@@ -28,7 +27,8 @@
         "pino-pretty": "^10.3.0",
         "qrcode": "^1.5.3",
         "sqlite": "^5.1.1",
-        "sqlite3": "^5.1.6"
+        "sqlite3": "^5.1.6",
+        "zod": "^3.23.8"
     },
     "devDependencies": {
         "@types/amqplib": "^0.10.1",

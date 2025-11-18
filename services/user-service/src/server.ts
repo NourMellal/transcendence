@@ -9,25 +9,46 @@ dotenv.config({ path: join(__dirname, '../../../.env') });
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository.js';
-import { SignupUseCase } from './application/use-cases/signup.usecase.js';
-import { LoginUseCase } from './application/use-cases/login.usecase.js';
-import { LogoutUseCase } from './application/use-cases/logout.usecase.js';
-import { UpdateProfileUseCase } from './application/use-cases/update-profile.usecase.js';
-import { GetUserUseCase } from './application/use-cases/get-user.usecase.js';
-import { Generate2FAUseCaseImpl } from './application/use-cases/generate-2fa.usecase.js';
-import { Enable2FAUseCaseImpl } from './application/use-cases/enable-2fa.usecase.js';
-import { Disable2FAUseCaseImpl } from './application/use-cases/disable-2fa.usecase.js';
-import { OAuth42LoginUseCaseImpl } from './application/use-cases/oauth42-login.usecase.js';
-import { OAuth42CallbackUseCaseImpl } from './application/use-cases/oauth42-callback.usecase.js';
-import { OAuthStateManager } from './application/services/oauth-state.manager.js';
-import { AuthController } from './infrastructure/http/controllers/auth.controller.js';
-import { UserController } from './infrastructure/http/controllers/user.controller.js';
-import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes.js';
-import { registerUserRoutes } from './infrastructure/http/routes/user.routes.js';
-import { initializeJWTService } from './infrastructure/services/jwt.service.js';
-import { createTwoFAService } from './infrastructure/services/two-fa.service.js';
-import { createOAuth42Service } from './infrastructure/services/oauth42.service.js';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import { SQLiteUserRepository } from './infrastructure/database/repositories/sqlite-user.repository';
+import { SQLiteFriendshipRepository } from './infrastructure/database/repositories/sqlite-friendship.repository';
+import { SQLiteSessionRepository } from './infrastructure/database/repositories/sqlite-session.repository';
+import { SQLitePresenceRepository } from './infrastructure/database/repositories/sqlite-presence.repository';
+import { SignupUseCase } from './application/use-cases/auth/signup.usecase';
+import { LoginUseCase } from './application/use-cases/auth/login.usecase';
+import { LogoutUseCase } from './application/use-cases/auth/logout.usecase';
+import { RefreshTokenUseCase } from './application/use-cases/auth/refresh-token.usecase';
+import { UpdateProfileUseCase } from './application/use-cases/users/update-profile.usecase';
+import { GetUserUseCase } from './application/use-cases/users/get-user.usecase';
+import { DeleteUserUseCase } from './application/use-cases/users/delete-user.usecase';
+import { Generate2FAUseCaseImpl } from './application/use-cases/two-fa/generate-2fa.usecase';
+import { Enable2FAUseCaseImpl } from './application/use-cases/two-fa/enable-2fa.usecase';
+import { Disable2FAUseCaseImpl } from './application/use-cases/two-fa/disable-2fa.usecase';
+import { OAuth42LoginUseCaseImpl } from './application/use-cases/auth/oauth42-login.usecase';
+import { OAuth42CallbackUseCaseImpl } from './application/use-cases/auth/oauth42-callback.usecase';
+import { OAuthStateManager } from './application/services/oauth-state.manager';
+import { AuthController } from './infrastructure/http/controllers/auth.controller';
+import { UserController } from './infrastructure/http/controllers/user.controller';
+import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes';
+import { registerUserRoutes } from './infrastructure/http/routes/user.routes';
+import { registerFriendRoutes } from './infrastructure/http/routes/friend.routes';
+import { registerPresenceRoutes } from './infrastructure/http/routes/presence.routes';
+import { initializeJWTService } from './infrastructure/services/jwt.service';
+import { createTwoFAService } from './infrastructure/services/two-fa.service';
+import { createOAuth42Service } from './infrastructure/services/oauth42.service';
+import { SendFriendRequestUseCase } from './application/use-cases/friends/send-friend-request.usecase';
+import { RespondFriendRequestUseCase } from './application/use-cases/friends/respond-friend-request.usecase';
+import { ListFriendsUseCase } from './application/use-cases/friends/list-friends.usecase';
+import { BlockUserUseCase } from './application/use-cases/friends/block-user.usecase';
+import { RemoveFriendUseCase } from './application/use-cases/friends/remove-friend.usecase';
+import { UnblockUserUseCase } from './application/use-cases/friends/unblock-user.usecase';
+import { CancelFriendRequestUseCase } from './application/use-cases/friends/cancel-friend-request.usecase';
+import { UpdatePresenceUseCase } from './application/use-cases/presence/update-presence.usecase';
+import { GetPresenceUseCase } from './application/use-cases/presence/get-presence.usecase';
+import { PresenceController } from './infrastructure/http/controllers/presence.controller';
+import { FriendController } from './infrastructure/http/controllers/friend.controller';
+import { SQLiteUnitOfWork } from './infrastructure/database/sqlite-unit-of-work';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
@@ -41,16 +62,42 @@ async function main() {
     const oauthStateManager = new OAuthStateManager();
     const twoFAService = createTwoFAService();
 
-    // Initialize database
+    // Initialize shared database connection
+    const db = await open({
+        filename: DB_PATH,
+        driver: sqlite3.Database,
+    });
+
     const userRepository = new SQLiteUserRepository();
-    await userRepository.initialize(DB_PATH);
+    await userRepository.initialize(DB_PATH, db);
+    const friendshipRepository = new SQLiteFriendshipRepository();
+    await friendshipRepository.initialize(DB_PATH, db);
+    const sessionRepository = new SQLiteSessionRepository();
+    await sessionRepository.initialize(DB_PATH, db);
+    const presenceRepository = new SQLitePresenceRepository();
+    await presenceRepository.initialize(DB_PATH, db);
+    const unitOfWork = new SQLiteUnitOfWork(db);
 
     // Initialize use cases with Vault JWT Service
     const signupUseCase = new SignupUseCase(userRepository);
-    const loginUseCase = new LoginUseCase(userRepository, jwtService, twoFAService);
-    const logoutUseCase = new LogoutUseCase(userRepository);
+    const loginUseCase = new LoginUseCase(
+        userRepository,
+        jwtService,
+        sessionRepository,
+        twoFAService,
+        presenceRepository
+    );
+    const logoutUseCase = new LogoutUseCase(userRepository, sessionRepository, presenceRepository);
+    const refreshTokenUseCase = new RefreshTokenUseCase(sessionRepository, userRepository, jwtService);
     const updateProfileUseCase = new UpdateProfileUseCase(userRepository);
     const getUserUseCase = new GetUserUseCase(userRepository);
+    const deleteUserUseCase = new DeleteUserUseCase(
+        userRepository,
+        sessionRepository,
+        friendshipRepository,
+        presenceRepository,
+        unitOfWork
+    );
     const generate2FAUseCase = new Generate2FAUseCaseImpl(userRepository, twoFAService);
     const enable2FAUseCase = new Enable2FAUseCaseImpl(userRepository, twoFAService);
     const disable2FAUseCase = new Disable2FAUseCaseImpl(userRepository, twoFAService);
@@ -61,12 +108,22 @@ async function main() {
         jwtService,
         oauthStateManager
     );
+    const sendFriendRequestUseCase = new SendFriendRequestUseCase(friendshipRepository, userRepository);
+    const respondFriendRequestUseCase = new RespondFriendRequestUseCase(friendshipRepository);
+    const listFriendsUseCase = new ListFriendsUseCase(friendshipRepository, userRepository);
+    const blockUserUseCase = new BlockUserUseCase(friendshipRepository, userRepository);
+    const removeFriendUseCase = new RemoveFriendUseCase(friendshipRepository);
+    const unblockUserUseCase = new UnblockUserUseCase(friendshipRepository);
+    const cancelFriendRequestUseCase = new CancelFriendRequestUseCase(friendshipRepository);
+    const updatePresenceUseCase = new UpdatePresenceUseCase(presenceRepository);
+    const getPresenceUseCase = new GetPresenceUseCase(presenceRepository);
 
     // Initialize controllers
     const authController = new AuthController(
         signupUseCase,
         loginUseCase,
         logoutUseCase,
+        refreshTokenUseCase,
         getUserUseCase,
         oauth42LoginUseCase,
         oauth42CallbackUseCase,
@@ -74,7 +131,17 @@ async function main() {
         enable2FAUseCase,
         disable2FAUseCase
     );
-    const userController = new UserController(updateProfileUseCase, getUserUseCase);
+    const userController = new UserController(updateProfileUseCase, getUserUseCase, deleteUserUseCase);
+    const friendController = new FriendController(
+        sendFriendRequestUseCase,
+        respondFriendRequestUseCase,
+        listFriendsUseCase,
+        blockUserUseCase,
+        removeFriendUseCase,
+        unblockUserUseCase,
+        cancelFriendRequestUseCase
+    );
+    const presenceController = new PresenceController(updatePresenceUseCase, getPresenceUseCase);
 
     // Initialize Fastify
     const fastify = Fastify({
@@ -101,13 +168,15 @@ async function main() {
         return {
             status: 'ok',
             service: 'user-service',
-            vault: jwtService.isUsingVault() ? 'connected' : 'fallback'
+            vault: jwtService.isUsingVault() ? 'connected' : 'fallback',
         };
     });
 
     // Register routes
     registerAuthRoutes(fastify, authController);
     registerUserRoutes(fastify, userController);
+    registerFriendRoutes(fastify, friendController);
+    registerPresenceRoutes(fastify, presenceController);
 
     // Graceful shutdown
     const shutdown = async () => {

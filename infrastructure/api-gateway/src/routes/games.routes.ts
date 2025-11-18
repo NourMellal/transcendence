@@ -5,8 +5,8 @@
 
 import type { FastifyInstance} from 'fastify';
 import { createGameSchema, gameIdParamSchema } from '@transcendence/shared-validation';
-import { validateRequestBody, validateRequestParams } from '../middleware/validation.middleware.js';
-import { requireAuth, getUser } from '../middleware/auth.middleware.js';
+import { validateRequestBody, validateRequestParams } from '../middleware/validation.middleware';
+import { requireAuth, getUser } from '../middleware/auth.middleware';
 
 export async function registerGameRoutes(
     fastify: FastifyInstance,

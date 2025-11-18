@@ -3,7 +3,6 @@
     "version": "1.0.0",
     "description": "Real-time chat service",
     "main": "dist/server.js",
-    "type": "module",
     "scripts": {
         "dev": "tsx src/server.ts",
         "build": "tsc",

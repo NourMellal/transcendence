@@ -1,10 +1,12 @@
-import { UserRepository } from '../../domain/ports';
-import { User } from '../../domain/entities/user.entity';
-import { PasswordHelper } from '../../domain/entities/user.entity';
-import { UpdateProfileInput } from '../dto/user.dto.js';
+import { UserRepository } from '../../../domain/ports';
+import { User } from '../../../domain/entities/user.entity';
+import { PasswordHelper } from '../../../domain/entities/user.entity';
+import { UpdateProfileInput } from '../../dto/user.dto';
 
 export class UpdateProfileUseCase {
-    constructor(private userRepository: UserRepository) { }
+    constructor(
+        private userRepository: UserRepository
+    ) { }
 
     async execute(userId: string, input: UpdateProfileInput): Promise<User> {
         // Find the user

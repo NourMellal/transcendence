@@ -4,8 +4,8 @@
  * Ensures sensitive data is filtered out when converting to DTOs
  */
 
-import { User } from '../../domain/entities/user.entity.js';
-import { UserProfileDTO, UpdateProfileResponseDTO } from '../dto/user.dto.js';
+import { User } from '../../domain/entities/user.entity';
+import { UserProfileDTO, UpdateProfileResponseDTO } from '../dto/user.dto';
 
 export class UserMapper {
     /**

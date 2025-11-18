@@ -1,8 +1,10 @@
 import jwt from 'jsonwebtoken';
-import { User, PasswordHelper } from '../../domain/entities/user.entity.js';
-import { UserRepository, TwoFAService } from '../../domain/ports.js';
+import { User, PasswordHelper } from '../../../domain/entities/user.entity';
+import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository } from '../../../domain/ports';
+import { PresenceStatus } from '../../../domain/entities/presence.entity';
 import type { JWTConfig } from '@transcendence/shared-utils';
-import { LoginUseCaseInput, LoginUseCaseOutput } from '../dto/auth.dto.js';
+import { LoginUseCaseInput, LoginUseCaseOutput } from '../../dto/auth.dto';
+import crypto from 'crypto';
 
 export interface JWTService {
     getJWTConfig(): Promise<JWTConfig>;
@@ -12,7 +14,9 @@ export class LoginUseCase {
     constructor(
         private userRepository: UserRepository,
         private jwtService: JWTService,
-        private twoFAService?: TwoFAService
+        private sessionRepository: SessionRepository,
+        private twoFAService?: TwoFAService,
+        private presenceRepository?: UserPresenceRepository
     ) { }
 
     async execute(input: LoginUseCaseInput): Promise<LoginUseCaseOutput> {
@@ -54,8 +58,10 @@ export class LoginUseCase {
             }
         }
 
-        // Generate JWT token using Vault secrets
+        // Generate JWT and refresh token
         const accessToken = await this.generateToken(user);
+        const { refreshToken } = await this.createRefreshSession(user.id);
+        await this.presenceRepository?.upsert(user.id, PresenceStatus.ONLINE, new Date());
 
         // Return user without password hash
         const { passwordHash: _, ...userWithoutPassword } = user;
@@ -63,6 +69,7 @@ export class LoginUseCase {
         return {
             user: userWithoutPassword as User,
             accessToken,
+            refreshToken,
         };
     }
 
@@ -86,5 +93,21 @@ export class LoginUseCase {
             expiresIn: `${config.expirationHours}h`,
             issuer: config.issuer,
         });
+    }
+
+    private async createRefreshSession(userId: string): Promise<{ refreshToken: string; expiresAt: Date }> {
+        const refreshToken = crypto.randomBytes(48).toString('hex');
+        const ttlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7');
+        const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+
+        await this.sessionRepository.save({
+            id: crypto.randomUUID(),
+            userId,
+            token: refreshToken,
+            expiresAt,
+            createdAt: new Date(),
+        });
+
+        return { refreshToken, expiresAt };
     }
 }

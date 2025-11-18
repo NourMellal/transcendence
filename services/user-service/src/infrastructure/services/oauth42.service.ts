@@ -1,5 +1,5 @@
 import { createUserServiceVault } from '@transcendence/shared-utils';
-import type { OAuthService, OAuth42Profile } from '../../domain/ports.js';
+import type { OAuthService, OAuth42Profile } from '../../domain/ports';
 
 interface OAuth42Config {
     clientId: string;

@@ -76,6 +76,18 @@ components:
       $ref: './components/schemas/stats.yaml#/UserStats'
     Leaderboard:
       $ref: './components/schemas/stats.yaml#/Leaderboard'
+
+    # Friend schemas
+    Friendship:
+      $ref: './components/schemas/friend.yaml#/Friendship'
+    Friend:
+      $ref: './components/schemas/friend.yaml#/Friend'
+    FriendListResponse:
+      $ref: './components/schemas/friend.yaml#/FriendListResponse'
+    SendFriendRequest:
+      $ref: './components/schemas/friend.yaml#/SendFriendRequest'
+    RespondFriendRequest:
+      $ref: './components/schemas/friend.yaml#/RespondFriendRequest'
     
     # Common schemas
     Error:
@@ -90,6 +102,8 @@ paths:
     $ref: './paths/auth.yaml#/~1auth~1signup'
   /auth/login:
     $ref: './paths/auth.yaml#/~1auth~1login'
+  /auth/refresh:
+    $ref: './paths/auth.yaml#/~1auth~1refresh'
   /auth/42/login:
     $ref: './paths/auth.yaml#/~1auth~142~1login'
   /auth/42/callback:
@@ -102,10 +116,28 @@ paths:
     $ref: './paths/auth.yaml#/~1auth~12fa~1generate'
   /auth/2fa/enable:
     $ref: './paths/auth.yaml#/~1auth~12fa~1enable'
+  /auth/2fa/disable:
+    $ref: './paths/auth.yaml#/~1auth~12fa~1disable'
   
   # User endpoints
   /users/me:
     $ref: './paths/users.yaml#/~1users~1me'
+  /users/presence:
+    $ref: './paths/users.yaml#/~1users~1presence'
+  /users/{userId}/presence:
+    $ref: './paths/users.yaml#/~1users~1{userId}~1presence'
+  /users/{userId}:
+    $ref: './paths/users.yaml#/~1users~1{userId}'
+  /friends:
+    $ref: './paths/friends.yaml#/~1friends'
+  /friends/requests:
+    $ref: './paths/friends.yaml#/~1friends~1requests'
+  /friends/requests/{friendshipId}:
+    $ref: './paths/friends.yaml#/~1friends~1requests~1{friendshipId}'
+  /friends/{userId}/block:
+    $ref: './paths/friends.yaml#/~1friends~1{userId}~1block'
+  /friends/{userId}:
+    $ref: './paths/friends.yaml#/~1friends~1{userId}'
   
   # Game endpoints
   /games:

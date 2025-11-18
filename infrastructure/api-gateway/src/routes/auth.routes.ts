@@ -4,9 +4,9 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { signUpSchema, loginSchema, enable2FASchema } from '@transcendence/shared-validation';
-import { validateRequestBody } from '../middleware/validation.middleware.js';
-import { requireAuth, publicEndpoint, getUser } from '../middleware/auth.middleware.js';
+import { signUpSchema, loginSchema, enable2FASchema, refreshTokenSchema } from '@transcendence/shared-validation';
+import { validateRequestBody } from '../middleware/validation.middleware';
+import { requireAuth, publicEndpoint, getUser } from '../middleware/auth.middleware';
 
 export async function registerAuthRoutes(
     fastify: FastifyInstance,
@@ -48,6 +48,30 @@ export async function registerAuthRoutes(
         ]
     }, async (request, reply) => {
         const response = await fetch(`${userServiceUrl}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+            },
+            body: JSON.stringify(request.body),
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
+     * POST /api/auth/refresh
+     * Public endpoint - Refresh access token
+     */
+    fastify.post('/api/auth/refresh', {
+        preHandler: [
+            publicEndpoint,
+            validateRequestBody(refreshTokenSchema)
+        ]
+    }, async (request, reply) => {
+        const response = await fetch(`${userServiceUrl}/auth/refresh`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -145,14 +169,20 @@ export async function registerAuthRoutes(
         preHandler: [requireAuth]
     }, async (request, reply) => {
         const user = getUser(request);
+        const hasBody = typeof request.body === 'object' && request.body !== null;
+        const headers: Record<string, string> = {
+            'x-internal-api-key': internalApiKey,
+            'x-request-id': request.id,
+            'x-user-id': user?.userId || user?.sub || '',
+            'Authorization': request.headers.authorization || '',
+        };
+        if (hasBody) {
+            headers['Content-Type'] = 'application/json';
+        }
         const response = await fetch(`${userServiceUrl}/auth/logout`, {
             method: 'POST',
-            headers: {
-                'x-internal-api-key': internalApiKey,
-                'x-request-id': request.id,
-                'x-user-id': user?.userId || user?.sub || '',
-                'Authorization': request.headers.authorization || '',
-            },
+            headers,
+            body: hasBody ? JSON.stringify(request.body) : undefined,
         });
 
         if (response.status === 204) {
@@ -197,6 +227,33 @@ export async function registerAuthRoutes(
     }, async (request, reply) => {
         const user = getUser(request);
         const response = await fetch(`${userServiceUrl}/auth/2fa/enable`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+            body: JSON.stringify(request.body),
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
+     * POST /api/auth/2fa/disable
+     * Protected - Disable 2FA with verification code
+     */
+    fastify.post('/api/auth/2fa/disable', {
+        preHandler: [
+            requireAuth,
+            validateRequestBody(enable2FASchema)
+        ]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const response = await fetch(`${userServiceUrl}/auth/2fa/disable`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

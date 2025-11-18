@@ -36,3 +36,35 @@ UpdateUserRequest:
       type: string
       format: binary
       description: Image file to upload
+    displayName:
+      type: string
+      example: "Player One"
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+      format: password
+
+PresenceUpdateRequest:
+  type: object
+  required: [status]
+  properties:
+    status:
+      type: string
+      enum: [online, offline]
+      example: "online"
+
+UserPresence:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+    status:
+      type: string
+      enum: [online, offline]
+    lastSeenAt:
+      type: string
+      format: date-time
+  required: [userId, status, lastSeenAt]

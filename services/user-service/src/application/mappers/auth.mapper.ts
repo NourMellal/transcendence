@@ -3,8 +3,8 @@
  * Maps between Domain Entities and Auth DTOs
  */
 
-import { User } from '../../domain/entities/user.entity.js';
-import { AuthResponseDTO, UserInfoDTO } from '../dto/auth.dto.js';
+import { User } from '../../domain/entities/user.entity';
+import { AuthResponseDTO, UserInfoDTO } from '../dto/auth.dto';
 
 export class AuthMapper {
     /**
@@ -41,11 +41,12 @@ export class AuthMapper {
     /**
      * Convert to login response
      */
-    static toLoginResponseDTO(user: User, accessToken: string): AuthResponseDTO {
+    static toLoginResponseDTO(user: User, accessToken: string, refreshToken: string, message = 'Login successful'): AuthResponseDTO {
         return {
             user: this.toUserInfoDTO(user),
             accessToken,
-            message: 'Login successful',
+            refreshToken,
+            message,
         };
     }
 }

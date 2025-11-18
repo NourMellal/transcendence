@@ -1,5 +1,5 @@
 import { NotFoundError } from '@transcendence/shared-utils';
-import type { Enable2FAUseCase, TwoFAService, UserRepository } from '../../domain/ports.js';
+import type { Enable2FAUseCase, TwoFAService, UserRepository } from '../../../domain/ports';
 
 export class Enable2FAUseCaseImpl implements Enable2FAUseCase {
     constructor(

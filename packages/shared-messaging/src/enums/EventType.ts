@@ -7,7 +7,7 @@ export enum EventType {
     USER_REGISTERED = 'user.registered',
     USER_PROFILE_UPDATED = 'user.profile.updated',
     USER_DELETED = 'user.deleted',
-    USER_STATUS_CHANGED = 'user.status.changed',
+    USER_AUTHENTICATED = 'user.authenticated',
 
     // Game Events
     GAME_STARTED = 'game.started',
@@ -23,4 +23,13 @@ export enum EventType {
     TOURNAMENT_CANCELLED = 'tournament.cancelled',
     PLAYER_REGISTERED_FOR_TOURNAMENT = 'tournament.player.registered',
     MATCH_COMPLETED = 'tournament.match.completed',
+
+    // Friendship Events
+    FRIENDSHIP_REQUESTED = 'friendship.requested',
+    FRIENDSHIP_ACCEPTED = 'friendship.accepted',
+    FRIENDSHIP_REJECTED = 'friendship.rejected',
+    FRIENDSHIP_CANCELLED = 'friendship.cancelled',
+    FRIENDSHIP_REMOVED = 'friendship.removed',
+    FRIENDSHIP_BLOCKED = 'friendship.blocked',
+    FRIENDSHIP_UNBLOCKED = 'friendship.unblocked',
 }
