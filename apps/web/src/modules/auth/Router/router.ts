@@ -1,11 +1,14 @@
-import { homePage } from "../Pages";
+import { homePage, LoginPage } from "../Pages";
 
-// export route definitions for the auth module; main aggregator will merge these
 export const routes = [
     {
-        path: '/test/home',
+        path: '/home',
         component: new homePage({ label: 'caca' }),
-    },
+    },  
+    {  
+        path : '/login'  ,  
+        component : new LoginPage({}) ,  
+    }
 ];
 
 export default routes;

@@ -1,9 +1,9 @@
 import { Component } from "../../../../core";
-import navBar from "../../components/navbar/navbar";
+import loginForm from "../loginForm/loginForm";
 type Props = { start?: number; label?: string  };
 type State = { count: number };
 
-export default class homePage extends Component<Props, State> {
+export default class rightLogin extends Component<Props, State> {
   constructor(props: Props = {}) {
     super(props);
   }
@@ -13,9 +13,13 @@ export default class homePage extends Component<Props, State> {
   }
 
   render()  {
-    return [ 
-        `<div class="home-container" >  
-        </div>`
+    return [
+      `<div class="right-login">`+
+        `<div id="form-header">
+          <span>Transcendence test login</span>
+        </div>`+
+        new loginForm().render() +
+      `</div>`,
     ];
   }
   protected attachEventListeners(): void {

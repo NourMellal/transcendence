@@ -23,34 +23,56 @@ export default abstract class Component<Props = {}, State = {}> {
    * - array returned: each item can be string|HTMLElement|Component; Components are mounted into placeholders
    */
   protected buildContent(content: string | HTMLElement | Array<string | HTMLElement | Component<any, any>>): HTMLElement {
-    // If render returned an element, use it directly
+    // If render returned an element, use it directly   
+    console.log("buildContent" + content)
     if (content instanceof HTMLElement) return content;
 
-    const wrapper = document.createElement('div');
-
-    const appendString = (html: string) => {
+    const appendStringToContainer = (html: string, container: HTMLElement) => {
       const template = document.createElement('template');
       template.innerHTML = html;
-      wrapper.appendChild(template.content.cloneNode(true));
+      container.appendChild(template.content.cloneNode(true));
     };
 
+    // Helper: when a string or single-item array parses to exactly one top-level HTMLElement,
+    // return that element directly to avoid adding an extra wrapper.
     if (typeof content === 'string') {
-      appendString(content);
+      const temp = document.createElement('template');
+      temp.innerHTML = content;
+      // if exactly one top-level element, return it (no extra wrapper)
+      if (temp.content.childElementCount === 1) {
+        return temp.content.firstElementChild as HTMLElement;
+      }
+      // otherwise fall back to wrapper
+      const wrapper = document.createElement('div');
+      wrapper.appendChild(temp.content.cloneNode(true));
       return wrapper;
     }
 
     // content is an array
+    // if array has a single item and that item is string or element, try to return a single element
+    if (Array.isArray(content) && content.length === 1) {
+      const only = content[0];
+      if (typeof only === 'string') {
+        const temp = document.createElement('template');
+        temp.innerHTML = only;
+        if (temp.content.childElementCount === 1) {
+          return temp.content.firstElementChild as HTMLElement;
+        }
+      } else if (only instanceof HTMLElement) {
+        return only;
+      }
+    }
+
+    const wrapper = document.createElement('div');
     for (const item of content) {
       if (typeof item === 'string') {
-        appendString(item);
+        appendStringToContainer(item, wrapper);
       } else if (item instanceof HTMLElement) {
         wrapper.appendChild(item);
       } else if (item instanceof Component) {
-        // ensure child is not currently mounted elsewhere
         if (item.element) item.unmount();
         const placeholder = document.createElement('div');
         wrapper.appendChild(placeholder);
-        // mount child into placeholder
         item.mount(placeholder);
       }
     }

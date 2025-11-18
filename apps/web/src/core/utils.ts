@@ -4,7 +4,6 @@ import Signal  from "./signal" ;
 let _mountedRoot: RootComponent | null = null;
 
 export const rootSignal = new Signal<RootComponent | null>(_mountedRoot);
-// export a signal that carries the current route view element
 export const viewSignal = new Signal<Component<{} ,  {}>  | null>(null);
 
 export function mountRoot(container: string | HTMLElement = '#root') {   

@@ -1,6 +1,6 @@
-import Router from './core/Router';
+import approuter from './routes';
 import { mountRoot } from './core/utils';
-import authRoutes from './modules/auth/Router/router';
+import  './styles/styles.scss'
 
 function mountAll ()  
 {  
@@ -10,11 +10,7 @@ function mountAll ()
 
     const appEl = document.querySelector('#app-view'); 
     if (appEl) {  
-      const routes = [
-        ...authRoutes,
-      ];
-      const router = new Router(routes);
-      router.start();
+      approuter.start();
     }
   } catch (err) {
   }

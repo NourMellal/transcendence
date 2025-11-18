@@ -89,13 +89,12 @@ private match(path: string): Route | null {
    return null;
 }     
 
-private handleNavigation(path: string): void {   
+private handleNavigation(path: string): void {    
    const route = this.match(path);
    if (!route) {
       console.warn(`No route matched for path: ${path}`);
       return;
    }
-
    const params = this.extractParams(route, path);
       let compInstance: Component<{}, {}> | null = null;
       try {
@@ -103,21 +102,16 @@ private handleNavigation(path: string): void {
             console.error('No component defined for route:', path);
             return;
          }
-
-         // If a constructor was provided, instantiate with props if any
          if (typeof route.component === 'function') {
             const Ctor = route.component as ComponentConstructor;
             compInstance = new Ctor(route.props);
          } else {
-            // component is an instance
             compInstance = route.component as Component<{}, {}>;
          }
       } catch (err) {
          console.error('Error creating route component for', path, err);
          return;
       }
-
-      // attach params to the component instance so it can access them
       try {
          (compInstance as any).params = params;
       } catch (e) {}
@@ -128,10 +122,8 @@ private handleNavigation(path: string): void {
 
 private render(componentInstance: Component<{}, {}>): void {
    if (!componentInstance) return;    
-   try {
-      // Router provides a component instance to the viewSignal; the root will call .render()
-      console.log("heeere")
-      viewSignal.set(componentInstance as any);
+   try {  
+      viewSignal.set(componentInstance as any);  
    } catch (err) {
       console.error('Router render error:', err);
    }
