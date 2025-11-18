@@ -1,3 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
 body {  
-     background-color: rgb(152, 0, 0)  ;
-} 
+     background-color:#030712 ; 
+     min-height: 100vh ;     
+     padding: 1rem ;
+      #root { 
+            height:  100% ;
+      #app-view {
+            display: flex ;
+            justify-content: center;  
+      
+      .login-container {  
+            width: 90% ;   
+            display:  flex ;  
+            justify-content: center;   
+            height: 80%;   
+            .left-login {  
+                  width: 35% ;   
+                  min-height: 90vh ;
+                  background-image: url("../../public/ef9c7552-7843-4f6d-b216-a273f225e524.png");
+                  background-size: cover;  
+             } 
+             .right-login {  
+                  width:  45%;  
+                  border-top-right-radius: 8px;
+                  border-bottom-right-radius: 8px;
+                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08); 
+                  padding: 16px;
+                  transition: box-shadow 0.3s ease, transform 0.2s ease;  
+                  display: flex ; 
+                  flex-direction: column ; 
+                  background: rgba(66, 218, 235, 0.03);
+                  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                  backdrop-filter: blur(6.7px);
+                  -webkit-backdrop-filter: blur(6.7px);
+                  border: 1px solid rgba(66, 218, 235, 0.3);    
+                        #form-header { 
+                              color: white ;   
+                              font-family: "Inter", sans-serif;
+                              font-optical-sizing: auto;
+                              font-weight:500;
+                              font-style: normal;
+                              margin-left: 10%;
+                        }
+             }
+      }
+}
+}
+}  
+

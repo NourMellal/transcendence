@@ -14,11 +14,7 @@ export default class RootComponent extends Component<Props, State> {
 
   render() {
     return [
-      `<header><h1>App Root</h1></header>`,
-      '<hr/>',
-      // mount point for router views
       '<main id="app-view"></main>',
-      `<footer><small>Mounted at #root</small></footer>`,
     ];
   }
 

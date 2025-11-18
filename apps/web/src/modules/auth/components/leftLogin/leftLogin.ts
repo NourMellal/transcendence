@@ -1,9 +1,8 @@
 import { Component } from "../../../../core";
-import navBar from "../../components/navbar/navbar";
 type Props = { start?: number; label?: string  };
 type State = { count: number };
 
-export default class homePage extends Component<Props, State> {
+export default class leftLogin extends Component<Props, State> {
   constructor(props: Props = {}) {
     super(props);
   }
@@ -13,9 +12,11 @@ export default class homePage extends Component<Props, State> {
   }
 
   render()  {
-    return [ 
-        `<div class="home-container" >  
-        </div>`
+    return [
+      `
+      <div class='left-login'>
+      </div>
+      `
     ];
   }
   protected attachEventListeners(): void {
