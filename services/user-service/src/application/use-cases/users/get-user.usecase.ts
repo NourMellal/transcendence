@@ -1,10 +1,16 @@
 import { UserRepository } from '../../../domain/ports';
-import { User } from '../../../domain/entities/user.entity';
+import type { IGetUserUseCase } from '../../../domain/ports';
+import type { GetUserInputDTO, UserProfileDTO } from '../../dto/user.dto';
+import { UserMapper } from '../../mappers/user.mapper';
 
-export class GetUserUseCase {
+export class GetUserUseCase implements IGetUserUseCase {
     constructor(private userRepository: UserRepository) { }
 
-    async execute(userId: string): Promise<User | null> {
-        return await this.userRepository.findById(userId);
+    async execute(input: GetUserInputDTO): Promise<UserProfileDTO | null> {
+        const user = await this.userRepository.findById(input.userId);
+        if (!user) {
+            return null;
+        }
+        return UserMapper.toProfileDTO(user);
     }
 }

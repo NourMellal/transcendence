@@ -5,16 +5,16 @@ import {
     friendshipIdParamSchema,
     userIdParamSchema,
 } from '@transcendence/shared-validation';
-import { SendFriendRequestUseCase } from '../../../application/use-cases/friends/send-friend-request.usecase';
-import { RespondFriendRequestUseCase } from '../../../application/use-cases/friends/respond-friend-request.usecase';
-import { ListFriendsUseCase } from '../../../application/use-cases/friends/list-friends.usecase';
-import { BlockUserUseCase } from '../../../application/use-cases/friends/block-user.usecase';
-import { RemoveFriendUseCase } from '../../../application/use-cases/friends/remove-friend.usecase';
-import { UnblockUserUseCase } from '../../../application/use-cases/friends/unblock-user.usecase';
-import { CancelFriendRequestUseCase } from '../../../application/use-cases/friends/cancel-friend-request.usecase';
 import type { AddFriendRequestDTO, UpdateFriendRequestDTO } from '../../../application/dto/friend.dto';
-import { FriendshipStatus } from '../../../domain/entities/friendship.entity';
-import { FriendMapper } from '../../../application/mappers/friend.mapper';
+import type {
+    IBlockUserUseCase,
+    ICancelFriendRequestUseCase,
+    IListFriendsUseCase,
+    IRemoveFriendUseCase,
+    IRespondFriendRequestUseCase,
+    ISendFriendRequestUseCase,
+    IUnblockUserUseCase
+} from '../../../domain/ports';
 
 interface RespondParams {
     friendshipId: string;
@@ -26,13 +26,13 @@ interface BlockParams {
 
 export class FriendController {
     constructor(
-        private readonly sendFriendRequestUseCase: SendFriendRequestUseCase,
-        private readonly respondFriendRequestUseCase: RespondFriendRequestUseCase,
-        private readonly listFriendsUseCase: ListFriendsUseCase,
-        private readonly blockUserUseCase: BlockUserUseCase,
-        private readonly removeFriendUseCase: RemoveFriendUseCase,
-        private readonly unblockUserUseCase: UnblockUserUseCase,
-        private readonly cancelFriendRequestUseCase: CancelFriendRequestUseCase
+        private readonly sendFriendRequestUseCase: ISendFriendRequestUseCase,
+        private readonly respondFriendRequestUseCase: IRespondFriendRequestUseCase,
+        private readonly listFriendsUseCase: IListFriendsUseCase,
+        private readonly blockUserUseCase: IBlockUserUseCase,
+        private readonly removeFriendUseCase: IRemoveFriendUseCase,
+        private readonly unblockUserUseCase: IUnblockUserUseCase,
+        private readonly cancelFriendRequestUseCase: ICancelFriendRequestUseCase
     ) {}
 
     async sendRequest(
@@ -55,8 +55,11 @@ export class FriendController {
         }
 
         try {
-            const friendship = await this.sendFriendRequestUseCase.execute(requesterId, payload.friendId);
-            reply.code(201).send(FriendMapper.toFriendshipDTO(friendship));
+            const friendship = await this.sendFriendRequestUseCase.execute({
+                requesterId,
+                friendId: payload.friendId,
+            });
+            reply.code(201).send(friendship);
         } catch (error: any) {
             request.log.error({ err: error }, 'Send friend request failed');
             const message = error.message || 'Failed to send friend request';
@@ -105,10 +108,7 @@ export class FriendController {
             return;
         }
 
-        const responseStatus =
-            body.status === 'accepted'
-                ? FriendshipStatus.ACCEPTED
-                : FriendshipStatus.REJECTED;
+        const responseStatus = body.status === 'accepted' ? 'accepted' : 'rejected';
 
         try {
             const friendship = await this.respondFriendRequestUseCase.execute({
@@ -117,7 +117,7 @@ export class FriendController {
                 status: responseStatus,
             });
 
-            reply.code(200).send(FriendMapper.toFriendshipDTO(friendship));
+            reply.code(200).send(friendship);
         } catch (error: any) {
             request.log.error({ err: error }, 'Respond friend request failed');
             const message = error.message || 'Failed to respond to friend request';
@@ -161,7 +161,10 @@ export class FriendController {
         }
 
         try {
-            await this.cancelFriendRequestUseCase.execute(userId, params.friendshipId);
+            await this.cancelFriendRequestUseCase.execute({
+                requesterId: userId,
+                friendshipId: params.friendshipId,
+            });
             reply.code(204).send();
         } catch (error: any) {
             request.log.error({ err: error }, 'Cancel friend request failed');
@@ -198,8 +201,8 @@ export class FriendController {
         }
 
         try {
-            const friends = await this.listFriendsUseCase.execute(userId);
-            reply.code(200).send(FriendMapper.toFriendListResponse(userId, friends));
+            const friends = await this.listFriendsUseCase.execute({ userId });
+            reply.code(200).send(friends);
         } catch (error: any) {
             request.log.error({ err: error }, 'List friends failed');
             reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to list friends' });
@@ -226,8 +229,11 @@ export class FriendController {
         }
 
         try {
-            const friendship = await this.blockUserUseCase.execute(userId, params.userId);
-            reply.code(200).send(FriendMapper.toFriendshipDTO(friendship));
+            const friendship = await this.blockUserUseCase.execute({
+                userId,
+                otherUserId: params.userId,
+            });
+            reply.code(200).send(friendship);
         } catch (error: any) {
             request.log.error({ err: error }, 'Block user failed');
             const message = error.message || 'Failed to block user';
@@ -266,8 +272,11 @@ export class FriendController {
         }
 
         try {
-            const friendship = await this.unblockUserUseCase.execute(userId, params.userId);
-            reply.code(200).send(FriendMapper.toFriendshipDTO(friendship));
+            const friendship = await this.unblockUserUseCase.execute({
+                userId,
+                otherUserId: params.userId,
+            });
+            reply.code(200).send(friendship);
         } catch (error: any) {
             request.log.error({ err: error }, 'Unblock user failed');
             const message = error.message || 'Failed to unblock user';
@@ -311,7 +320,10 @@ export class FriendController {
         }
 
         try {
-            await this.removeFriendUseCase.execute(userId, params.userId);
+            await this.removeFriendUseCase.execute({
+                userId,
+                friendId: params.userId,
+            });
             reply.code(204).send();
         } catch (error: any) {
             request.log.error({ err: error }, 'Remove friend failed');

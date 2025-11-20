@@ -6,12 +6,6 @@ import {
     refreshTokenSchema,
 } from '@transcendence/shared-validation';
 import { ZodError } from 'zod';
-import { SignupUseCase } from '../../../application/use-cases/auth/signup.usecase';
-import { LoginUseCase } from '../../../application/use-cases/auth/login.usecase';
-import { LogoutUseCase } from '../../../application/use-cases/auth/logout.usecase';
-import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase';
-import { RefreshTokenUseCase } from '../../../application/use-cases/auth/refresh-token.usecase';
-import { AuthMapper } from '../../../application/mappers/auth.mapper';
 import {
     SignupRequestDTO,
     LoginRequestDTO,
@@ -20,11 +14,16 @@ import {
     RefreshTokenRequestDTO
 } from '../../../application/dto/auth.dto';
 import type {
-    Disable2FAUseCase,
-    Enable2FAUseCase,
-    Generate2FAUseCase,
-    OAuth42CallbackUseCase,
-    OAuth42LoginUseCase
+    IDisable2FAUseCase,
+    IEnable2FAUseCase,
+    IGenerate2FAUseCase,
+    IOAuth42CallbackUseCase,
+    IOAuth42LoginUseCase,
+    ILoginUseCase,
+    ILogoutUseCase,
+    IRefreshTokenUseCase,
+    ISignupUseCase,
+    IGetUserUseCase
 } from '../../../domain/ports';
 
 type OAuthCallbackQuery = {
@@ -42,16 +41,16 @@ export class AuthController {
         'http://localhost:5173/oauth/error';
 
     constructor(
-        private readonly signupUseCase: SignupUseCase,
-        private readonly loginUseCase: LoginUseCase,
-        private readonly logoutUseCase: LogoutUseCase,
-        private readonly refreshTokenUseCase: RefreshTokenUseCase,
-        private readonly getUserUseCase: GetUserUseCase,
-        private readonly oauth42LoginUseCase: OAuth42LoginUseCase,
-        private readonly oauth42CallbackUseCase: OAuth42CallbackUseCase,
-        private readonly generate2FAUseCase: Generate2FAUseCase,
-        private readonly enable2FAUseCase: Enable2FAUseCase,
-        private readonly disable2FAUseCase: Disable2FAUseCase,
+        private readonly signupUseCase: ISignupUseCase,
+        private readonly loginUseCase: ILoginUseCase,
+        private readonly logoutUseCase: ILogoutUseCase,
+        private readonly refreshTokenUseCase: IRefreshTokenUseCase,
+        private readonly getUserUseCase: IGetUserUseCase,
+        private readonly oauth42LoginUseCase: IOAuth42LoginUseCase,
+        private readonly oauth42CallbackUseCase: IOAuth42CallbackUseCase,
+        private readonly generate2FAUseCase: IGenerate2FAUseCase,
+        private readonly enable2FAUseCase: IEnable2FAUseCase,
+        private readonly disable2FAUseCase: IDisable2FAUseCase,
     ) { }
 
     async signup(
@@ -66,8 +65,8 @@ export class AuthController {
             return;
         }
         try {
-            const user = await this.signupUseCase.execute(payload);
-            reply.code(201).send(AuthMapper.toSignupResponseDTO(user));
+            const result = await this.signupUseCase.execute(payload);
+            reply.code(201).send(result);
         } catch (error: any) {
             if (error.message.includes('already exists')) {
                 reply.code(409).send({
@@ -106,7 +105,7 @@ export class AuthController {
         }
         try {
             const result = await this.loginUseCase.execute(payload);
-            reply.code(200).send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken, result.refreshToken));
+            reply.code(200).send(result);
         } catch (error: any) {
             request.log.error({ err: error }, 'Login failed');
             const message = error.message || '';
@@ -150,7 +149,7 @@ export class AuthController {
                 return;
             }
 
-            const user = await this.getUserUseCase.execute(userId);
+            const user = await this.getUserUseCase.execute({ userId });
 
             if (!user) {
                 reply.code(404).send({
@@ -162,7 +161,7 @@ export class AuthController {
 
             reply.code(200).send({
                 authenticated: true,
-                user: AuthMapper.toUserInfoDTO(user)
+                user
             });
         } catch (error: any) {
             request.log.error({ err: error }, 'Auth status failed');
@@ -191,7 +190,10 @@ export class AuthController {
             const body = (request.body ?? {}) as { refreshToken?: string };
             const refreshTokenFromBody = body.refreshToken;
 
-            const result = await this.logoutUseCase.execute(userId, refreshTokenFromBody);
+            const result = await this.logoutUseCase.execute({
+                userId,
+                refreshToken: refreshTokenFromBody,
+            });
             reply.code(200).send(result);
         } catch (error: any) {
             request.log.error({ err: error }, 'Logout failed');
@@ -209,10 +211,8 @@ export class AuthController {
     ): Promise<void> {
         try {
             const payload = refreshTokenSchema.parse(request.body) as RefreshTokenRequestDTO;
-            const result = await this.refreshTokenUseCase.execute(payload.refreshToken);
-            reply
-                .code(200)
-                .send(AuthMapper.toLoginResponseDTO(result.user, result.accessToken, result.refreshToken, 'Token refreshed'));
+            const result = await this.refreshTokenUseCase.execute(payload);
+            reply.code(200).send(result);
         } catch (error: any) {
             if (error instanceof ZodError) {
                 this.handleValidationError(error, reply);
@@ -235,7 +235,7 @@ export class AuthController {
         reply: FastifyReply
     ): Promise<void> {
         try {
-            const authorizationUrl = await this.oauth42LoginUseCase.execute();
+            const { authorizationUrl } = await this.oauth42LoginUseCase.execute();
             reply.redirect(authorizationUrl);
         } catch (error: any) {
             reply.code(500).send({
@@ -257,8 +257,8 @@ export class AuthController {
         }
 
         try {
-            const { sessionToken, user } = await this.oauth42CallbackUseCase.execute(code, state);
-            reply.redirect(this.buildSuccessRedirect(sessionToken, user.id));
+            const { sessionToken, userId } = await this.oauth42CallbackUseCase.execute({ code, state });
+            reply.redirect(this.buildSuccessRedirect(sessionToken, userId));
         } catch (error: any) {
             request.log.error({ err: error }, 'OAuth 42 callback failed');
             reply.redirect(this.buildFailureRedirect('oauth_error'));
@@ -280,7 +280,7 @@ export class AuthController {
         }
 
         try {
-            const result = await this.generate2FAUseCase.execute(userId);
+            const result = await this.generate2FAUseCase.execute({ userId });
             reply.code(200).send({
                 secret: result.secret,
                 qrCode: result.qrCode,
@@ -317,7 +317,7 @@ export class AuthController {
         }
 
         try {
-            await this.enable2FAUseCase.execute(userId, payload.token);
+            await this.enable2FAUseCase.execute({ userId, token: payload.token });
             reply.code(200).send({ message: 'Two-factor authentication enabled' });
         } catch (error: any) {
             request.log.error({ err: error }, 'Enable 2FA failed');
@@ -358,7 +358,7 @@ export class AuthController {
         }
 
         try {
-            await this.disable2FAUseCase.execute(userId, payload.token);
+            await this.disable2FAUseCase.execute({ userId, token: payload.token });
             reply.code(200).send({ message: 'Two-factor authentication disabled' });
         } catch (error: any) {
             request.log.error({ err: error }, 'Disable 2FA failed');

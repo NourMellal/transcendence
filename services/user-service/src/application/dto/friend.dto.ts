@@ -1,44 +1,67 @@
-/**
- * Friends System DTOs
- * Data Transfer Objects for friend-related operations
- */
+export type FriendshipStatusDTO = 'pending' | 'accepted' | 'rejected' | 'blocked';
 
-export enum FriendshipStatus {
-    PENDING = 'pending',
-    ACCEPTED = 'accepted',
-    REJECTED = 'rejected',
-    BLOCKED = 'blocked'
+export interface AddFriendRequestDTO {
+    readonly friendId: string;
 }
 
-// Request DTOs
-export interface AddFriendRequestDTO {
-    friendId: string;
+export interface SendFriendRequestInputDTO extends AddFriendRequestDTO {
+    readonly requesterId: string;
 }
 
 export interface UpdateFriendRequestDTO {
-    status: FriendshipStatus;
+    readonly status: FriendshipStatusDTO;
 }
 
-// Response DTOs
+export interface RespondFriendRequestInputDTO {
+    readonly friendshipId: string;
+    readonly userId: string;
+    readonly status: FriendshipStatusDTO;
+}
+
+export interface ListFriendsInputDTO {
+    readonly userId: string;
+    readonly statuses?: FriendshipStatusDTO[];
+}
+
+export interface BlockUserInputDTO {
+    readonly userId: string;
+    readonly otherUserId: string;
+}
+
+export interface RemoveFriendInputDTO {
+    readonly userId: string;
+    readonly friendId: string;
+}
+
+export interface UnblockUserInputDTO {
+    readonly userId: string;
+    readonly otherUserId: string;
+}
+
+export interface CancelFriendRequestInputDTO {
+    readonly requesterId: string;
+    readonly friendshipId: string;
+}
+
 export interface FriendshipDTO {
-    id: string;
-    userId: string;
-    friendId: string;
-    status: FriendshipStatus;
-    createdAt: Date;
-    updatedAt: Date;
+    readonly id: string;
+    readonly userId: string;
+    readonly friendId: string;
+    readonly status: FriendshipStatusDTO;
+    readonly createdAt: string;
+    readonly updatedAt: string;
 }
 
 export interface FriendDTO {
-    id: string;
-    username: string;
-    displayName?: string;
-    avatar?: string;
-    isOnline: boolean;
-    friendshipStatus: FriendshipStatus;
+    readonly id: string;
+    readonly username: string;
+    readonly displayName?: string;
+    readonly avatar?: string;
+    readonly isOnline: boolean;
+    readonly friendshipStatus: FriendshipStatusDTO;
 }
 
 export interface FriendListResponseDTO {
-    friends: FriendDTO[];
-    totalCount: number;
+    readonly friends: FriendDTO[];
+    readonly totalCount: number;
 }

@@ -1,12 +1,11 @@
-import crypto from 'crypto';
+import { DisplayName, Email, UserId, Username } from '../value-objects';
 
-// Domain Entities
 export interface User {
-    id: string;
-    email: string;
-    username: string;
-    passwordHash?: string; // Optional for OAuth users
-    displayName?: string;
+    id: UserId;
+    email: Email;
+    username: Username;
+    passwordHash?: string;
+    displayName: DisplayName;
     avatar?: string;
     twoFASecret?: string;
     is2FAEnabled: boolean;
@@ -24,86 +23,34 @@ export interface Session {
     createdAt: Date;
 }
 
-// Domain Value Objects
-export class UserId {
-    constructor(public readonly value: string) {
-        if (!value || value.trim().length === 0) {
-            throw new Error('User ID cannot be empty');
-        }
-    }
-}
-
-export class Email {
-    constructor(public readonly value: string) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
-            throw new Error('Invalid email format');
-        }
-    }
-}
-
-export class Username {
-    constructor(public readonly value: string) {
-        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-        if (!usernameRegex.test(value)) {
-            throw new Error('Username must be 3-20 characters, alphanumeric and underscores only');
-        }
-    }
-}
-
-/**
- * Simple password hashing using Node.js crypto (scrypt)
- */
-export class PasswordHelper {
-    private static readonly SALT_LENGTH = 16;
-    private static readonly KEY_LENGTH = 64;
-
-    static async hash(password: string): Promise<string> {
-        return new Promise((resolve, reject) => {
-            const salt = crypto.randomBytes(this.SALT_LENGTH).toString('hex');
-
-            crypto.scrypt(password, salt, this.KEY_LENGTH, (err, derivedKey) => {
-                if (err) reject(err);
-                resolve(salt + ':' + derivedKey.toString('hex'));
-            });
-        });
-    }
-
-    static async verify(password: string, hash: string): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            const [salt, key] = hash.split(':');
-
-            crypto.scrypt(password, salt, this.KEY_LENGTH, (err, derivedKey) => {
-                if (err) reject(err);
-                resolve(key === derivedKey.toString('hex'));
-            });
-        });
-    }
-}
-
-/**
- * Simple user factory
- */
-export function createUser(data: {
-    email: string;
-    username: string;
+interface CreateUserProps {
+    id: UserId;
+    email: Email;
+    username: Username;
     passwordHash?: string;
-    displayName?: string;
+    displayName?: DisplayName;
+    avatar?: string;
+    twoFASecret?: string;
+    is2FAEnabled?: boolean;
     oauthProvider?: 'local' | '42';
     oauthId?: string;
-}): User {
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+export function createUser(data: CreateUserProps): User {
     return {
-        id: crypto.randomUUID(),
+        id: data.id,
         email: data.email,
         username: data.username,
         passwordHash: data.passwordHash,
-        displayName: data.displayName || data.username,
-        avatar: undefined,
-        twoFASecret: undefined,
-        is2FAEnabled: false,
-        oauthProvider: data.oauthProvider || 'local',
+        displayName: data.displayName ?? new DisplayName(data.username.toString()),
+        avatar: data.avatar,
+        twoFASecret: data.twoFASecret,
+        is2FAEnabled: data.is2FAEnabled ?? false,
+        oauthProvider: data.oauthProvider ?? 'local',
         oauthId: data.oauthId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: data.createdAt ?? new Date(),
+        updatedAt: data.updatedAt ?? new Date(),
     };
 }

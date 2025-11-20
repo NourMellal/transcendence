@@ -1,12 +1,13 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { updateUserSchema, userIdParamSchema, idParamSchema } from '@transcendence/shared-validation';
-import { UpdateProfileUseCase } from '../../../application/use-cases/users/update-profile.usecase';
-import { GetUserUseCase } from '../../../application/use-cases/users/get-user.usecase';
-import { DeleteUserUseCase } from '../../../application/use-cases/users/delete-user.usecase';
 import { UpdateProfileRequestDTO } from '../../../application/dto/user.dto';
-import { UserMapper } from '../../../application/mappers/user.mapper';
 import { ErrorHandler } from '../utils/error-handler';
+import type {
+    IDeleteUserUseCase,
+    IGetUserUseCase,
+    IUpdateProfileUseCase
+} from '../../../domain/ports';
 
 interface GetUserParams {
     userId: string;
@@ -18,9 +19,9 @@ interface DeleteUserRequestBody {
 
 export class UserController {
     constructor(
-        private updateProfileUseCase: UpdateProfileUseCase,
-        private getUserUseCase: GetUserUseCase,
-        private deleteUserUseCase: DeleteUserUseCase
+        private updateProfileUseCase: IUpdateProfileUseCase,
+        private getUserUseCase: IGetUserUseCase,
+        private deleteUserUseCase: IDeleteUserUseCase
     ) { }
 
     async getUser(
@@ -29,7 +30,7 @@ export class UserController {
     ): Promise<void> {
         try {
             const params = userIdParamSchema.parse(request.params);
-            const user = await this.getUserUseCase.execute(params.userId);
+            const user = await this.getUserUseCase.execute({ userId: params.userId });
 
             if (!user) {
                 reply.code(404).send({
@@ -39,7 +40,7 @@ export class UserController {
                 return;
             }
 
-            reply.code(200).send(UserMapper.toProfileDTO(user));
+            reply.code(200).send(user);
         } catch (error: any) {
             request.log.error(error);
             reply.code(500).send({
@@ -78,7 +79,8 @@ export class UserController {
 
             request.log.info({ targetUserId: params.userId, initiatedBy: authenticatedUserId, reason: body?.reason }, 'Deleting user');
 
-            await this.deleteUserUseCase.execute(params.userId, {
+            await this.deleteUserUseCase.execute({
+                userId: params.userId,
                 reason: body?.reason,
                 initiatedBy: authenticatedUserId,
             });
@@ -128,7 +130,7 @@ export class UserController {
 
             const userId = idParamSchema.parse({ id: userIdHeader }).id;
 
-            const user = await this.getUserUseCase.execute(userId);
+            const user = await this.getUserUseCase.execute({ userId });
 
             if (!user) {
                 reply.code(404).send({
@@ -138,7 +140,7 @@ export class UserController {
                 return;
             }
 
-            reply.code(200).send(UserMapper.toProfileDTO(user));
+            reply.code(200).send(user);
         } catch (error: any) {
             request.log.error(error);
             reply.code(500).send({
@@ -168,9 +170,12 @@ export class UserController {
             if (!updates) {
                 return;
             }
-            const updatedUser = await this.updateProfileUseCase.execute(userId, updates);
+            const updatedUser = await this.updateProfileUseCase.execute({
+                userId,
+                ...updates,
+            });
 
-            reply.code(200).send(UserMapper.toUpdateResponseDTO(updatedUser));
+            reply.code(200).send(updatedUser);
         } catch (error: any) {
             request.log.error({ err: error }, 'Update profile failed');
             ErrorHandler.handleUpdateProfileError(error, reply);
@@ -203,9 +208,12 @@ export class UserController {
                 return;
             }
 
-            const updatedUser = await this.updateProfileUseCase.execute(params.userId, updates);
+            const updatedUser = await this.updateProfileUseCase.execute({
+                userId: params.userId,
+                ...updates,
+            });
 
-            reply.code(200).send(UserMapper.toUpdateResponseDTO(updatedUser));
+            reply.code(200).send(updatedUser);
         } catch (error: any) {
             request.log.error({ err: error }, 'Update profile failed');
             ErrorHandler.handleUpdateProfileError(error, reply);

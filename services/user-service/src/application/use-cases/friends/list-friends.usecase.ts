@@ -1,24 +1,20 @@
 import type { User } from '../../../domain/entities/user.entity';
-import { FriendshipStatus, type Friendship } from '../../../domain/entities/friendship.entity';
+import { FriendshipStatus } from '../../../domain/entities/friendship.entity';
 import type { FriendshipRepository, UserRepository } from '../../../domain/ports';
+import type { IListFriendsUseCase } from '../../../domain/ports';
+import type { FriendListResponseDTO, ListFriendsInputDTO } from '../../dto/friend.dto';
+import { FriendMapper } from '../../mappers/friend.mapper';
 
-export interface FriendListItem {
-    friendship: Friendship;
-    friend: User | null;
-}
-
-interface ListFriendsOptions {
-    statuses?: FriendshipStatus[];
-}
-
-export class ListFriendsUseCase {
+export class ListFriendsUseCase implements IListFriendsUseCase {
     constructor(
         private readonly friendshipRepository: FriendshipRepository,
         private readonly userRepository: UserRepository
     ) {}
 
-    async execute(userId: string, options: ListFriendsOptions = {}): Promise<FriendListItem[]> {
-        const friendships = await this.friendshipRepository.listForUser(userId, options.statuses);
+    async execute(input: ListFriendsInputDTO): Promise<FriendListResponseDTO> {
+        const { userId, statuses } = input;
+        const normalizedStatuses = statuses?.map((status) => this.toDomainStatus(status));
+        const friendships = await this.friendshipRepository.listForUser(userId, normalizedStatuses);
 
         const friendIds = friendships.map(friendship =>
             friendship.requesterId === userId ? friendship.addresseeId : friendship.requesterId
@@ -36,12 +32,19 @@ export class ListFriendsUseCase {
             })
         );
 
-        return friendships.map(friendship => {
-            const otherUserId = friendship.requesterId === userId ? friendship.addresseeId : friendship.requesterId;
-            return {
-                friendship,
-                friend: friendsMap.get(otherUserId) ?? null,
-            };
-        });
+        return FriendMapper.toFriendListResponse(userId, friendships, friendsMap);
+    }
+
+    private toDomainStatus(status: string): FriendshipStatus {
+        switch (status) {
+            case 'accepted':
+                return FriendshipStatus.ACCEPTED;
+            case 'rejected':
+                return FriendshipStatus.REJECTED;
+            case 'blocked':
+                return FriendshipStatus.BLOCKED;
+            default:
+                return FriendshipStatus.PENDING;
+        }
     }
 }

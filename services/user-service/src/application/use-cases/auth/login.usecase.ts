@@ -1,32 +1,36 @@
 import jwt from 'jsonwebtoken';
-import { User, PasswordHelper } from '../../../domain/entities/user.entity';
-import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository } from '../../../domain/ports';
+import { User } from '../../../domain/entities/user.entity';
+import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository, IPasswordHasher } from '../../../domain/ports';
+import type { ILoginUseCase } from '../../../domain/ports';
 import { PresenceStatus } from '../../../domain/entities/presence.entity';
 import type { JWTConfig } from '@transcendence/shared-utils';
-import { LoginUseCaseInput, LoginUseCaseOutput } from '../../dto/auth.dto';
+import type { LoginUseCaseInputDTO, LoginUseCaseOutputDTO } from '../../dto/auth.dto';
 import crypto from 'crypto';
+import { Email } from '../../../domain/value-objects';
+import { AuthMapper } from '../../mappers/auth.mapper';
 
 export interface JWTService {
     getJWTConfig(): Promise<JWTConfig>;
 }
 
-export class LoginUseCase {
+export class LoginUseCase implements ILoginUseCase {
     constructor(
-        private userRepository: UserRepository,
-        private jwtService: JWTService,
-        private sessionRepository: SessionRepository,
-        private twoFAService?: TwoFAService,
-        private presenceRepository?: UserPresenceRepository
+        private readonly userRepository: UserRepository,
+        private readonly jwtService: JWTService,
+        private readonly sessionRepository: SessionRepository,
+        private readonly passwordHasher: IPasswordHasher,
+        private readonly twoFAService?: TwoFAService,
+        private readonly presenceRepository?: UserPresenceRepository
     ) { }
 
-    async execute(input: LoginUseCaseInput): Promise<LoginUseCaseOutput> {
+    async execute(input: LoginUseCaseInputDTO): Promise<LoginUseCaseOutputDTO> {
         // Validate input
         if (!input.email || !input.password) {
             throw new Error('Email and password are required');
         }
 
-        // Find user by email
-        const user = await this.userRepository.findByEmail(input.email);
+        const email = new Email(input.email);
+        const user = await this.userRepository.findByEmail(email.toString());
         if (!user) {
             throw new Error('Invalid credentials');
         }
@@ -37,7 +41,7 @@ export class LoginUseCase {
         }
 
         // Verify password
-        const isPasswordValid = await PasswordHelper.verify(input.password, user.passwordHash);
+        const isPasswordValid = await this.passwordHasher.verify(input.password, user.passwordHash);
         if (!isPasswordValid) {
             throw new Error('Invalid credentials');
         }
@@ -60,17 +64,11 @@ export class LoginUseCase {
 
         // Generate JWT and refresh token
         const accessToken = await this.generateToken(user);
-        const { refreshToken } = await this.createRefreshSession(user.id);
-        await this.presenceRepository?.upsert(user.id, PresenceStatus.ONLINE, new Date());
+        const { refreshToken } = await this.createRefreshSession(user.id.toString());
+        await this.presenceRepository?.upsert(user.id.toString(), PresenceStatus.ONLINE, new Date());
 
-        // Return user without password hash
-        const { passwordHash: _, ...userWithoutPassword } = user;
-
-        return {
-            user: userWithoutPassword as User,
-            accessToken,
-            refreshToken,
-        };
+        const sanitizedUser: User = { ...user, passwordHash: undefined };
+        return AuthMapper.toLoginResponseDTO(sanitizedUser, accessToken, refreshToken);
     }
 
     private async generateToken(user: User): Promise<string> {
@@ -82,10 +80,10 @@ export class LoginUseCase {
         }
 
         const payload = {
-            sub: user.id,
-            userId: user.id,
-            email: user.email,
-            username: user.username,
+            sub: user.id.toString(),
+            userId: user.id.toString(),
+            email: user.email.toString(),
+            username: user.username.toString(),
         };
 
         // Use jsonwebtoken library (same as API Gateway)

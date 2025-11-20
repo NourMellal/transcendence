@@ -1,20 +1,16 @@
 import {
     FriendshipDomain,
     FriendshipStatus,
-    type Friendship,
 } from '../../../domain/entities/friendship.entity';
 import type { FriendshipRepository } from '../../../domain/ports';
+import type { IRespondFriendRequestUseCase } from '../../../domain/ports';
+import type { FriendshipDTO, RespondFriendRequestInputDTO } from '../../dto/friend.dto';
+import { FriendMapper } from '../../mappers/friend.mapper';
 
-interface RespondFriendRequestInput {
-    friendshipId: string;
-    userId: string;
-    status: FriendshipStatus.ACCEPTED | FriendshipStatus.REJECTED;
-}
-
-export class RespondFriendRequestUseCase {
+export class RespondFriendRequestUseCase implements IRespondFriendRequestUseCase {
     constructor(private readonly friendshipRepository: FriendshipRepository) {}
 
-    async execute(input: RespondFriendRequestInput): Promise<Friendship> {
+    async execute(input: RespondFriendRequestInputDTO): Promise<FriendshipDTO> {
         const friendship = await this.friendshipRepository.findById(input.friendshipId);
 
         if (!friendship) {
@@ -25,13 +21,8 @@ export class RespondFriendRequestUseCase {
             throw new Error('Only the recipient can respond to this request');
         }
 
-        let transitionType: 'ACCEPT' | 'REJECT';
-
-        if (input.status === FriendshipStatus.ACCEPTED) {
-            transitionType = 'ACCEPT';
-        } else {
-            transitionType = 'REJECT';
-        }
+        const transitionType: 'ACCEPT' | 'REJECT' =
+            input.status === FriendshipStatus.ACCEPTED ? 'ACCEPT' : 'REJECT';
 
         const updatedFriendship = FriendshipDomain.transition(friendship, { type: transitionType });
 
@@ -41,9 +32,9 @@ export class RespondFriendRequestUseCase {
             blockedBy: updatedFriendship.blockedBy,
         });
 
-        return {
+        return FriendMapper.toFriendshipDTO({
             ...friendship,
             ...updatedFriendship,
-        };
+        });
     }
 }

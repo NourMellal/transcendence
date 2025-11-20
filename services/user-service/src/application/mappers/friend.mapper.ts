@@ -1,7 +1,6 @@
 import type { User } from '../../domain/entities/user.entity';
 import type { Friendship } from '../../domain/entities/friendship.entity';
 import type { FriendDTO, FriendListResponseDTO, FriendshipDTO } from '../dto/friend.dto';
-import type { FriendListItem } from '../use-cases/friends/list-friends.usecase';
 
 export class FriendMapper {
     static toFriendshipDTO(friendship: Friendship): FriendshipDTO {
@@ -10,27 +9,36 @@ export class FriendMapper {
             userId: friendship.requesterId,
             friendId: friendship.addresseeId,
             status: friendship.status,
-            createdAt: friendship.createdAt,
-            updatedAt: friendship.updatedAt,
+            createdAt: friendship.createdAt.toISOString(),
+            updatedAt: friendship.updatedAt.toISOString(),
         };
     }
 
     static toFriendDTO(selfId: string, friendship: Friendship, friendUser: User | null): FriendDTO {
         const friendId = friendship.requesterId === selfId ? friendship.addresseeId : friendship.requesterId;
         return {
-            id: friendUser?.id ?? friendId,
-            username: friendUser?.username ?? 'unknown',
-            displayName: friendUser?.displayName,
+            id: friendUser ? friendUser.id.toString() : friendId,
+            username: friendUser ? friendUser.username.toString() : 'unknown',
+            displayName: friendUser ? friendUser.displayName.toString() : undefined,
             avatar: friendUser?.avatar,
             isOnline: false,
             friendshipStatus: friendship.status,
         };
     }
 
-    static toFriendListResponse(selfId: string, items: FriendListItem[]): FriendListResponseDTO {
+    static toFriendListResponse(
+        selfId: string,
+        friendships: Friendship[],
+        friendsMap: Map<string, User | undefined | null>
+    ): FriendListResponseDTO {
+        const friends = friendships.map(friendship => {
+            const otherUserId = friendship.requesterId === selfId ? friendship.addresseeId : friendship.requesterId;
+            return this.toFriendDTO(selfId, friendship, friendsMap.get(otherUserId) ?? null);
+        });
+
         return {
-            friends: items.map(item => this.toFriendDTO(selfId, item.friendship, item.friend)),
-            totalCount: items.length,
+            friends,
+            totalCount: friends.length,
         };
     }
 }

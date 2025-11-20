@@ -1,20 +1,13 @@
 import { UserRepository } from '../../../domain/ports';
+import type { IAuthStatusUseCase } from '../../../domain/ports';
+import type { AuthStatusInputDTO, AuthStatusResponseDTO } from '../../dto/auth.dto';
+import { AuthMapper } from '../../mappers/auth.mapper';
 
-export class AuthStatusUseCase {
+export class AuthStatusUseCase implements IAuthStatusUseCase {
     constructor(private userRepository: UserRepository) { }
 
-    async execute(userId: string): Promise<{
-        authenticated: boolean;
-        user?: {
-            id: string;
-            email: string;
-            username: string;
-            displayName?: string;
-            avatar?: string;
-            is2FAEnabled: boolean;
-            oauthProvider?: string;
-        };
-    }> {
+    async execute(input: AuthStatusInputDTO): Promise<AuthStatusResponseDTO> {
+        const { userId } = input;
         if (!userId) {
             return { authenticated: false };
         }
@@ -27,15 +20,7 @@ export class AuthStatusUseCase {
 
         return {
             authenticated: true,
-            user: {
-                id: user.id,
-                email: user.email,
-                username: user.username,
-                displayName: user.displayName,
-                avatar: user.avatar,
-                is2FAEnabled: user.is2FAEnabled,
-                oauthProvider: user.oauthProvider,
-            }
+            user: AuthMapper.toUserInfoDTO(user),
         };
     }
 }

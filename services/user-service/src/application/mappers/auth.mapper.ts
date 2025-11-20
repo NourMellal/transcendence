@@ -4,7 +4,7 @@
  */
 
 import { User } from '../../domain/entities/user.entity';
-import { AuthResponseDTO, UserInfoDTO } from '../dto/auth.dto';
+import { AuthResponseDTO, SignupResponseDTO, UserInfoDTO } from '../dto/auth.dto';
 
 export class AuthMapper {
     /**
@@ -13,10 +13,10 @@ export class AuthMapper {
      */
     static toUserInfoDTO(user: User): UserInfoDTO {
         return {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            displayName: user.displayName,
+            id: user.id.toString(),
+            email: user.email.toString(),
+            username: user.username.toString(),
+            displayName: user.displayName.toString(),
             avatar: user.avatar,
             is2FAEnabled: user.is2FAEnabled,
         };
@@ -26,15 +26,15 @@ export class AuthMapper {
      * Convert to signup response
      * Includes creation timestamp
      */
-    static toSignupResponseDTO(user: User) {
+    static toSignupResponseDTO(user: User): SignupResponseDTO {
         return {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            displayName: user.displayName,
+            id: user.id.toString(),
+            email: user.email.toString(),
+            username: user.username.toString(),
+            displayName: user.displayName.toString(),
             avatar: user.avatar,
             is2FAEnabled: user.is2FAEnabled,
-            createdAt: user.createdAt,
+            createdAt: user.createdAt.toISOString(),
         };
     }
 
