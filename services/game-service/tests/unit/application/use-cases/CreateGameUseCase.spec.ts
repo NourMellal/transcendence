@@ -4,6 +4,7 @@ import { IGameRepository } from '../../../../src/application/ports/repositories/
 import { Game } from '../../../../src/domain/entities';
 import { IGameEventPublisher } from '../../../../src/application/ports/messaging/IGameEventPublisher';
 import { IUserServiceClient } from '../../../../src/application/ports/external/IUserServiceClient';
+import { InvalidGameStateError } from '../../../../src/domain/errors';
 
 class InMemoryRepo implements IGameRepository {
     private games = new Map<string, Game>();
@@ -39,10 +40,21 @@ class FakePublisher implements IGameEventPublisher {
 }
 
 class FakeUserClient implements IUserServiceClient {
+    constructor(private readonly missingUsers: Set<string> = new Set()) {}
+
     async getUserSummary(userId: string) {
+        if (this.missingUsers.has(userId)) {
+            return null;
+        }
         return { id: userId, username: `user-${userId}` } as any;
     }
-    async ensureUsersExist(): Promise<void> {}
+
+    async ensureUsersExist(userIds: string[]): Promise<void> {
+        const missing = userIds.filter((id) => this.missingUsers.has(id));
+        if (missing.length > 0) {
+            throw new InvalidGameStateError(`Missing users: ${missing.join(', ')}`);
+        }
+    }
 }
 
 describe('CreateGameUseCase', () => {
@@ -56,5 +68,21 @@ describe('CreateGameUseCase', () => {
 
         expect(result.id).toBeDefined();
         expect(publisher.events.length).toBe(1);
+    });
+
+    it('throws when provided players do not exist', async () => {
+        const repo = new InMemoryRepo();
+        const publisher = new FakePublisher();
+        const userClient = new FakeUserClient(new Set(['ghost']));
+        const useCase = new CreateGameUseCase(repo, publisher, userClient);
+
+        await expect(
+            useCase.execute({
+                playerId: 'player1',
+                opponentId: 'ghost',
+                mode: 'classic',
+                config: {}
+            })
+        ).rejects.toBeInstanceOf(InvalidGameStateError);
     });
 });
