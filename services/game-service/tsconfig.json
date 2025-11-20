@@ -7,7 +7,8 @@
     "paths": {
       "@transcendence/shared-types": ["../../packages/shared-types/src"],
       "@transcendence/shared-utils": ["../../packages/shared-utils/src"],
-      "@transcendence/shared-validation": ["../../packages/shared-validation/src"]
+      "@transcendence/shared-validation": ["../../packages/shared-validation/src"],
+      "@transcendence/shared-messaging": ["../../packages/shared-messaging/src"]
     }
   },
   "include": ["src/**/*"],
@@ -15,6 +16,7 @@
   "references": [
     { "path": "../../packages/shared-types" },
     { "path": "../../packages/shared-utils" },
-    { "path": "../../packages/shared-validation" }
+    { "path": "../../packages/shared-validation" },
+    { "path": "../../packages/shared-messaging" }
   ]
 }
