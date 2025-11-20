@@ -1,4 +1,5 @@
 import { IUserServiceClient, UserSummary } from '../../application/ports/external/IUserServiceClient';
+import { InvalidGameStateError } from '../../domain/errors';
 
 export class UserServiceClient implements IUserServiceClient {
     constructor(
@@ -7,24 +8,44 @@ export class UserServiceClient implements IUserServiceClient {
     ) {}
 
     async getUserSummary(userId: string): Promise<UserSummary | null> {
-        const response = await fetch(`${this.baseUrl}/internal/users/${userId}`, {
-            headers: this.buildHeaders()
-        });
+        try {
+            const response = await fetch(`${this.baseUrl}/internal/users/${userId}`, {
+                headers: this.buildHeaders()
+            });
 
-        if (response.status === 404) {
-            return null;
+            if (response.status === 404) {
+                return null;
+            }
+
+            if (!response.ok) {
+                throw new Error(`User service responded with status ${response.status}`);
+            }
+
+            const body = (await response.json()) as { data: UserSummary };
+            return body.data;
+        } catch (error) {
+            console.error('[UserServiceClient] Failed to fetch user summary', error);
+            throw new Error('User service unavailable');
         }
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch user summary');
-        }
-
-        const body = await response.json();
-        return body.data as UserSummary;
     }
 
     async ensureUsersExist(userIds: string[]): Promise<void> {
-        await Promise.all(userIds.map((userId) => this.getUserSummary(userId)));
+        const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+        if (uniqueUserIds.length === 0) {
+            return;
+        }
+
+        const results = await Promise.all(
+            uniqueUserIds.map(async (userId) => {
+                const user = await this.getUserSummary(userId);
+                return { userId, exists: user !== null };
+            })
+        );
+
+        const missingUsers = results.filter((result) => !result.exists).map((result) => result.userId);
+        if (missingUsers.length > 0) {
+            throw new InvalidGameStateError(`Cannot create game: users not found [${missingUsers.join(', ')}]`);
+        }
     }
 
     private buildHeaders(): Record<string, string> {
