@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SQLiteUserRepository } from '../../../../src/infrastructure/database/repositories/sqlite-user.repository';
-import { createTestDatabase, closeTestDatabase } from '../../../../helpers/test-database';
+import { createTestDatabase, closeTestDatabase } from '../../../helpers/test-database';
 import { createUser } from '../../../../src/domain/entities/user.entity';
 import { Email, Username, UserId, DisplayName } from '../../../../src/domain/value-objects';
 import { Database } from 'sqlite';
