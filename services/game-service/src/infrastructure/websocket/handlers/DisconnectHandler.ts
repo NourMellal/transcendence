@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { DisconnectPlayerUseCase } from '../../../application/use-cases';
+import { DisconnectPlayerUseCase } from   '../../../application/use-cases';
 import { GameRoomManager } from '../GameRoomManager';
 
 export class DisconnectHandler {
