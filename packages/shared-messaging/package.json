@@ -4,7 +4,6 @@
   "description": "Shared messaging contracts for Transcendence microservices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "type": "module",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
