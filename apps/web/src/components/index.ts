@@ -7,5 +7,13 @@ export { Component } from './base/Component';
 
 // Authentication components
 export { LoginForm } from './auth/LoginForm';
-export { RegisterForm } from './auth/RegisterForm';
-export { AuthManager } from './auth/AuthManager';
+
+// Pages
+export { HomePage } from './pages/HomePage';
+export { ComingSoonPage } from './pages/ComingSoonPage';
+export { SignupPage } from './SignupPage';
+
+// UI
+export { StatCard } from './ui/StatCard';
+export { LiveMatchCard } from './ui/LiveMatchCard';
+export { TournamentCard } from './ui/TournamentCard';

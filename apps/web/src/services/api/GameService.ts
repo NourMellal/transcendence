@@ -4,7 +4,8 @@ import {
   GameDTOs, 
   GameState, 
   Match,
-  PaginatedResponse 
+  PaginatedResponse,
+  LandingOverview,
 } from '../../models';
 
 /**
@@ -12,6 +13,21 @@ import {
  * Handles game creation, joining, and real-time game operations
  */
 export class GameService {
+  /**
+   * Landing overview used by the marketing home page
+   */
+  async getLandingOverview(): Promise<LandingOverview> {
+    try {
+      const response = await httpClient.get<LandingOverview>('/games/overview');
+      if (response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.warn('Failed to load landing overview, falling back to mock data', error);
+    }
+    return this.buildLandingFallback();
+  }
+
   /**
    * Create a new game
    */
@@ -170,6 +186,69 @@ export class GameService {
    */
   async cancelMatchmaking(): Promise<void> {
     await httpClient.delete('/games/matchmaking');
+  }
+
+  /**
+   * Local fallback data to keep the landing page rich while backend evolves
+   */
+  private buildLandingFallback(): LandingOverview {
+    return {
+      stats: {
+        activePlayers: 1842,
+        gamesPlayed: 128_430,
+        tournaments: 42,
+        matchmakingTime: 26,
+        winRate: 63,
+      },
+      liveMatches: [
+        {
+          id: 'legend-finals',
+          title: 'Legend League Finals',
+          stage: 'Best of 5',
+          league: 'legend',
+          map: 'neo-noir',
+          spectators: 5120,
+          eta: 'LIVE',
+          players: [
+            { username: 'Aurora', score: 8 },
+            { username: 'Kinetic', score: 7 },
+          ],
+        },
+        {
+          id: 'elite-queue',
+          title: 'Elite Queue Spotlight',
+          stage: 'Match Point',
+          league: 'elite',
+          map: 'lunar-drift',
+          spectators: 1280,
+          eta: '02:14',
+          players: [
+            { username: 'Pulse', score: 5 },
+            { username: 'Nebula', score: 5 },
+          ],
+        },
+      ],
+      tournaments: [
+        {
+          id: 'storm-championship',
+          name: 'Storm Circuit Championship',
+          status: 'registration',
+          prizePool: 7500,
+          slots: { taken: 38, total: 64 },
+          region: 'EU',
+          startDate: new Date(Date.now() + 86400000).toISOString(),
+        },
+        {
+          id: 'nova-finals',
+          name: 'Nova Masters Invitational',
+          status: 'finals',
+          prizePool: 15000,
+          slots: { taken: 8, total: 8 },
+          region: 'NA',
+          startDate: new Date().toISOString(),
+        },
+      ],
+    };
   }
 }
 

@@ -1,0 +1,540 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    
+    /* ============================================= */
+    /* 🎨 TRANSCENDENCE DESIGN SYSTEM              */
+    /* ============================================= */
+    /* 
+     * 💡 SINGLE SOURCE OF TRUTH FOR ALL COLORS
+     * Edit the colors below to change the entire app theme.
+     * These CSS variables are used throughout all components.
+     */
+    
+    /* 🎮 Brand Colors - NEON CYBERPUNK PALETTE */
+    --color-brand-primary: #00b3d9;      /* Softer cyan - futuristic energy */
+    --color-brand-secondary: #ff006e;    /* Hot magenta - gaming intensity */
+    --color-brand-accent: #8338ec;       /* Electric purple - tech vibes */
+    --color-brand-neon: #3ddc84;         /* Matrix green - success states */
+    --color-brand-dark: #0d1117;         /* GitHub dark - professional depth */
+    
+    /* 🎯 Semantic Colors - CYBERPUNK FEEDBACK */
+    --color-success: #00ff88;            /* Bright success green - celebrate wins */
+    --color-warning: #ffaa00;            /* Vibrant orange - attention grabbing */
+    --color-error: #ff073a;              /* Neon red - critical alerts */
+    --color-info: #00ccff;               /* Electric blue - information */
+    
+    /* 🌫️ Enhanced Gray Scale - TECH NOIR HIERARCHY */
+    --color-gray-50: #fafbfc;            /* Pure whites */
+    --color-gray-100: #f6f8fa;
+    --color-gray-200: #e1e4e8;
+    --color-gray-300: #d1d9e0;
+    --color-gray-400: #959da5;           /* Tech mid-tones */
+    --color-gray-500: #6a737d;           /* Professional readability */
+    --color-gray-600: #586069;           /* Enhanced contrast */
+    --color-gray-700: #444d56;           /* Dark tech surfaces */
+    --color-gray-800: #2f363d;           /* Rich dark panels */
+    --color-gray-900: #1b1f23;           /* Deep tech backgrounds */
+    
+    /* 🎭 UI Component Colors - CYBERPUNK GLASS SYSTEM */
+    --color-panel-bg: rgba(47, 54, 61, 0.85);             /* Darker tech glass */
+    --color-panel-border: rgba(88, 96, 105, 0.5);         /* Stronger neon borders */
+    --color-input-bg: rgba(27, 31, 35, 0.9);              /* Deep tech inputs */
+    --color-input-border: rgba(149, 157, 165, 0.7);       /* Clear tech boundaries */
+    --color-input-focus: var(--color-brand-primary);       /* Electric focus states */
+    
+    /* 📝 Text Colors - Optimized Hierarchy */
+    --color-text-primary: #f8fafc;       /* Softer white - less harsh */
+    --color-text-secondary: #cbd5e1;     /* Better secondary contrast */
+    --color-text-muted: #94a3b8;         /* Improved muted text readability */
+    --color-text-inverse: #0f172a;       /* True dark for light backgrounds */
+    
+    /* ⚡ Interactive States - NEON FEEDBACK */
+    --color-hover-overlay: rgba(0, 217, 255, 0.1);         /* Electric cyan overlay */
+    --color-active-overlay: rgba(255, 0, 110, 0.15);       /* Hot magenta active state */
+    --color-disabled-overlay: rgba(27, 31, 35, 0.7);       /* Tech disabled state */
+    
+    /* 🌟 Enhanced Effects & Shadows - CYBERPUNK GLOW */
+    --shadow-glow-primary: 0 0 30px rgba(0, 217, 255, 0.6), 0 0 60px rgba(0, 217, 255, 0.2);
+    --shadow-glow-secondary: 0 0 30px rgba(255, 0, 110, 0.5), 0 0 60px rgba(255, 0, 110, 0.15);
+    --shadow-glass: 0 32px 64px rgba(13, 17, 23, 0.9), 0 16px 32px rgba(13, 17, 23, 0.6);
+    --backdrop-blur: blur(32px);          /* Enhanced cyberpunk blur */
+  }
+
+  /* Default scrolling behavior - can be overridden by login-page when needed */
+  html {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+  }
+
+  body {
+    @apply font-sans min-h-screen;
+    background-color: var(--color-brand-dark);
+    color: var(--color-text-primary);
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+  }
+
+  #app {
+    @apply min-h-screen;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    width: 100%;
+  }
+
+  /* Only disable scrolling when login page is explicitly marked */
+  body.login-page-active html,
+  body.login-page-active body,
+  body.login-page-active #app {
+    overflow: hidden;
+    height: 100vh;
+  }
+}
+
+@layer components {
+  /* 🎨 Reusable Component Classes */
+  .glass-panel {
+    background-color: var(--color-panel-bg);
+    border: 1px solid var(--color-panel-border);
+    backdrop-filter: var(--backdrop-blur);
+    border-radius: 1.5rem;
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glass-input {
+    background-color: var(--color-input-bg);
+    border: 1px solid var(--color-input-border);
+    color: var(--color-text-primary);
+    backdrop-filter: var(--backdrop-blur);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .glass-input:focus {
+    outline: none;
+    border-color: var(--color-input-focus);
+    box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.3), 0 0 20px rgba(0, 217, 255, 0.2);
+  }
+
+  .glass-input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .gradient-ring {
+    @apply relative;
+  }
+
+  .gradient-ring::before {
+    content: '';
+    @apply absolute inset-0 rounded-3xl;
+    background: conic-gradient(
+      from 130deg, 
+      var(--color-brand-primary), 
+      var(--color-brand-secondary), 
+      var(--color-brand-accent), 
+      var(--color-brand-primary)
+    );
+    filter: blur(20px);
+    opacity: 0.45;
+  }
+
+  /* 🎮 CYBERPUNK Button Styles */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-accent));
+    color: var(--color-text-inverse);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #00f0ff, #a855f7);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, var(--color-brand-secondary), var(--color-brand-neon));
+    color: var(--color-text-primary);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 0 20px rgba(255, 0, 110, 0.3);
+  }
+
+  .btn-secondary:hover {
+    background: linear-gradient(135deg, #ff1a85, #00ff99);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow-secondary);
+  }
+
+  /* 🌟 Utility Classes for Quick Theming */
+  .text-brand-gradient {
+    background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 200%;
+  }
+
+  .border-brand-gradient {
+    border: 1px solid;
+    border-image: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)) 1;
+  }
+
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary));
+  }
+
+  .glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  .glow-secondary {
+    box-shadow: var(--shadow-glow-secondary);
+  }
+
+  /* 🌟 Cyberpunk Background Utilities */
+  .cyberpunk-radial-bg {
+    background: radial-gradient(circle at center, rgba(0, 217, 255, 0.1), transparent 70%);
+  }
+
+  /* 📱 MOBILE-FIRST RESPONSIVE SYSTEM */
+  
+  /* Touch-friendly button sizes */
+  .btn-touch {
+    min-height: 44px; /* Apple Human Interface Guidelines minimum touch target */
+    min-width: 44px;
+    padding: 0.875rem 1.5rem; /* Larger padding for touch */
+  }
+
+  /* Mobile-optimized form inputs */
+  .input-touch {
+    min-height: 48px; /* Better for thumb interaction */
+    padding: 0.875rem 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Mobile typography scale */
+  .text-mobile-hero {
+    font-size: 2.5rem; /* 40px - readable on small screens */
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+  }
+
+  .text-mobile-title {
+    font-size: 1.875rem; /* 30px */
+    line-height: 1.2;
+  }
+
+  .text-mobile-subtitle {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.4;
+  }
+
+  .text-mobile-body {
+    font-size: 1rem; /* 16px - optimal for readability */
+    line-height: 1.6;
+  }
+
+  /* Mobile spacing utilities */
+  .mobile-container {
+    padding: 1rem;
+    max-width: 100%;
+  }
+
+  .mobile-section-spacing {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  .mobile-card-spacing {
+    padding: 1.5rem;
+  }
+
+  /* Enhanced glass panels for mobile */
+  .glass-panel-mobile {
+    background-color: var(--color-panel-bg);
+    border: 1px solid var(--color-panel-border);
+    backdrop-filter: var(--backdrop-blur);
+    border-radius: 1rem; /* Slightly smaller radius for mobile */
+    box-shadow: var(--shadow-glass);
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  /* Mobile navigation improvements */
+  .mobile-nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(20px);
+    background-color: rgba(13, 17, 23, 0.95);
+    border-bottom: 1px solid var(--color-panel-border);
+  }
+
+  /* Touch interaction feedback */
+  .touch-feedback {
+    transition: transform 0.1s ease-in-out, background-color 0.1s ease-in-out;
+    -webkit-tap-highlight-color: rgba(0, 217, 255, 0.2);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .touch-feedback:active {
+    transform: scale(0.98);
+  }
+
+  /* Improve button touch targets */
+  .btn-mobile {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  /* Mobile form improvements */
+  .form-mobile {
+    gap: 1rem;
+  }
+
+  .form-mobile input,
+  .form-mobile textarea,
+  .form-mobile select {
+    min-height: 48px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.875rem 1rem;
+  }
+
+  /* Better mobile modals/overlays */
+  .mobile-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .mobile-modal-content {
+    width: 100%;
+    max-width: 28rem;
+    background-color: var(--color-panel-bg);
+    border: 1px solid var(--color-panel-border);
+    border-radius: 1rem 1rem 0 0;
+    padding: 1.5rem;
+    backdrop-filter: var(--backdrop-blur);
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+  }
+
+  .mobile-modal.active .mobile-modal-content {
+    transform: translateY(0);
+  }
+
+  /* Safe area padding for notched devices */
+  .safe-area-inset {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Scroll optimization for mobile */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Loading states optimized for mobile */
+  .mobile-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    gap: 0.75rem;
+  }
+
+  .mobile-loading .spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid var(--color-panel-border);
+    border-top: 2px solid var(--color-brand-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+}
+
+/* 📱 RESPONSIVE BREAKPOINTS */
+@layer utilities {
+  
+  /* Enhanced mobile-first responsive utilities */
+  
+  /* Extra small devices (phones, 575px and down) */
+  @media (max-width: 575.98px) {
+    .text-responsive-hero {
+      font-size: 2.25rem !important; /* 36px */
+      line-height: 1.1 !important;
+    }
+    
+    .text-responsive-title {
+      font-size: 1.75rem !important; /* 28px */
+    }
+    
+    .text-responsive-subtitle {
+      font-size: 1rem !important; /* 16px */
+    }
+    
+    .mobile-xs-hidden {
+      display: none !important;
+    }
+    
+    .mobile-xs-full-width {
+      width: 100% !important;
+    }
+    
+    .mobile-xs-text-center {
+      text-align: center !important;
+    }
+    
+    .mobile-xs-px-4 {
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+    }
+    
+    .mobile-xs-py-8 {
+      padding-top: 2rem !important;
+      padding-bottom: 2rem !important;
+    }
+  }
+
+  /* Small devices (landscape phones, 576px and up to 767px) */
+  @media (min-width: 576px) and (max-width: 767.98px) {
+    .mobile-sm-grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    
+    .mobile-sm-flex-row {
+      flex-direction: row !important;
+    }
+  }
+
+  /* Medium devices (tablets, 768px and up to 991px) */
+  @media (min-width: 768px) and (max-width: 991.98px) {
+    .tablet-grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+    
+    .tablet-max-w-2xl {
+      max-width: 42rem !important;
+    }
+  }
+
+  /* Touch device optimizations (any device with touch capability) */
+  @media (hover: none) and (pointer: coarse) {
+    .touch-device .btn-primary,
+    .touch-device .btn-secondary {
+      min-height: 48px;
+      padding: 0.875rem 1.5rem;
+    }
+    
+    .touch-device .glass-input {
+      min-height: 48px;
+      padding: 0.875rem 1rem;
+      font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Remove hover effects on touch devices */
+    .touch-device .hover\:scale-105:hover {
+      transform: none;
+    }
+    
+    .touch-device .hover\:bg-gray-800:hover {
+      background-color: inherit;
+    }
+  }
+
+  /* High DPI displays (Retina, etc.) */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .retina-border {
+      border-width: 0.5px;
+    }
+  }
+
+  /* Landscape orientation on mobile devices */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .landscape-mobile-adjust {
+      min-height: auto !important;
+      padding-top: 1rem !important;
+      padding-bottom: 1rem !important;
+    }
+    
+    .landscape-mobile-text-sm {
+      font-size: 0.875rem !important;
+    }
+    
+    .landscape-mobile-compact {
+      gap: 0.5rem !important;
+      padding: 0.75rem !important;
+    }
+  }
+
+  /* Dark mode optimizations for mobile */
+  @media (prefers-color-scheme: dark) {
+    .auto-dark-optimized {
+      color: var(--color-text-primary);
+      background-color: var(--color-brand-dark);
+    }
+  }
+
+  /* Reduced motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-safe-only {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .high-contrast-border {
+      border: 2px solid var(--color-text-primary) !important;
+    }
+    
+    .high-contrast-text {
+      color: var(--color-text-primary) !important;
+    }
+  }
+}
+
+

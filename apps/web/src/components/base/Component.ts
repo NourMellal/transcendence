@@ -5,6 +5,7 @@
 export abstract class Component {
   protected element: HTMLElement;
   protected mounted = false;
+  private cleanupCallbacks: Array<() => void> = [];
 
   constructor(tagName = 'div', className?: string) {
     this.element = document.createElement(tagName);
@@ -79,25 +80,21 @@ export abstract class Component {
     listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any
   ): void {
     element.addEventListener(type, listener);
-    
-    // Store cleanup function
-    if (!this.element.dataset.cleanupFunctions) {
-      this.element.dataset.cleanupFunctions = '[]';
-    }
-    
-    const cleanupFunctions = JSON.parse(this.element.dataset.cleanupFunctions);
-    cleanupFunctions.push(() => element.removeEventListener(type, listener));
-    this.element.dataset.cleanupFunctions = JSON.stringify(cleanupFunctions);
+    this.registerCleanup(() => element.removeEventListener(type, listener));
+  }
+
+  /**
+   * Track cleanup callbacks for subscriptions or observers
+   */
+  protected registerCleanup(callback: () => void): void {
+    this.cleanupCallbacks.push(callback);
   }
 
   /**
    * Cleanup method for event listeners, etc.
    */
   protected cleanup(): void {
-    if (this.element.dataset.cleanupFunctions) {
-      const cleanupFunctions = JSON.parse(this.element.dataset.cleanupFunctions);
-      cleanupFunctions.forEach((fn: () => void) => fn());
-      delete this.element.dataset.cleanupFunctions;
-    }
+    this.cleanupCallbacks.forEach((fn) => fn());
+    this.cleanupCallbacks = [];
   }
 }

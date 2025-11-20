@@ -16,99 +16,133 @@ export class LoginForm extends Component {
   private show2FA = false;
 
   constructor() {
-    super('div', 'login-form bg-white p-8 rounded-lg shadow-md max-w-md mx-auto');
+    super('div', 'login-form bg-brand-dark text-white min-h-screen flex items-center justify-center mobile-xs-px-4 px-6 landscape-mobile-adjust safe-area-inset');
+    
+    // Add touch device detection
+    this.detectTouchDevice();
+  }
+
+  private detectTouchDevice(): void {
+    // Add touch device class for CSS targeting
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      document.body.classList.add('touch-device');
+    }
   }
 
   protected render(): void {
     this.element.innerHTML = `
-      <div class="text-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Sign In</h2>
-        <p class="text-gray-600 mt-2">Welcome back to Transcendence</p>
+      <!-- Background with cyberpunk gradient -->
+      <div class="absolute inset-0 bg-gradient-to-br from-brand-dark via-brand-dark to-brand-dark">
+        <div class="absolute inset-0 cyberpunk-radial-bg"></div>
       </div>
 
-      <div class="error-message hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
-      
-      <div class="loading-message hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
-        <div class="flex items-center">
-          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2"></div>
-          Signing in...
-        </div>
-      </div>
-
-      <form class="space-y-4">
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input 
-            type="email" 
-            id="email" 
-            name="email"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your email"
-            required
-          >
+      <div class="relative max-w-md w-full mobile-container">
+        <!-- Header -->
+        <div class="text-center mb-6 sm:mb-8">
+          <h1 class="text-responsive-title sm:text-3xl font-light tracking-tight mb-2 text-text-primary">Welcome Back</h1>
+          <p class="text-text-secondary mobile-xs-px-4">Sign in to your Transcendence account</p>
         </div>
 
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input 
-            type="password" 
-            id="password" 
-            name="password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your password"
-            required
-          >
-        </div>
-
-        <div class="two-fa-section hidden">
-          <label for="twofa" class="block text-sm font-medium text-gray-700 mb-1">2FA Code</label>
-          <input 
-            type="text" 
-            id="twofa" 
-            name="twofa"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter 6-digit code"
-            maxlength="6"
-          >
-          <p class="text-sm text-gray-500 mt-1">Enter the 6-digit code from your authenticator app</p>
-        </div>
-
-        <button 
-          type="submit"
-          class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          Sign In
-        </button>
-      </form>
-
-      <div class="mt-6">
-        <div class="relative">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-300"></div>
+        <!-- Login Form -->
+        <div class="glass-panel-mobile sm:glass-panel sm:p-8 border border-panel-border mobile-card-spacing">
+          <!-- Error Message -->
+          <div class="error-message hidden bg-error/10 border border-error/20 text-error px-4 py-3 rounded-lg mb-4"></div>
+          
+          <!-- Loading Message -->
+          <div class="loading-message hidden bg-brand-primary/10 border border-brand-primary/20 text-brand-secondary px-4 py-3 rounded-lg mb-4">
+            <div class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-secondary mr-3"></div>
+              Signing you in...
+            </div>
           </div>
-          <div class="relative flex justify-center text-sm">
-            <span class="px-2 bg-white text-gray-500">Or continue with</span>
+
+          <form class="space-y-4 sm:space-y-5">
+            <!-- Email Field -->
+            <div class="space-y-2">
+              <label for="email" class="block text-sm font-medium text-text-secondary">Email</label>
+              <input 
+                type="email" 
+                id="email" 
+                name="email"
+                class="input-touch glass-input w-full px-4 py-3 rounded-xl transition-all"
+                placeholder="your.email@example.com"
+                required
+              >
+            </div>
+
+            <!-- Password Field -->
+            <div class="space-y-2">
+              <label for="password" class="block text-sm font-medium text-text-secondary">Password</label>
+              <input 
+                type="password" 
+                id="password" 
+                name="password"
+                class="input-touch glass-input w-full px-4 py-3 rounded-xl transition-all"
+                placeholder="Enter your password"
+                required
+              >
+            </div>
+
+            <!-- 2FA Section -->
+            <div class="two-fa-section hidden space-y-2">
+              <label for="twofa" class="block text-sm font-medium text-text-secondary">Two-Factor Code</label>
+              <input 
+                type="text" 
+                id="twofa" 
+                name="twofa"
+                class="input-touch glass-input w-full px-4 py-3 rounded-xl transition-all font-mono text-center tracking-widest"
+                placeholder="000000"
+                maxlength="6"
+              >
+              <p class="text-xs text-text-muted text-center">Enter the 6-digit code from your authenticator app</p>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+              type="submit"
+              class="btn-primary btn-touch w-full py-3 px-6 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-secondary/50 focus:ring-offset-2 focus:ring-offset-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] touch-feedback"
+            >
+              Sign In
+            </button>
+          </form>
+
+          <!-- Divider -->
+          <div class="relative my-5 sm:my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-panel-border"></div>
+            </div>
+            <div class="relative flex justify-center text-xs">
+              <span class="px-4 bg-brand-dark text-text-muted">Or continue with</span>
+            </div>
+          </div>
+
+          <!-- 42 OAuth Button -->
+          <button 
+            type="button"
+            class="oauth-button btn-touch w-full bg-panel-bg text-text-primary py-3 px-6 rounded-xl border border-panel-border hover:bg-panel-bg hover:border-panel-border focus:outline-none focus:ring-2 focus:ring-brand-secondary/50 focus:ring-offset-2 focus:ring-offset-brand-dark transition-all duration-200 touch-feedback"
+          >
+            <div class="flex items-center justify-center">
+              <img src="/assets/images/42logo.png" alt="42 School" class="w-5 h-5 mr-3">
+              <span class="hidden sm:inline">Sign in with 42 School</span>
+              <span class="sm:hidden">42 School Login</span>
+            </div>
+          </button>
+
+          <!-- Register Link -->
+          <div class="text-center pt-4">
+            <p class="text-sm text-text-secondary">
+              New to Transcendence? 
+              <a href="#" class="register-link text-brand-secondary hover:text-text-primary font-medium transition-colors">Create Account</a>
+            </p>
           </div>
         </div>
 
-        <button 
-          type="button"
-          class="oauth-button w-full mt-4 bg-gray-900 text-white py-2 px-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
-        >
-          <div class="flex items-center justify-center">
-            <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0c-6.627 0-12 5.373-12 12 0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 22.954 24 17.99 24 12c0-6.627-5.373-12-12-12z"/>
-            </svg>
-            Sign in with 42 School
-          </div>
-        </button>
-      </div>
-
-      <div class="mt-6 text-center">
-        <p class="text-sm text-gray-600">
-          Don't have an account? 
-          <a href="#" class="register-link text-blue-600 hover:text-blue-500 font-medium">Sign up</a>
-        </p>
+        <!-- Back to Home -->
+        <div class="text-center mt-4 sm:mt-6">
+          <a href="#" class="home-link text-sm text-text-muted hover:text-text-secondary transition-colors">
+            ← Back to Home
+          </a>
+        </div>
       </div>
     `;
 
@@ -140,6 +174,13 @@ export class LoginForm extends Component {
     this.addEventListener(registerLink, 'click', (e) => {
       e.preventDefault();
       this.onRegisterClick?.();
+    });
+
+    // Back to home link
+    const homeLink = this.element.querySelector('.home-link') as HTMLAnchorElement;
+    this.addEventListener(homeLink, 'click', (e) => {
+      e.preventDefault();
+      this.onHomeClick?.();
     });
 
     // Real-time validation
@@ -223,11 +264,11 @@ export class LoginForm extends Component {
 
   private setFieldError(input: HTMLInputElement, error?: string): void {
     if (error) {
-      input.classList.add('border-red-500');
-      input.classList.remove('border-gray-300');
+      input.classList.add('border-error', 'ring-1', 'ring-error');
+      input.classList.remove('border-white/20');
     } else {
-      input.classList.remove('border-red-500');
-      input.classList.add('border-gray-300');
+      input.classList.remove('border-error', 'ring-1', 'ring-error');
+      input.classList.add('border-white/20');
     }
   }
 
@@ -253,4 +294,5 @@ export class LoginForm extends Component {
   // Event callbacks
   public onLoginSuccess?: () => void;
   public onRegisterClick?: () => void;
+  public onHomeClick?: () => void;
 }

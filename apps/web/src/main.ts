@@ -1,16 +1,22 @@
-import './styles/login-page.css';
+import './styles/main.css';
+
 import { LoginPage } from './components/LoginPage';
-import { AuthManager } from './components/auth/AuthManager';
+import { SignupPage } from './components/SignupPage';
+import { HomePage } from './components/pages/HomePage';
+import { ComingSoonPage } from './components/pages/ComingSoonPage';
+import { Router } from './core/Router';
+import { createAppState } from './state/AppState';
+import { gameService } from './services/api/GameService';
 
 /**
  * Main application entry point
- * Initialize the frontend application with impressive botanical login design
+ * Initialize the Transcendence frontend application with cyberpunk design
  */
 
 console.log('🚀 ft_transcendence Frontend Starting...');
-console.log('🎨 Loading beautiful botanical login design...');
+console.log('🎨 Loading cyberpunk gaming experience...');
 
-const DEV : boolean = true
+const DEV: boolean = true;
 async function startMockServer(): Promise<void> {
   if (!DEV) {
     return;
@@ -30,36 +36,67 @@ async function startMockServer(): Promise<void> {
   }
 }
 
-function isRegisterRoute(): boolean {
-  const path = window.location.pathname.toLowerCase();
-  const registerPaths = ['/auth/signup', '/auth/register', '/register', '/signup'];
-  const searchIntent =
-    new URLSearchParams(window.location.search).get('view')?.toLowerCase() === 'register';
-  return registerPaths.includes(path) || searchIntent;
-}
-
-// Initialize the application
 async function initializeApp(): Promise<void> {
   try {
     await startMockServer();
     console.log('📱 Initializing UI Components...');
 
-    // Get the root container
     const app = document.getElementById('app');
     if (!app) {
       throw new Error('App container not found');
     }
 
-    // Create and mount the appropriate auth component
-    const component = isRegisterRoute()
-      ? new AuthManager('register')
-      : new LoginPage();
-    component.mount(app);
+    const state = createAppState();
+    const router = new Router(app);
 
-    console.log('✅ Login page mounted successfully!');
-    console.log('🌺 Beautiful tropical botanical design loaded');
-    console.log('🎯 Split-screen layout with modern form design ready');
+    router
+      .addRoute({
+        path: '/',
+        component: () => new HomePage(state, gameService, router),
+        title: 'Transcendence | Competitive Pong Platform',
+      })
+      .addRoute({
+        path: '/auth/login',
+        component: () => new LoginPage(router),
+        title: 'Login | Transcendence',
+      })
+      .addRoute({
+        path: '/auth/signup',
+        component: () => new SignupPage(router),
+        title: 'Join Transcendence',
+      })
+      .addRoute({
+        path: '/game',
+        component: () =>
+          new ComingSoonPage({
+            title: 'Matchmaking Hub is docking soon',
+            description: 'Queue for duels, practice arenas, and scrims from this hub shortly.',
+          }),
+        title: 'Play | Transcendence',
+      })
+      .addRoute({
+        path: '/tournaments',
+        component: () =>
+          new ComingSoonPage({
+            title: 'Tournament HQ is under construction',
+            description: 'Track brackets, analyst decks, and casting seats here soon.',
+          }),
+        title: 'Tournaments | Transcendence',
+      })
+      .addRoute({
+        path: '/profile',
+        component: () =>
+          new ComingSoonPage({
+            title: 'Profile Labs launching soon',
+            description: 'Showcase badges, stats, and achievements once this lab opens.',
+          }),
+        title: 'Profile | Transcendence',
+      })
+      .setNotFound('/');
 
+    router.start();
+
+    console.log('✅ Router initialized and routes registered');
   } catch (error) {
     console.error('❌ Failed to initialize app:', error);
 

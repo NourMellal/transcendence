@@ -8,6 +8,7 @@
 export * from './User';
 export * from './Game';
 export * from './Tournament';
+export * from './Home';
 export * from './Common';
 
 // Type aliases for convenience
@@ -21,3 +22,9 @@ export type {
   ChatMessage, 
   Notification 
 } from './Common';
+export type {
+  GameStats,
+  LiveMatchSummary,
+  TournamentHighlight,
+  LandingOverview,
+} from './Home';

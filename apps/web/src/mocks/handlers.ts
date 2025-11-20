@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import type { User, UpdateUserRequest } from '../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../models/Auth';
+import type { LandingOverview } from '../models/Home';
 import {
   mockUser,
   getCurrentUser,
@@ -166,5 +167,90 @@ export const handlers = [
     };
 
     return HttpResponse.json(response, { status: 200 });
+  }),
+
+  // GET /games/overview - Landing page overview data
+  http.get(`${API_BASE}/games/overview`, () => {
+    const overview: LandingOverview = {
+      stats: {
+        activePlayers: 1842,
+        gamesPlayed: 128_430,
+        tournaments: 42,
+        matchmakingTime: 26,
+        winRate: 63,
+      },
+      liveMatches: [
+        {
+          id: 'legend-finals',
+          title: 'Legend League Finals',
+          stage: 'Best of 5',
+          league: 'legend',
+          map: 'neo-noir',
+          spectators: 5120,
+          eta: 'LIVE',
+          players: [
+            { username: 'Aurora', score: 8 },
+            { username: 'Kinetic', score: 7 },
+          ],
+        },
+        {
+          id: 'elite-queue',
+          title: 'Elite Queue Spotlight',
+          stage: 'Match Point',
+          league: 'elite',
+          map: 'lunar-drift',
+          spectators: 1280,
+          eta: '02:14',
+          players: [
+            { username: 'Pulse', score: 5 },
+            { username: 'Nebula', score: 5 },
+          ],
+        },
+        {
+          id: 'open-scrim',
+          title: 'Open Scrim Session',
+          stage: 'Game 2',
+          league: 'open',
+          map: 'titan-core',
+          spectators: 342,
+          eta: '05:32',
+          players: [
+            { username: 'Velocity', score: 3 },
+            { username: 'Stellar', score: 2 },
+          ],
+        },
+      ],
+      tournaments: [
+        {
+          id: 'storm-championship',
+          name: 'Storm Circuit Championship',
+          status: 'registration',
+          prizePool: 7500,
+          slots: { taken: 38, total: 64 },
+          region: 'EU',
+          startDate: new Date(Date.now() + 86400000).toISOString(),
+        },
+        {
+          id: 'nova-finals',
+          name: 'Nova Masters Invitational',
+          status: 'finals',
+          prizePool: 15000,
+          slots: { taken: 8, total: 8 },
+          region: 'NA',
+          startDate: new Date().toISOString(),
+        },
+        {
+          id: 'rising-stars',
+          name: 'Rising Stars Open',
+          status: 'live',
+          prizePool: 3500,
+          slots: { taken: 16, total: 16 },
+          region: 'ASIA',
+          startDate: new Date(Date.now() - 3600000).toISOString(),
+        },
+      ],
+    };
+
+    return HttpResponse.json(overview, { status: 200 });
   }),
 ];
