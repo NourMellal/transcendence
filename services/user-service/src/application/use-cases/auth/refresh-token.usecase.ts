@@ -2,17 +2,20 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { User } from '../../../domain/entities/user.entity';
 import { SessionRepository, UserRepository } from '../../../domain/ports';
+import type { IRefreshTokenUseCase } from '../../../domain/ports';
 import type { JWTService } from './login.usecase';
-import type { LoginUseCaseOutput } from '../../dto/auth.dto';
+import type { RefreshTokenRequestDTO, RefreshTokenResponseDTO } from '../../dto/auth.dto';
+import { AuthMapper } from '../../mappers/auth.mapper';
 
-export class RefreshTokenUseCase {
+export class RefreshTokenUseCase implements IRefreshTokenUseCase {
     constructor(
         private readonly sessionRepository: SessionRepository,
         private readonly userRepository: UserRepository,
         private readonly jwtService: JWTService
     ) {}
 
-    async execute(refreshToken: string): Promise<LoginUseCaseOutput> {
+    async execute(input: RefreshTokenRequestDTO): Promise<RefreshTokenResponseDTO> {
+        const { refreshToken } = input;
         if (!refreshToken) {
             throw new Error('Refresh token is required');
         }
@@ -39,13 +42,10 @@ export class RefreshTokenUseCase {
         await this.sessionRepository.delete(refreshToken);
 
         const accessToken = await this.generateToken(user);
-        const { refreshToken: newRefreshToken } = await this.createRefreshSession(user.id);
+        const { refreshToken: newRefreshToken } = await this.createRefreshSession(user.id.toString());
 
-        return {
-            user,
-            accessToken,
-            refreshToken: newRefreshToken,
-        };
+        const sanitizedUser: User = { ...user, passwordHash: undefined };
+        return AuthMapper.toLoginResponseDTO(sanitizedUser, accessToken, newRefreshToken, 'Token refreshed');
     }
 
     private async generateToken(user: User): Promise<string> {
@@ -56,10 +56,10 @@ export class RefreshTokenUseCase {
         }
 
         const payload = {
-            sub: user.id,
-            userId: user.id,
-            email: user.email,
-            username: user.username,
+            sub: user.id.toString(),
+            userId: user.id.toString(),
+            email: user.email.toString(),
+            username: user.username.toString(),
         };
 
         return jwt.sign(payload, config.secretKey, {

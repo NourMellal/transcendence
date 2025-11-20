@@ -1,14 +1,18 @@
-import type { OAuth42LoginUseCase, OAuthService } from '../../../domain/ports';
+import type { IOAuth42LoginUseCase } from '../../../domain/ports';
+import type { OAuthService } from '../../../domain/ports';
 import { OAuthStateManager } from '../../services/oauth-state.manager';
+import type { OAuthLoginResponseDTO } from '../../dto/auth.dto';
 
-export class OAuth42LoginUseCaseImpl implements OAuth42LoginUseCase {
+export class OAuth42LoginUseCaseImpl implements IOAuth42LoginUseCase {
     constructor(
         private readonly oauthService: OAuthService,
         private readonly stateManager: OAuthStateManager
     ) { }
 
-    async execute(): Promise<string> {
+    async execute(): Promise<OAuthLoginResponseDTO> {
         const state = this.stateManager.createState();
-        return this.oauthService.getAuthorizationUrl(state);
+        return {
+            authorizationUrl: this.oauthService.getAuthorizationUrl(state),
+        };
     }
 }

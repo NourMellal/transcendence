@@ -1,7 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { PresenceStatus } from '../../../domain/entities/presence.entity';
-import { UpdatePresenceUseCase } from '../../../application/use-cases/presence/update-presence.usecase';
-import { GetPresenceUseCase } from '../../../application/use-cases/presence/get-presence.usecase';
+import type { IGetPresenceUseCase, IUpdatePresenceUseCase } from '../../../domain/ports';
 
 interface UpdatePresenceBody {
     status: PresenceStatus;
@@ -13,8 +12,8 @@ interface PresenceParams {
 
 export class PresenceController {
     constructor(
-        private readonly updatePresenceUseCase: UpdatePresenceUseCase,
-        private readonly getPresenceUseCase: GetPresenceUseCase
+        private readonly updatePresenceUseCase: IUpdatePresenceUseCase,
+        private readonly getPresenceUseCase: IGetPresenceUseCase
     ) {}
 
     async updatePresence(
@@ -49,17 +48,13 @@ export class PresenceController {
             return;
         }
 
-        const presence = await this.getPresenceUseCase.execute(userId);
+        const presence = await this.getPresenceUseCase.execute({ userId });
 
         if (!presence) {
             reply.code(404).send({ error: 'Not Found', message: 'Presence not found' });
             return;
         }
 
-        reply.code(200).send({
-            userId: presence.userId,
-            status: presence.status,
-            lastSeenAt: presence.lastSeenAt,
-        });
+        reply.code(200).send(presence);
     }
 }

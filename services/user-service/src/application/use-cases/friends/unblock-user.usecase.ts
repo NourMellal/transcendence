@@ -1,10 +1,14 @@
 import { FriendshipDomain, FriendshipStatus } from '../../../domain/entities/friendship.entity';
 import type { FriendshipRepository } from '../../../domain/ports';
+import type { IUnblockUserUseCase } from '../../../domain/ports';
+import type { FriendshipDTO, UnblockUserInputDTO } from '../../dto/friend.dto';
+import { FriendMapper } from '../../mappers/friend.mapper';
 
-export class UnblockUserUseCase {
+export class UnblockUserUseCase implements IUnblockUserUseCase {
     constructor(private readonly friendshipRepository: FriendshipRepository) {}
 
-    async execute(unblockingUserId: string, otherUserId: string) {
+    async execute(input: UnblockUserInputDTO): Promise<FriendshipDTO> {
+        const { userId: unblockingUserId, otherUserId } = input;
         if (unblockingUserId === otherUserId) {
             throw new Error('Cannot unblock yourself');
         }
@@ -26,9 +30,9 @@ export class UnblockUserUseCase {
             blockedBy: updated.blockedBy,
         });
 
-        return {
+        return FriendMapper.toFriendshipDTO({
             ...friendship,
             ...updated,
-        };
+        });
     }
 }

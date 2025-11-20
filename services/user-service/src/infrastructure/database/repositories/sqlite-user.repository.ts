@@ -1,7 +1,8 @@
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
-import { User } from '../../../domain/entities/user.entity';
+import { User, createUser } from '../../../domain/entities/user.entity';
 import { UserRepository } from '../../../domain/ports';
+import { DisplayName, Email, UserId, Username } from '../../../domain/value-objects';
 
 export class SQLiteUserRepository implements UserRepository {
     private db: Database | null = null;
@@ -78,11 +79,11 @@ export class SQLiteUserRepository implements UserRepository {
                 created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                user.id,
-                user.email,
-                user.username,
+                user.id.toString(),
+                user.email.toString(),
+                user.username.toString(),
                 user.passwordHash || null,
-                user.displayName || null,
+                user.displayName.toString(),
                 user.avatar || null,
                 user.twoFASecret || null,
                 user.is2FAEnabled ? 1 : 0,
@@ -102,15 +103,15 @@ export class SQLiteUserRepository implements UserRepository {
 
         if (updates.email !== undefined) {
             fields.push('email = ?');
-            values.push(updates.email);
+            values.push(updates.email.toString());
         }
         if (updates.username !== undefined) {
             fields.push('username = ?');
-            values.push(updates.username);
+            values.push(updates.username.toString());
         }
         if (updates.displayName !== undefined) {
             fields.push('display_name = ?');
-            values.push(updates.displayName);
+            values.push(updates.displayName.toString());
         }
         if (updates.avatar !== undefined) {
             fields.push('avatar = ?');
@@ -145,19 +146,19 @@ export class SQLiteUserRepository implements UserRepository {
     }
 
     private mapRowToUser(row: any): User {
-        return {
-            id: row.id,
-            email: row.email,
-            username: row.username,
-            passwordHash: row.password_hash,
-            displayName: row.display_name,
-            avatar: row.avatar,
-            twoFASecret: row.two_fa_secret,
+        return createUser({
+            id: new UserId(row.id),
+            email: new Email(row.email),
+            username: new Username(row.username),
+            passwordHash: row.password_hash ?? undefined,
+            displayName: row.display_name ? new DisplayName(row.display_name) : undefined,
+            avatar: row.avatar ?? undefined,
+            twoFASecret: row.two_fa_secret ?? undefined,
             is2FAEnabled: row.is_2fa_enabled === 1,
-            oauthProvider: row.oauth_provider,
-            oauthId: row.oauth_id,
+            oauthProvider: row.oauth_provider ?? undefined,
+            oauthId: row.oauth_id ?? undefined,
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at),
-        };
+        });
     }
 }

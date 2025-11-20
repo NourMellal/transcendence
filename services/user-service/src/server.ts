@@ -1,10 +1,7 @@
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { join } from 'path';
 
 // Load .env from project root BEFORE any other imports
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../../../.env') });
 
 import Fastify from 'fastify';
@@ -49,6 +46,7 @@ import { GetPresenceUseCase } from './application/use-cases/presence/get-presenc
 import { PresenceController } from './infrastructure/http/controllers/presence.controller';
 import { FriendController } from './infrastructure/http/controllers/friend.controller';
 import { SQLiteUnitOfWork } from './infrastructure/database/sqlite-unit-of-work';
+import { PasswordHasherAdapter } from './infrastructure/adapters/security/password-hasher.adapter';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
@@ -61,6 +59,7 @@ async function main() {
     await oauth42Service.initialize();
     const oauthStateManager = new OAuthStateManager();
     const twoFAService = createTwoFAService();
+    const passwordHasher = new PasswordHasherAdapter();
 
     // Initialize shared database connection
     const db = await open({
@@ -79,17 +78,18 @@ async function main() {
     const unitOfWork = new SQLiteUnitOfWork(db);
 
     // Initialize use cases with Vault JWT Service
-    const signupUseCase = new SignupUseCase(userRepository);
+    const signupUseCase = new SignupUseCase(userRepository, passwordHasher);
     const loginUseCase = new LoginUseCase(
         userRepository,
         jwtService,
         sessionRepository,
+        passwordHasher,
         twoFAService,
         presenceRepository
     );
     const logoutUseCase = new LogoutUseCase(userRepository, sessionRepository, presenceRepository);
     const refreshTokenUseCase = new RefreshTokenUseCase(sessionRepository, userRepository, jwtService);
-    const updateProfileUseCase = new UpdateProfileUseCase(userRepository);
+    const updateProfileUseCase = new UpdateProfileUseCase(userRepository, passwordHasher);
     const getUserUseCase = new GetUserUseCase(userRepository);
     const deleteUserUseCase = new DeleteUserUseCase(
         userRepository,

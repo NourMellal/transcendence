@@ -1,47 +1,49 @@
-/**
- * User Profile DTOs
- * Data Transfer Objects for user profile operations
- */
-
-// Request DTOs
 export interface UpdateProfileRequestDTO {
-    displayName?: string;
-    avatar?: string;
-    email?: string;
-    password?: string;
-    username?: string;
+    readonly displayName?: string;
+    readonly avatar?: string;
+    readonly email?: string;
+    readonly password?: string;
+    readonly username?: string;
 }
 
-// Response DTOs
 export interface UserProfileDTO {
-    id: string;
-    email: string;
-    username: string;
-    displayName?: string;
-    avatar?: string;
-    is2FAEnabled: boolean;
-    oauthProvider?: 'local' | '42';
-    createdAt: Date;
-    updatedAt: Date;
+    readonly id: string;
+    readonly email: string;
+    readonly username: string;
+    readonly displayName?: string;
+    readonly avatar?: string;
+    readonly is2FAEnabled: boolean;
+    readonly oauthProvider?: 'local' | '42';
+    readonly createdAt: string;
+    readonly updatedAt: string;
 }
 
 export interface UpdateProfileResponseDTO {
-    id: string;
-    email: string;
-    username: string;
-    displayName?: string;
-    avatar?: string;
-    is2FAEnabled: boolean;
-    oauthProvider?: 'local' | '42';
-    updatedAt: Date;
-    message: string;
+    readonly id: string;
+    readonly email: string;
+    readonly username: string;
+    readonly displayName?: string;
+    readonly avatar?: string;
+    readonly is2FAEnabled: boolean;
+    readonly oauthProvider?: 'local' | '42';
+    readonly updatedAt: string;
+    readonly message: string;
 }
 
-// Use Case DTOs
-export interface UpdateProfileInput {
-    displayName?: string;
-    avatar?: string;
-    email?: string;
-    password?: string;
-    username?: string;
+export interface UpdateProfileInputDTO extends UpdateProfileRequestDTO {
+    readonly userId: string;
+}
+
+export interface GetUserInputDTO {
+    readonly userId: string;
+}
+
+export interface DeleteUserInputDTO {
+    readonly userId: string;
+    readonly reason?: string;
+    readonly initiatedBy: string;
+}
+
+export interface DeleteUserResponseDTO {
+    readonly success: boolean;
 }
