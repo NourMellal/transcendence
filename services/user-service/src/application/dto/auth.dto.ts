@@ -1,80 +1,102 @@
-import type { User } from '../../domain/entities/user.entity';
-
-/**
- * Authentication DTOs
- * Data Transfer Objects for auth-related operations
- */
-
-// Request DTOs
 export interface SignupRequestDTO {
-    email: string;
-    username: string;
-    password: string;
-    displayName?: string;
+    readonly email: string;
+    readonly username: string;
+    readonly password: string;
+    readonly displayName?: string;
+}
+
+export type SignupUseCaseInputDTO = SignupRequestDTO;
+
+export interface SignupResponseDTO {
+    readonly id: string;
+    readonly email: string;
+    readonly username: string;
+    readonly displayName: string;
+    readonly avatar?: string;
+    readonly is2FAEnabled: boolean;
+    readonly createdAt: string;
 }
 
 export interface LoginRequestDTO {
-    email: string;
-    password: string;
-    totpCode?: string;
+    readonly email: string;
+    readonly password: string;
+    readonly totpCode?: string;
 }
 
-export interface Enable2FARequestDTO {
-    token: string;
-}
-
-export interface Disable2FARequestDTO {
-    token: string;
-}
-
-// Response DTOs
-export interface AuthResponseDTO {
-    user: UserInfoDTO;
-    accessToken: string;
-    refreshToken: string;
-    message: string;
-}
+export type LoginUseCaseInputDTO = LoginRequestDTO;
 
 export interface UserInfoDTO {
-    id: string;
-    email: string;
-    username: string;
-    displayName?: string;
-    avatar?: string;
-    is2FAEnabled: boolean;
+    readonly id: string;
+    readonly email: string;
+    readonly username: string;
+    readonly displayName?: string;
+    readonly avatar?: string;
+    readonly is2FAEnabled: boolean;
 }
 
+export interface AuthResponseDTO {
+    readonly user: UserInfoDTO;
+    readonly accessToken: string;
+    readonly refreshToken: string;
+    readonly message: string;
+}
+
+export type LoginUseCaseOutputDTO = AuthResponseDTO;
+
 export interface AuthStatusResponseDTO {
-    authenticated: boolean;
-    user: UserInfoDTO;
+    readonly authenticated: boolean;
+    readonly user?: UserInfoDTO;
 }
 
 export interface LogoutResponseDTO {
-    message: string;
+    readonly message: string;
 }
 
-// Use Case Input/Output DTOs
-export interface SignupUseCaseInput {
-    email: string;
-    username: string;
-    password: string;
-    displayName?: string;
+export interface LogoutInputDTO {
+    readonly userId: string;
+    readonly refreshToken?: string;
 }
 
-export interface LoginUseCaseInput {
-    email: string;
-    password: string;
-    totpCode?: string;
+export interface AuthStatusInputDTO {
+    readonly userId: string;
 }
 
-export interface LoginUseCaseOutput {
-    user: User;
-    accessToken: string;
-    refreshToken: string;
+export interface Enable2FARequestDTO {
+    readonly token: string;
+}
+
+export interface Enable2FAInputDTO extends Enable2FARequestDTO {
+    readonly userId: string;
+}
+
+export interface Disable2FARequestDTO {
+    readonly token: string;
+}
+
+export interface Disable2FAInputDTO extends Disable2FARequestDTO {
+    readonly userId: string;
+}
+
+export interface Generate2FAInputDTO {
+    readonly userId: string;
+}
+
+export interface OAuthLoginResponseDTO {
+    readonly authorizationUrl: string;
+}
+
+export interface OAuthCallbackRequestDTO {
+    readonly code: string;
+    readonly state: string;
+}
+
+export interface OAuthCallbackResponseDTO {
+    readonly sessionToken: string;
+    readonly userId: string;
 }
 
 export interface RefreshTokenRequestDTO {
-    refreshToken: string;
+    readonly refreshToken: string;
 }
 
 export type RefreshTokenResponseDTO = AuthResponseDTO;

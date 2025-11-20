@@ -1,4 +1,6 @@
 import { UserRepository, SessionRepository, UserPresenceRepository } from '../../../domain/ports';
+import type { ILogoutUseCase } from '../../../domain/ports';
+import type { LogoutInputDTO, LogoutResponseDTO } from '../../dto/auth.dto';
 
 /**
  * Logout Use Case
@@ -11,14 +13,15 @@ import { UserRepository, SessionRepository, UserPresenceRepository } from '../..
  * - Session tracking in database
  * - Refresh token revocation
  */
-export class LogoutUseCase {
+export class LogoutUseCase implements ILogoutUseCase {
     constructor(
         private userRepository: UserRepository,
         private sessionRepository?: SessionRepository,
         private presenceRepository?: UserPresenceRepository
     ) { }
 
-    async execute(userId: string, refreshToken?: string): Promise<{ message: string }> {
+    async execute(input: LogoutInputDTO): Promise<LogoutResponseDTO> {
+        const { userId, refreshToken } = input;
         // Verify user exists
         const user = await this.userRepository.findById(userId);
 

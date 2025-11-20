@@ -1,13 +1,17 @@
-import { FriendshipDomain, FriendshipStatus, type Friendship } from '../../../domain/entities/friendship.entity';
+import { FriendshipDomain, FriendshipStatus } from '../../../domain/entities/friendship.entity';
 import type { FriendshipRepository, UserRepository } from '../../../domain/ports';
+import type { ISendFriendRequestUseCase } from '../../../domain/ports';
+import type { FriendshipDTO, SendFriendRequestInputDTO } from '../../dto/friend.dto';
+import { FriendMapper } from '../../mappers/friend.mapper';
 
-export class SendFriendRequestUseCase {
+export class SendFriendRequestUseCase implements ISendFriendRequestUseCase {
     constructor(
         private readonly friendshipRepository: FriendshipRepository,
         private readonly userRepository: UserRepository
     ) {}
 
-    async execute(requesterId: string, friendId: string): Promise<Friendship> {
+    async execute(input: SendFriendRequestInputDTO): Promise<FriendshipDTO> {
+        const { requesterId, friendId } = input;
         if (!requesterId) {
             throw new Error('Requester ID is required');
         }
@@ -42,6 +46,6 @@ export class SendFriendRequestUseCase {
         const friendship = FriendshipDomain.createRequest(requesterId, friendId);
         await this.friendshipRepository.save(friendship);
 
-        return friendship;
+        return FriendMapper.toFriendshipDTO(friendship);
     }
 }

@@ -1,10 +1,13 @@
 import { FriendshipRepository } from '../../../domain/ports';
+import type { ICancelFriendRequestUseCase } from '../../../domain/ports';
 import { FriendshipStatus } from '../../../domain/entities/friendship.entity';
+import type { CancelFriendRequestInputDTO } from '../../dto/friend.dto';
 
-export class CancelFriendRequestUseCase {
+export class CancelFriendRequestUseCase implements ICancelFriendRequestUseCase {
     constructor(private readonly friendshipRepository: FriendshipRepository) {}
 
-    async execute(requesterId: string, friendshipId: string): Promise<void> {
+    async execute(input: CancelFriendRequestInputDTO): Promise<void> {
+        const { requesterId, friendshipId } = input;
         if (!requesterId) {
             throw new Error('Requester ID is required');
         }

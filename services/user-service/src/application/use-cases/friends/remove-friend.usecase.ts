@@ -1,10 +1,13 @@
 import { FriendshipRepository } from '../../../domain/ports';
+import type { IRemoveFriendUseCase } from '../../../domain/ports';
 import { FriendshipStatus } from '../../../domain/entities/friendship.entity';
+import type { RemoveFriendInputDTO } from '../../dto/friend.dto';
 
-export class RemoveFriendUseCase {
+export class RemoveFriendUseCase implements IRemoveFriendUseCase {
     constructor(private readonly friendshipRepository: FriendshipRepository) {}
 
-    async execute(userId: string, friendId: string): Promise<void> {
+    async execute(input: RemoveFriendInputDTO): Promise<void> {
+        const { userId, friendId } = input;
         if (!userId) {
             throw new Error('User ID is required');
         }

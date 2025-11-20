@@ -1,14 +1,18 @@
 import { UserRepository } from '../../../domain/ports';
-import { User } from '../../../domain/entities/user.entity';
-import { PasswordHelper } from '../../../domain/entities/user.entity';
-import { UpdateProfileInput } from '../../dto/user.dto';
+import type { IUpdateProfileUseCase, IPasswordHasher } from '../../../domain/ports';
+import { DisplayName, Email, Password, Username } from '../../../domain/value-objects';
+import type { UpdateProfileInputDTO, UpdateProfileResponseDTO } from '../../dto/user.dto';
+import { UserMapper } from '../../mappers/user.mapper';
+import type { User } from '../../../domain/entities/user.entity';
 
-export class UpdateProfileUseCase {
+export class UpdateProfileUseCase implements IUpdateProfileUseCase {
     constructor(
-        private userRepository: UserRepository
+        private readonly userRepository: UserRepository,
+        private readonly passwordHasher: IPasswordHasher
     ) { }
 
-    async execute(userId: string, input: UpdateProfileInput): Promise<User> {
+    async execute(input: UpdateProfileInputDTO): Promise<UpdateProfileResponseDTO> {
+        const { userId, ...payload } = input;
         // Find the user
         const user = await this.userRepository.findById(userId);
         if (!user) {
@@ -21,80 +25,53 @@ export class UpdateProfileUseCase {
         };
 
         // Update display name
-        if (input.displayName !== undefined) {
-            if (input.displayName.trim().length < 1 || input.displayName.length > 50) {
-                throw new Error('Display name must be between 1 and 50 characters');
-            }
-            updates.displayName = input.displayName.trim();
+        if (payload.displayName !== undefined) {
+            const displayName = new DisplayName(payload.displayName);
+            updates.displayName = displayName;
         }
 
         // Update avatar
-        if (input.avatar !== undefined) {
+        if (payload.avatar !== undefined) {
             // For now, just store the URL/path
             // In the future, this could validate the URL or handle file upload
-            updates.avatar = input.avatar;
+            updates.avatar = payload.avatar;
         }
 
         // Update email
-        if (input.email !== undefined) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(input.email)) {
-                throw new Error('Invalid email format');
-            }
+        if (payload.email !== undefined) {
+            const email = new Email(payload.email);
 
             // Check if email is already taken by another user
-            const existingUser = await this.userRepository.findByEmail(input.email);
-            if (existingUser && existingUser.id !== userId) {
+            const existingUser = await this.userRepository.findByEmail(email.toString());
+            if (existingUser && existingUser.id.toString() !== userId) {
                 throw new Error('Email already exists');
             }
 
-            updates.email = input.email.toLowerCase();
+            updates.email = email;
         }
 
         // Update username
-        if (input.username !== undefined) {
-            if (input.username.length < 3 || input.username.length > 20) {
-                throw new Error('Username must be between 3 and 20 characters');
-            }
-
-            const usernameRegex = /^[a-zA-Z0-9_-]+$/;
-            if (!usernameRegex.test(input.username)) {
-                throw new Error('Username can only contain letters, numbers, hyphens, and underscores');
-            }
+        if (payload.username !== undefined) {
+            const username = new Username(payload.username);
 
             // Check if username is already taken by another user
-            const existingUser = await this.userRepository.findByUsername(input.username);
-            if (existingUser && existingUser.id !== userId) {
+            const existingUser = await this.userRepository.findByUsername(username.toString());
+            if (existingUser && existingUser.id.toString() !== userId) {
                 throw new Error('Username already exists');
             }
 
-            updates.username = input.username;
+            updates.username = username;
         }
 
         // Update password
-        if (input.password !== undefined) {
+        if (payload.password !== undefined) {
             // Only allow password updates for local auth users
             if (user.oauthProvider !== 'local') {
                 throw new Error('Cannot update password for OAuth accounts');
             }
 
-            // Validate password strength
-            if (input.password.length < 8) {
-                throw new Error('Password must be at least 8 characters');
-            }
-
-            const hasUpperCase = /[A-Z]/.test(input.password);
-            const hasLowerCase = /[a-z]/.test(input.password);
-            const hasNumber = /[0-9]/.test(input.password);
-            const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(input.password);
-
-            if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-                throw new Error(
-                    'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-                );
-            }
-
-            updates.passwordHash = await PasswordHelper.hash(input.password);
+            const password = new Password(payload.password);
+            updates.passwordHash = await this.passwordHasher.hash(password.toString());
         }
 
         // Apply updates
@@ -106,6 +83,6 @@ export class UpdateProfileUseCase {
             throw new Error('Failed to retrieve updated user');
         }
 
-        return updatedUser;
+        return UserMapper.toUpdateResponseDTO(updatedUser);
     }
 }

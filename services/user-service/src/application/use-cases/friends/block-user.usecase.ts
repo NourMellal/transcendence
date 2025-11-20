@@ -1,17 +1,20 @@
 import {
     FriendshipDomain,
     FriendshipStatus,
-    type Friendship,
 } from '../../../domain/entities/friendship.entity';
 import type { FriendshipRepository, UserRepository } from '../../../domain/ports';
+import type { IBlockUserUseCase } from '../../../domain/ports';
+import type { BlockUserInputDTO, FriendshipDTO } from '../../dto/friend.dto';
+import { FriendMapper } from '../../mappers/friend.mapper';
 
-export class BlockUserUseCase {
+export class BlockUserUseCase implements IBlockUserUseCase {
     constructor(
         private readonly friendshipRepository: FriendshipRepository,
         private readonly userRepository: UserRepository
     ) {}
 
-    async execute(blockingUserId: string, otherUserId: string): Promise<Friendship> {
+    async execute(input: BlockUserInputDTO): Promise<FriendshipDTO> {
+        const { userId: blockingUserId, otherUserId } = input;
         if (blockingUserId === otherUserId) {
             throw new Error('Cannot block yourself');
         }
@@ -26,11 +29,11 @@ export class BlockUserUseCase {
         if (!existing) {
             const friendship = FriendshipDomain.createBlocked(blockingUserId, otherUserId, blockingUserId);
             await this.friendshipRepository.save(friendship);
-            return friendship;
+            return FriendMapper.toFriendshipDTO(friendship);
         }
 
         if (existing.status === FriendshipStatus.BLOCKED && existing.blockedBy === blockingUserId) {
-            return existing;
+            return FriendMapper.toFriendshipDTO(existing);
         }
 
         const updatedFriendship = FriendshipDomain.transition(existing, {
@@ -43,9 +46,9 @@ export class BlockUserUseCase {
             blockedBy: updatedFriendship.blockedBy,
         });
 
-        return {
+        return FriendMapper.toFriendshipDTO({
             ...existing,
             ...updatedFriendship,
-        };
+        });
     }
 }

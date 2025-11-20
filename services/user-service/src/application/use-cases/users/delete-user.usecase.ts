@@ -5,13 +5,10 @@ import {
     UnitOfWork,
     UserPresenceRepository,
 } from '../../../domain/ports';
+import type { IDeleteUserUseCase } from '../../../domain/ports';
+import type { DeleteUserInputDTO, DeleteUserResponseDTO } from '../../dto/user.dto';
 
-interface DeleteUserOptions {
-    reason?: string;
-    initiatedBy?: string;
-}
-
-export class DeleteUserUseCase {
+export class DeleteUserUseCase implements IDeleteUserUseCase {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly sessionRepository: SessionRepository,
@@ -20,7 +17,8 @@ export class DeleteUserUseCase {
         private readonly unitOfWork: UnitOfWork
     ) {}
 
-    async execute(userId: string, options: DeleteUserOptions = {}): Promise<void> {
+    async execute(input: DeleteUserInputDTO): Promise<DeleteUserResponseDTO> {
+        const { userId } = input;
         if (!userId) {
             throw new Error('User ID is required');
         }
@@ -39,5 +37,7 @@ export class DeleteUserUseCase {
             await this.userRepository.delete(userId);
 
         });
+
+        return { success: true };
     }
 }

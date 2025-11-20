@@ -14,15 +14,15 @@ export class UserMapper {
      */
     static toProfileDTO(user: User): UserProfileDTO {
         return {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            displayName: user.displayName,
+            id: user.id.toString(),
+            email: user.email.toString(),
+            username: user.username.toString(),
+            displayName: user.displayName.toString(),
             avatar: user.avatar,
             is2FAEnabled: user.is2FAEnabled,
             oauthProvider: user.oauthProvider,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
+            createdAt: user.createdAt.toISOString(),
+            updatedAt: user.updatedAt.toISOString(),
         };
     }
 
@@ -32,14 +32,14 @@ export class UserMapper {
      */
     static toUpdateResponseDTO(user: User, message: string = 'Profile updated successfully'): UpdateProfileResponseDTO {
         return {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            displayName: user.displayName,
+            id: user.id.toString(),
+            email: user.email.toString(),
+            username: user.username.toString(),
+            displayName: user.displayName.toString(),
             avatar: user.avatar,
             is2FAEnabled: user.is2FAEnabled,
             oauthProvider: user.oauthProvider,
-            updatedAt: user.updatedAt,
+            updatedAt: user.updatedAt.toISOString(),
             message,
         };
     }
