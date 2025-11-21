@@ -19,7 +19,6 @@ navigate(path: string): void  {
   };
   start(): void  
    {    
-      console.log("Router started")
       this._location =  window.location.pathname  ;    
       window.addEventListener('popstate', this.onPopState.bind(this));
       this.handleNavigation(this._location)  ;  

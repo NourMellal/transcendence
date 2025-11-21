@@ -24,7 +24,6 @@ export default abstract class Component<Props = {}, State = {}> {
    */
   protected buildContent(content: string | HTMLElement | Array<string | HTMLElement | Component<any, any>>): HTMLElement {
     // If render returned an element, use it directly   
-    console.log("buildContent" + content)
     if (content instanceof HTMLElement) return content;
 
     const appendStringToContainer = (html: string, container: HTMLElement) => {

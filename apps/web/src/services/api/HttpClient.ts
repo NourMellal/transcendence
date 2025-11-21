@@ -23,12 +23,30 @@ export class ApiError extends Error {
 export class HttpClient {
   private baseUrl: string;
   private defaultHeaders: Record<string, string>;
+  private token: string | null = null;
+  private tokenUnsub: (() => void) | null = null;
 
-  constructor(baseUrl: string = '/api') {
+  /**
+   * @param baseUrl Base API URL (default: '/api')
+   * @param tokenSignal Optional Signal<string|null> that publishes auth token changes
+   */
+  constructor(baseUrl: string = '/api', tokenSignal?: import("../../core/signal").default<string | null>) {
     this.baseUrl = baseUrl;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
     };
+
+    if (tokenSignal) {
+      // initialize and subscribe to token changes
+      try {
+        this.token = tokenSignal.get();
+        this.tokenUnsub = tokenSignal.subscribe((t) => {
+          this.token = t;
+        });
+      } catch (e) {
+        // ignore signal subscription errors
+      }
+    }
   }
 
   /**
@@ -42,6 +60,7 @@ export class HttpClient {
    * Get authorization token from localStorage
    */
   public getAuthToken(): string | null {
+    if (this.token !== null && this.token !== undefined) return this.token;
     return localStorage.getItem('auth_token');
   }
 
@@ -49,7 +68,11 @@ export class HttpClient {
    * Set authorization token in localStorage
    */
   public setAuthToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+    try {
+      localStorage.setItem('auth_token', token);
+    } catch (e) {
+    }
+    this.token = token;
   }
 
   /**
@@ -64,7 +87,6 @@ export class HttpClient {
    */
   private buildHeaders(customHeaders?: Record<string, string>): Record<string, string> {
     const headers = { ...this.defaultHeaders };
-    
     const token = this.getAuthToken();
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -128,6 +150,10 @@ export class HttpClient {
       }
     }
 
+    // Use AbortController to allow future timeout/cancellation support.
+    const controller = new AbortController();
+    (fetchConfig as any).signal = controller.signal;
+
     try {
       const response = await fetch(fullUrl, fetchConfig);
       return this.handleResponse<T>(response);
@@ -135,12 +161,10 @@ export class HttpClient {
       if (error instanceof ApiError) {
         throw error;
       }
-      
-      // Network error or other fetch errors
-      throw new ApiError(
-        error instanceof Error ? error.message : 'Network error occurred',
-        0
-      );
+
+      // Normalize fetch/network errors as ApiError with status 0
+      const message = error instanceof Error ? error.message : 'Network error occurred';
+      throw new ApiError(message, 0);
     }
   }
 

@@ -16,13 +16,13 @@ export default class LoginPage extends Component<Props, State> {
     return [
       `
       <div class="login-container" > 
-      `+  
-      new leftLogin().render()+
-      new rightLogin().render()+
+      `,
+      new leftLogin(),
+      new rightLogin(),
       `
         </div>
-      `
-  ];
+      `,
+    ];
   }
   protected attachEventListeners(): void {
 }

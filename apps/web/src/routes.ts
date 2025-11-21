@@ -2,7 +2,14 @@ import authRoutes from './modules/auth/Router/router';
 import Router from './core/Router';
 
 const routes = [
-        ...authRoutes,
-      ];
+  ...authRoutes,
+];
 const approuter = new Router(routes);
-export default approuter;
+
+export function navigate(path: string) {
+  approuter.navigate(path);
+}
+
+export function initRouter() {
+  approuter.start();
+}

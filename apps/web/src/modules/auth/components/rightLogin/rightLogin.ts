@@ -14,11 +14,11 @@ export default class rightLogin extends Component<Props, State> {
 
   render()  {
     return [
-      `<div class="right-login">`+
+      `<div class="right-login"> `, 
         `<div id="form-header">
           <span>Transcendence test login</span>
-        </div>`+
-        new loginForm().render() +
+        </div>` ,  
+        new loginForm() ,  
       `</div>`,
     ];
   }

@@ -1,4 +1,4 @@
-import approuter from './routes';
+import { initRouter } from './routes';
 import { mountRoot } from './core/utils';
 import  './styles/styles.scss'
 
@@ -10,7 +10,7 @@ function mountAll ()
 
     const appEl = document.querySelector('#app-view');
     if (appEl) {
-      approuter.start();
+      initRouter();
     }
   } catch (err) {
   }
