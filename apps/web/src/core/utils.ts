@@ -1,31 +1,21 @@
 import Component from "./Component";
-import RootComponent from "./root";   
-import Signal  from "./signal" ;     
+import RootComponent from "./root";
+import Signal from "./signal";
 let _mountedRoot: RootComponent | null = null;
 
-/**
- * `rootSignal` publishes the mounted `RootComponent` instance.
- * `viewSignal` publishes the currently active page `Component` instance.
- *
- * IMPORTANT: when the view changes we must call `unmount()` on the
- * previously mounted component so it can clean up subscriptions and event
- * listeners. The subscriber below tracks the current view and invokes
- * `unmount()` (with error handling) before mounting the next view.
- */
 export const rootSignal = new Signal<RootComponent | null>(_mountedRoot);
-export const viewSignal = new Signal<Component<{} ,  {}>  | null>(null);
+export const viewSignal = new Signal<Component<{}, {}> | null>(null);
 
-export function mountRoot(container: string | HTMLElement = '#root') {   
+export function mountRoot(container: string | HTMLElement = '#root') {
   if (_mountedRoot) return _mountedRoot;
   const root = new RootComponent();
-  root.mount(container );
+  root.mount(container);
   _mountedRoot = root;
   rootSignal.set(_mountedRoot);
 
-
   let _currentView: Component<{}, {}> | null = null;
 
-  const unsubscribe = viewSignal.subscribe((el) => {  
+  const unsubscribe = viewSignal.subscribe((el) => {
     try {
       const rootEl =
         typeof container === 'string'
@@ -34,13 +24,10 @@ export function mountRoot(container: string | HTMLElement = '#root') {
       if (!rootEl) return;
       const appView = rootEl.querySelector('#app-view') as HTMLElement | null;
       if (!appView) return;
-x
       if (_currentView) {
         try {
           _currentView.unmount();
-        } catch (err) {
-          console.warn('Error during component unmount:', err);
-        }
+        } catch (err) {}
         _currentView = null;
       }
 
@@ -48,7 +35,7 @@ x
         const child = appView.firstChild as HTMLElement;
         const cleanup = (child as any)?._cleanup;
         if (typeof cleanup === 'function') {
-          try { cleanup(); } catch (e) { /* ignore cleanup errors */ }
+          try { cleanup(); } catch (e) {}
         }
         appView.removeChild(child);
       }
@@ -61,13 +48,10 @@ x
           try {
             const rendered = el.render();
             if (rendered instanceof HTMLElement) appView.appendChild(rendered);
-          } catch (er) {
-          }
+          } catch (er) {}
         }
       }
-    } catch (e) {
-      console.error('viewSignal subscriber error:', e);
-    }
+    } catch (e) {}
   });
 
   (root as any)._viewUnsubscribe = unsubscribe;

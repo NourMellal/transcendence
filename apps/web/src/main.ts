@@ -1,25 +1,10 @@
-import { initRouter } from './routes';
-import { mountRoot } from './core/utils';
-import  './styles/styles.scss'
+import Router from "./core/Router";
+import routes from "./modules/auth/Router/router";
+import { mountRoot } from "./core/utils";
 
-function mountAll ()
-{
-  try {
-    const rootEl = document.querySelector('#root');
-    if (rootEl) mountRoot(rootEl as HTMLElement);
+// Ensure the RootComponent is mounted and the `viewSignal` subscriber is active.
+mountRoot();
 
-    const appEl = document.querySelector('#app-view');
-    if (appEl) {
-      initRouter();
-    }
-  } catch (err) {
-  }
-}
-if (typeof window !== 'undefined') {
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountAll);
-  } else {
-    mountAll();
-  }
-}
+const router = new Router(routes);
+// start routing (handleNavigation will publish the view via viewSignal)
+router.start();

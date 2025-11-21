@@ -1,19 +1,28 @@
-export default abstract class Component<Props = {}, State = {}> {
+import { rerenderComponent } from './renderer';
+
+export default class Component<P = {}, S = {}> {
   protected element: HTMLElement | null = null;
-  protected state: State;
-  protected props: Props;
+  protected state: S;
+  protected props: P;
   protected subscriptions: (() => void)[] = [];
 
-  constructor(props: Props) {
+  constructor(props: P) {
     this.props = props;
     this.state = this.getInitialState();
   }
-  abstract getInitialState(): State;
+  abstract getInitialState(): S;
+
+  setState(part: Partial<S>) {
+    this.state = { ...(this.state as any), ...(part as any) } as S;
+    // re-render this component in-place
+    try { rerenderComponent(this as any); } catch (err) { console.error('rerender error', err); }
+  }
+
   // render may return a string, an HTMLElement, or an array mixing strings, elements and Components
   abstract render(): string | HTMLElement | Array<string | HTMLElement | Component<any, any>>;
 
   onMount?(): void;
-  onUpdate?(prevProps: Props, prevState: State): void;
+  onUpdate?(prevProps: P, prevState: S): void;
   onUnmount?(): void;
 
   /**

@@ -5,11 +5,27 @@ import { viewSignal } from "./utils";
 export default class Router {
    private _routes: Route[];
    private _location: string;
+  // listeners registered via onRoute(...)
+  private _routeListeners: Array<(component: Component, params: Record<string,string>) => void> = [];
 
    constructor(routes: Route[]) {
       this._routes = routes;
       this._location = "";
    }
+  
+  /**
+   * Register a callback called whenever a route is rendered.
+   * Returns an unsubscribe function.
+   */
+  onRoute(cb: (component: Component, params: Record<string,string>) => void): () => void {
+    this._routeListeners.push(cb);
+    return () => { this._routeListeners = this._routeListeners.filter(l => l !== cb); };
+  }
+  private _notifyRoute(component: Component, params: Record<string,string>) {
+    for (const l of this._routeListeners) {
+      try { l(component, params); } catch (err) { console.error('route listener error', err); }
+    }
+  }
 
 navigate(path: string): void  { 
      if (!path) return;
@@ -42,52 +58,40 @@ navigate(path: string): void  {
  * @returns 
 **/
 private match(path: string): Route | null {
-   const normalize = (p: string) => {
-      if (!p) return '/';
-      const cleaned = p.replace(/\/+$/, '');
-      return cleaned === '' ? '/' : cleaned;
-   };
+    const normalize = (p: string) => {
+        if (!p) return '/';
+        const cleaned = p.replace(/\/+$/, '');
+        return cleaned === '' ? '/' : cleaned;
+    };
 
-   const target = normalize(path);
+    const target = normalize(path);
 
-   for (const route of this._routes) {
-      const routePath = normalize(route.path);
+    const toRegex = (routePath: string): RegExp => {
+        // Normalize route
+        const rp = normalize(routePath);
 
-      if (routePath === target) return route;
+        // Escape regex specials
+        let pattern = rp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      const routeSegs = routePath.split('/').filter(Boolean);
-      const pathSegs = target.split('/').filter(Boolean);
+        // Restore wildcard
+        pattern = pattern.replace(/\\\*/g, '.*');
 
-      let matched = true;
-      for (let i = 0; i < Math.max(routeSegs.length, pathSegs.length); i++) {
-         const r = routeSegs[i];
-         const p = pathSegs[i];
+        // Replace params
+        pattern = pattern.replace(/:([A-Za-z0-9_]+)/g, '[^/]+');
 
-         if (r === '*') {
-            matched = true;
-            break;
-         }
+        // Full match
+        return new RegExp(`^${pattern}/?$`);
+    };
 
-         if (r === undefined || p === undefined) {
-            matched = false;
-            break;
-         }
-         if (r.startsWith(':')) continue;
-         if (r !== p) {
-            matched = false;
-            break;
-         }
-      }
+    for (const route of this._routes) {
+        const regex = toRegex(route.path);
 
-      const endsWithWildcard = routeSegs.length > 0 && routeSegs[routeSegs.length - 1] === '*';
-      if (matched && (routeSegs.length === pathSegs.length || endsWithWildcard)) {
-         return route;
-      }
-   }
-
-   return null;
-}     
-
+        if (regex.test(target)) {
+            return route;
+        }
+    }
+    return null;
+}
 private handleNavigation(path: string): void {    
    const route = this.match(path);
    if (!route) {
@@ -95,28 +99,30 @@ private handleNavigation(path: string): void {
       return;
    }
    const params = this.extractParams(route, path);
-      let compInstance: Component<{}, {}> | null = null;
-      try {
-         if (!route.component) {
-            console.error('No component defined for route:', path);
-            return;
-         }
-         if (typeof route.component === 'function') {
-            const Ctor = route.component as ComponentConstructor;
-            compInstance = new Ctor(route.props);
-         } else {
-            compInstance = route.component as Component<{}, {}>;
-         }
-      } catch (err) {
-         console.error('Error creating route component for', path, err);
+   let compInstance: Component<{}, {}> | null = null;
+   try {
+      if (!route.component) {
+         console.error('No component defined for route:', path);
          return;
       }
-      try {
-         (compInstance as any).params = params;
-      } catch (e) {}
+      if (typeof route.component === 'function') {
+         const Ctor = route.component as ComponentConstructor;
+         compInstance = new Ctor(route.props);
+      } else {
+         compInstance = route.component as Component<{}, {}>;
+      }
+   } catch (err) {
+      console.error('Error creating route component for', path, err);
+      return;
+   }
+   try {
+      (compInstance as any).params = params;
+   } catch (e) {}
 
-      this._location = path;
-      this.render(compInstance);
+   this._location = path;
+  this.render(compInstance);
+  // ...and notify any onRoute subscribers (pass params from instance)
+  try { this._notifyRoute(compInstance, (compInstance as any).params ?? {}); } catch (e) {}
 }
 
 private render(componentInstance: Component<{}, {}>): void {

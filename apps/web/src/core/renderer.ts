@@ -89,3 +89,38 @@ export function unmountComponent(component: AnyComponent) {
   delete (component as any)._root;
   delete (component as any)._mountedChildren;
 }
+
+/**
+ * Rerender a component: unmount previously mounted children (but keep this root in DOM),
+ * clear root content and render fresh output.
+ */
+export function rerenderComponent(component: AnyComponent) {
+  const root: HTMLElement | undefined = (component as any)._root;
+  if (!root) return;
+
+  // unmount previously mounted children (but keep this root in DOM)
+  const prevChildren: AnyComponent[] = (component as any)._mountedChildren ?? [];
+  for (const ch of prevChildren) {
+    try { unmountComponent(ch); } catch (err) { console.error('child unmount error', err); }
+  }
+  (component as any)._mountedChildren = [];
+
+  // clear root content and render fresh output
+  root.innerHTML = '';
+  let out: any[] = [];
+  try {
+    out = component.render() ?? [];
+  } catch (err) {
+    console.error('component render error', err);
+    root.textContent = 'Component render error';
+    return;
+  }
+  renderInto(root, Array.isArray(out) ? out : [out], component);
+
+  try {
+    component.attachEventListeners?.();
+    component.onMount?.();
+  } catch (err) {
+    console.error('component mount hook error', err);
+  }
+}

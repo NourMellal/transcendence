@@ -17,7 +17,6 @@ export default class LoginPage extends Component<Props, State> {
       `
       <div class="login-container" > 
       `,
-      new leftLogin(),
       new rightLogin(),
       `
         </div>

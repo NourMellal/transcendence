@@ -4,7 +4,7 @@ import Router from './core/Router';
 const routes = [
   ...authRoutes,
 ];
-const approuter = new Router(routes);
+export  const approuter = new Router(routes);
 
 export function navigate(path: string) {
   approuter.navigate(path);

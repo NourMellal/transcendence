@@ -1,14 +1,16 @@
 import { homePage, LoginPage } from "../Pages";
 
 export const routes = [
-    {
-        path: '/home',
-        component: new homePage({ label: 'caca' }),
-    },  
-    {  
-        path : '/login'  ,  
-        component : new LoginPage({}) ,  
-    }
+  {
+    path: '/home',
+    component: homePage,    // constructor, not instance
+    props: { label: 'caca' },
+  },
+  {
+    path: '/login',
+    component: LoginPage,   // constructor, not instance
+    props: {},
+  },
 ];
 
 export default routes;
