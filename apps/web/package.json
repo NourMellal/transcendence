@@ -5,6 +5,7 @@
   "description": "Frontend SPA for Transcendence",
   "scripts": {
     "dev": "vite",
+    "generate:component": "node ./scripts/create-component.cjs",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "echo 'Linting skipped - no eslint config for web app yet'"
@@ -13,8 +14,10 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "vite": "^5.4.0",
-    "msw": "^2.4.0"
+    "msw": "^2.4.0",
+    "sass": "^1.94.0",
+    "sass-embedded": "^1.93.3",
+    "vite": "^5.4.0"
   },
   "msw": {
     "workerDirectory": [

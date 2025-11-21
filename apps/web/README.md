@@ -68,109 +68,121 @@ The following endpoints are mocked using MSW and return data matching the OpenAP
   - Returns: `LoginResponse` with user and message
 - `GET /auth/status` - Get current authentication status
   - Returns: `User` object if authenticated, 401 if not
-- `POST /auth/logout` - Logout current user
-  - Returns: 204 No Content
+````markdown
+# Transcendence Web App — Developer Guide
 
-### User Endpoints
+This document is focused on developer onboarding: framework primitives, project structure, how the renderer and router work, and a step-by-step (101) to create a Page.
 
-- `GET /users/me` - Get current user profile
-  - Returns: `User` object if authenticated, 401 if not
-- `PATCH /users/me` - Update current user profile
-  - Accepts: JSON with `username` field or multipart form-data with `username` and `avatar`
-  - Returns: Updated `User` object
+## Quick start
 
-## Development
+Install dependencies and run the web dev server:
 
 ```bash
-# Install dependencies (from root)
 pnpm install
-
-# Start dev server
-cd apps/web
-pnpm dev
-
-# Build for production
-pnpm build
-
-# Preview production build
-pnpm preview
+pnpm --filter web run dev
 ```
 
-## Testing the Mock API
+Open `http://localhost:5173` (or the URL printed by the dev server).
 
-When you run `pnpm dev`, the application will start with MSW enabled. Open your browser to `http://localhost:5173` to see an interactive test interface where you can:
+## Where to look
 
-1. Test each endpoint individually
-2. View request/response data
-3. Verify that all endpoints work correctly
+- `apps/web/src/core` — framework primitives (`Component`, `signal`, `Router`, `utils`)
+- `apps/web/src/services` — `HttpClient` and service classes (AuthService, UserService)
+- `apps/web/src/modules` — feature modules (pages, components, routes)
+- `apps/web/src/state` — app-wide signals and actions
 
-The mock API is configured to:
-- Return proper status codes (200, 201, 204, 401)
-- Match the `User` model structure from the OpenAPI spec
-- Handle authentication state
-- Support JSON and multipart form-data
+## Core concepts
 
-## User Model
+- Component: class-based UI unit. Implement `getInitialState()` and `render()`.
+- Signal: tiny observable used for global state and reactivity.
+- Router: SPA router that instantiates page components and publishes the active view via `viewSignal`.
+- Root: the app shell that subscribes to `viewSignal` and mounts the current page into `#app-view`.
 
-All mock responses match this TypeScript interface from the OpenAPI spec:
+## Renderer and lifecycle (practical)
 
-```typescript
-interface User {
-  id: string;           // UUID format
-  username: string;
-  email: string;
-  avatar: string | null;
-  is2FAEnabled: boolean;
-  status: 'ONLINE' | 'OFFLINE' | 'INGAME';
+1. `render()` may return strings, `HTMLElement`, or an array mixing strings and Component instances.
+2. The renderer mounts Component instances into a stable root element created per-instance and stores it on the instance (e.g. `_root`).
+3. On mount the renderer calls `attachEventListeners()` and `onMount()`.
+4. On route change or replacement the renderer calls `unmount()` on the previous component (try/catch), recursively unmounts its children, then removes the root from DOM.
+
+This lifecycle ensures event listeners and subscriptions are cleaned up and prevents leaks.
+
+## HttpClient (summary)
+
+`src/services/api/HttpClient.ts` is a small fetch wrapper exposing `get`, `post`, `put`, `patch`, and `delete`. It throws `ApiError` for non-OK responses and accepts an optional `Signal<string|null>` token to keep the Authorization header reactive.
+
+## How to create a Page (101)
+
+1) Create the Page class
+
+Create `apps/web/src/modules/<feature>/Pages/MyPage/MyPage.ts`:
+
+```ts
+import Component from '../../../../core/Component';
+
+type Props = {};
+type State = { count: number };
+
+export default class MyPage extends Component<Props, State> {
+  constructor(props: Props = {}) { super(props); }
+  getInitialState(): State { return { count: 0 }; }
+
+  render() {
+    return [
+      `<div class="my-page">`,
+      `<h1>My Page</h1>`,
+      new MyChildComponent(),
+      `</div>`
+    ];
+  }
+
+  protected attachEventListeners(): void {
+    // use this.element to query and attach DOM listeners
+  }
+
+  onMount(): void {
+    // optional setup
+  }
+
+  onUnmount(): void {
+    // cleanup timers, subscriptions, etc.
+  }
 }
 ```
 
-## Architecture
+2) Add components
 
-The frontend follows a **service-oriented architecture** ensuring clean separation between UI, API communication, and data models.
+Create child components in the `components/` folder and export them from `index.ts` in the feature.
 
-```
-src/
-├── main.ts                    # Application entry point
-├── services/
-│   ├── api/
-│   │   ├── HttpClient.ts      # Generic HTTP client wrapper
-│   │   ├── UserService.ts     # User-related API calls
-│   │   └── ...                # Other service modules
-│   └── auth/
-│       └── AuthService.ts     # Authentication API calls
-├── models/                    # Frontend data models (DTOs)
-│   ├── User.ts                # User model interfaces
-│   ├── Auth.ts                # Auth-related DTOs
-│   └── index.ts               # Model exports
-├── mocks/                     # MSW mock handlers
-│   ├── browser.ts             # MSW worker setup
-│   ├── handlers.ts            # Mock API handlers
-│   └── data.ts                # Mock data
-├── components/                # UI components (future)
-├── pages/                     # Page controllers (future)
-└── router/                    # Client-side routing (future)
+3) Register route
+
+Add your route in `apps/web/src/modules/<feature>/Router/router.ts`:
+
+```ts
+export const routes = [
+  { path: '/my-page', component: MyPage, props: {} },
+];
+export default routes;
 ```
 
-### Design Principles
+4) Use services & state
 
-**What Frontend SHOULD Know:**
-- ✅ HTTP endpoints (e.g., `/api/users/me`)
-- ✅ JSON request & response structures
-- ✅ HTTP methods & status codes
-- ✅ OpenAPI spec (DTOs/contracts)
+- Import `httpClient` from `src/services/api/client` to call your backend.
+- Use `Signal` from `src/state` for shared state; call `signal.set(...)` to update and `signal.get()` to read.
 
-**What Frontend SHOULD NOT Know:**
-- ❌ Domain entities or value objects
-- ❌ Use cases or business logic
-- ❌ Repository, service, or database layers
-- ❌ Any internal backend structure
+5) Ensure cleanup
 
-The frontend acts as a **pure REST consumer**, communicating only through the API Gateway.
+- Implement `onUnmount()` to remove subscriptions and event listeners to avoid leaks.
 
-## Notes
+## Recommended development workflow
 
-- The mock API runs entirely in the browser using MSW service workers
-- No backend server is required for frontend development
-- State is maintained in memory and resets on page reload
-- OAuth login flow (`/auth/42/login`) is intentionally not mocked as it's a redirect to external SSO
+- Create a small Page and route, start the dev server, and visit the path.
+- Use browser devtools to inspect `#app-view` and ensure only one page root is mounted at a time.
+- Add unit tests for components that rely on external subscriptions to assert cleanup is called on `unmount()`.
+
+## Optional next improvements
+
+- Add a scaffold script (node script) to generate Page + component + route files.
+- Add automatic linting/formatting and tests for renderer behavior.
+
+````
