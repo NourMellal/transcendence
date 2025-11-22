@@ -3,7 +3,7 @@ import { Ball } from './Ball';
 import { Paddle } from './Paddle';
 import { GameStatus, Position, Score, Velocity } from '../value-objects';
 
-export type GameMode = 'classic' | 'tournament' | 'ranked' | 'custom';
+export type GameMode = 'CLASSIC' | 'TOURNAMENT' | 'RANKED' | 'CUSTOM';
 
 export interface GameConfig {
     readonly arenaWidth: number;

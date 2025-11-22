@@ -10,7 +10,7 @@ export function createGameValidator(payload: unknown, playerId?: string): Create
 
     return {
         playerId,
-      mode: parsed.gameMode.toLowerCase() as CreateGameInput['mode'],
+      mode: parsed.gameMode as CreateGameInput['mode'],
       isPrivate: parsed.isPrivate,
       config: {},
       tournamentId: undefined

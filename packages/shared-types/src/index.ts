@@ -48,7 +48,7 @@ export interface Game {
     id: string;
     player1Id: string;
     player2Id?: string;
-    status: 'waiting' | 'playing' | 'finished';
+    status: 'WAITING' | 'PLAYING' | 'FINISHED' | 'CANCELLED';
     score: {
         player1: number;
         player2: number;

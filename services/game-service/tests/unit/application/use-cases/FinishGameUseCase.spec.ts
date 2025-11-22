@@ -41,7 +41,7 @@ describe('FinishGameUseCase', () => {
         const repo = new InMemoryRepo();
         const publisher = new FakePublisher();
         const useCase = new FinishGameUseCase(repo, publisher);
-        const game = Game.create({ playerId: 'player1', opponentId: 'player2', mode: 'classic', config: {} });
+        const game = Game.create({ playerId: 'player1', opponentId: 'player2', mode: 'CLASSIC', config: {} });
         game.start();
         await repo.create(game);
 

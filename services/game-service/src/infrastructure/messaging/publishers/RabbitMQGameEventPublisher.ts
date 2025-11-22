@@ -32,7 +32,7 @@ export class RabbitMQGameEventPublisher implements IGameEventPublisher {
             gameId: game.id,
             player1Id: player1?.id ?? '',
             player2Id: player2?.id ?? '',
-            gameType: game.mode === 'tournament' ? 'tournament' : 'classic',
+            gameType: game.mode === 'TOURNAMENT' ? 'tournament' : 'classic',
             tournamentId: game.tournamentId,
             startedAt: game.startedAt ?? new Date(),
             gameSettings: {
@@ -56,7 +56,7 @@ export class RabbitMQGameEventPublisher implements IGameEventPublisher {
             finalScore: { player1: game.score.player1, player2: game.score.player2 },
             duration: durationMs / 1000,
             finishedAt,
-            gameType: game.mode === 'tournament' ? 'tournament' : 'classic',
+            gameType: game.mode === 'TOURNAMENT' ? 'tournament' : 'classic',
             tournamentId: game.tournamentId
         });
         await this.publish('game.finished', event);

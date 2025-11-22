@@ -84,14 +84,19 @@ export class GameController {
 }
 
 function mapQueryStatus(status?: string): GameStatus | undefined {
-  switch (status) {
-    case 'WAITING':
+  if (!status) {
+    return undefined;
+  }
+
+  switch (status.toUpperCase()) {
+    case GameStatus.WAITING:
       return GameStatus.WAITING;
     case 'PLAYING':
+    case GameStatus.IN_PROGRESS:
       return GameStatus.IN_PROGRESS;
-    case 'FINISHED':
+    case GameStatus.FINISHED:
       return GameStatus.FINISHED;
-    case 'CANCELLED':
+    case GameStatus.CANCELLED:
       return GameStatus.CANCELLED;
     default:
       return undefined;
@@ -99,17 +104,7 @@ function mapQueryStatus(status?: string): GameStatus | undefined {
 }
 
 function toApiStatus(status: GameStatus): 'WAITING' | 'PLAYING' | 'FINISHED' | 'CANCELLED' {
-  switch (status) {
-    case GameStatus.IN_PROGRESS:
-      return 'PLAYING';
-    case GameStatus.FINISHED:
-      return 'FINISHED';
-    case GameStatus.CANCELLED:
-      return 'CANCELLED';
-    case GameStatus.WAITING:
-    default:
-      return 'WAITING';
-  }
+  return status === GameStatus.IN_PROGRESS ? 'PLAYING' : status;
 }
 
 function resolveWinner(game: GameStateOutput): string | null {

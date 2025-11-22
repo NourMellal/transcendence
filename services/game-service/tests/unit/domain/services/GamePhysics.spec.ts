@@ -5,7 +5,7 @@ import { CollisionDetector } from '../../../../src/domain/services/CollisionDete
 
 describe('GamePhysics', () => {
     it('updates ball position each tick', () => {
-        const game = Game.create({ playerId: 'player', opponentId: 'opponent', mode: 'classic', config: {} });
+        const game = Game.create({ playerId: 'player', opponentId: 'opponent', mode: 'CLASSIC', config: {} });
         game.start();
         const physics = new GamePhysics(new CollisionDetector());
         const originalX = game.ball.position.x;
