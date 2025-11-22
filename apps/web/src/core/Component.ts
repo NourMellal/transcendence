@@ -1,5 +1,3 @@
-import { rerenderComponent } from './renderer';
-
 export default class Component<P = {}, S = {}> {
   protected element: HTMLElement | null = null;
   protected state: S;
@@ -14,8 +12,16 @@ export default class Component<P = {}, S = {}> {
 
   setState(part: Partial<S>) {
     this.state = { ...(this.state as any), ...(part as any) } as S;
-    // re-render this component in-place
-    try { rerenderComponent(this as any); } catch (err) { console.error('rerender error', err); }
+    // Re-render this component in-place using the Component's own update logic
+    if (!this.element || !this.element.parentElement) return;
+    
+    const parent = this.element.parentElement;
+    const raw = this.render();
+    const content = this.buildContent(raw);
+    
+    parent.replaceChild(content, this.element);
+    this.element = content;
+    this.attachEventListeners();
   }
 
   // render may return a string, an HTMLElement, or an array mixing strings, elements and Components
@@ -45,7 +51,7 @@ export default class Component<P = {}, S = {}> {
     // return that element directly to avoid adding an extra wrapper.
     if (typeof content === 'string') {
       const temp = document.createElement('template');
-      temp.innerHTML = content;
+      temp.innerHTML = content.trim(); // Trim whitespace to avoid text nodes
       // if exactly one top-level element, return it (no extra wrapper)
       if (temp.content.childElementCount === 1) {
         return temp.content.firstElementChild as HTMLElement;

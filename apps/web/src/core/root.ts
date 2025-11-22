@@ -1,5 +1,4 @@
-import Component from '../components/Component';
-import TestComponent from '../components/testComponent/testComponent';
+import Component from './Component';
 
 type Props = {};
 type State = {};

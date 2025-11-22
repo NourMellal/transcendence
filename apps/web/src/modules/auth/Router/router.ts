@@ -1,14 +1,15 @@
-import { homePage, LoginPage } from "../Pages";
+import LoginPage from '../Pages/LoginPage/LoginPage';
+import SignupPage from '../Pages/SignupPage/SignupPage';
 
 export const routes = [
   {
-    path: '/home',
-    component: homePage,    // constructor, not instance
-    props: { label: 'caca' },
+    path: '/auth/login',
+    component: LoginPage,
+    props: {},
   },
   {
-    path: '/login',
-    component: LoginPage,   // constructor, not instance
+    path: '/auth/signup',
+    component: SignupPage,
     props: {},
   },
 ];

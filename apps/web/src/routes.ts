@@ -1,7 +1,9 @@
 import authRoutes from './modules/auth/Router/router';
+import homeRoutes from './modules/home/Router/router';
 import Router from './core/Router';
 
 const routes = [
+  ...homeRoutes,
   ...authRoutes,
 ];
 export  const approuter = new Router(routes);
