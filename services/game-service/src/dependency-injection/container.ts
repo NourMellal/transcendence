@@ -6,8 +6,10 @@ import {
     CreateGameUseCase,
     FinishGameUseCase,
     GetGameUseCase,
+  JoinGameUseCase,
     HandlePaddleMoveUseCase,
     ListGamesUseCase,
+  LeaveGameUseCase,
     StartGameUseCase,
     UpdateGameStateUseCase,
     DisconnectPlayerUseCase
@@ -34,6 +36,8 @@ export interface GameServiceContainer {
         readonly finishGame: FinishGameUseCase;
         readonly getGame: GetGameUseCase;
         readonly listGames: ListGamesUseCase;
+      readonly joinGame: JoinGameUseCase;
+      readonly leaveGame: LeaveGameUseCase;
         readonly handlePaddleMove: HandlePaddleMoveUseCase;
         readonly updateGameState: UpdateGameStateUseCase;
         readonly disconnectPlayer: DisconnectPlayerUseCase;
@@ -60,13 +64,15 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const finishGame = new FinishGameUseCase(repository, eventPublisher);
     const getGame = new GetGameUseCase(repository);
     const listGames = new ListGamesUseCase(repository);
+  const joinGame = new JoinGameUseCase(repository);
+  const leaveGame = new LeaveGameUseCase(repository);
     const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics);
     const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics);
     const disconnectPlayer = new DisconnectPlayerUseCase(repository);
 
     const gameLoop = new GameLoop(updateGameState);
     const roomManager = new GameRoomManager();
-    const connectionHandler = new ConnectionHandler(roomManager, gameLoop, startGame);
+  const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, startGame);
     const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove);
     const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager);
 
@@ -74,8 +80,8 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         createGameUseCase: createGame,
         listGamesUseCase: listGames,
         getGameUseCase: getGame,
-        startGameUseCase: startGame,
-        finishGameUseCase: finishGame
+      joinGameUseCase: joinGame,
+      leaveGameUseCase: leaveGame
     });
     const healthController = new HealthController();
 
@@ -97,6 +103,8 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
             finishGame,
             getGame,
             listGames,
+          joinGame,
+          leaveGame,
             handlePaddleMove,
             updateGameState,
             disconnectPlayer

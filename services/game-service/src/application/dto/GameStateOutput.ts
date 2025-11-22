@@ -9,4 +9,6 @@ export interface GameStateOutput {
     readonly score: { player1: number; player2: number };
     readonly createdAt: Date;
     readonly updatedAt: Date;
+  readonly startedAt?: Date;
+  readonly finishedAt?: Date;
 }

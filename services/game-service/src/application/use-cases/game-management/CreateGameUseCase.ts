@@ -1,6 +1,6 @@
 import { Game } from '../../../domain/entities';
 import { InvalidGameStateError } from '../../../domain/errors';
-import { CreateGameInput, CreateGameOutput } from '../../dto';
+import {CreateGameInput, GameStateOutput} from '../../dto';
 import { IGameRepository } from '../../ports/repositories/IGameRepository';
 import { IGameEventPublisher } from '../../ports/messaging/IGameEventPublisher';
 import { IUserServiceClient } from '../../ports/external/IUserServiceClient';
@@ -12,7 +12,7 @@ export class CreateGameUseCase {
         private readonly userServiceClient: IUserServiceClient
     ) {}
 
-    async execute(input: CreateGameInput): Promise<CreateGameOutput> {
+  async execute(input: CreateGameInput): Promise<GameStateOutput> {
         await this.userServiceClient.ensureUsersExist(
             [input.playerId, input.opponentId].filter(Boolean) as string[]
         );
@@ -43,8 +43,13 @@ export class CreateGameUseCase {
         return {
             id: game.id,
             status: game.status,
-            players: game.players.map((player) => ({ id: player.id, isConnected: player.isConnected })),
-            createdAt: game.createdAt
+          mode: game.mode,
+          players: game.players,
+          score: {player1: game.score.player1, player2: game.score.player2},
+          createdAt: game.createdAt,
+          updatedAt: game.updatedAt,
+          startedAt: game.startedAt,
+          finishedAt: game.finishedAt
         };
     }
 }

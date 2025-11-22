@@ -6,7 +6,7 @@ export class GamePhysics {
     constructor(private readonly collisionDetector: CollisionDetector) {}
 
     advance(game: Game, deltaTime: number): void {
-        if (game.status === GameStatus.FINISHED) {
+      if (game.status === GameStatus.FINISHED || game.status === GameStatus.CANCELLED) {
             return;
         }
 

@@ -225,6 +225,12 @@ export class Game {
         this.touch();
     }
 
+  cancel(): void {
+    this.props.status = GameStatus.CANCELLED;
+    this.props.finishedAt = new Date();
+    this.touch();
+  }
+
     updateBall(nextBall: Ball): void {
         this.props.ball = nextBall;
         this.touch();
@@ -283,6 +289,11 @@ export class Game {
                 paddleWidth
             )
         });
+      this.touch();
+    }
+
+  removePlayer(playerId: string): void {
+    this.props.players = this.props.players.filter((player) => player.id !== playerId);
         this.touch();
     }
 

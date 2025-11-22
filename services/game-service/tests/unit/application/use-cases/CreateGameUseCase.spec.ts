@@ -21,7 +21,7 @@ class InMemoryRepo implements IGameRepository {
         return this.games.get(id) ?? null;
     }
 
-    async list(): Promise<Game[]> {
+  async list(_params?: any): Promise<Game[]> {
         return [...this.games.values()];
     }
 

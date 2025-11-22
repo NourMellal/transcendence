@@ -5,6 +5,7 @@ export interface CreateGameInput {
     readonly opponentId?: string;
     readonly mode: GameMode;
     readonly tournamentId?: string;
+  readonly isPrivate?: boolean;
     readonly config?: {
         readonly arenaWidth?: number;
         readonly arenaHeight?: number;

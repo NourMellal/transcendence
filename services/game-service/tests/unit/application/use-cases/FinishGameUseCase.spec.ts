@@ -17,10 +17,12 @@ class InMemoryRepo implements IGameRepository {
     async findById(id: string): Promise<Game | null> {
         return this.games.get(id) ?? null;
     }
-    async list(): Promise<Game[]> {
+
+  async list(_params?: any): Promise<Game[]> {
         return [...this.games.values()];
     }
-    async findActiveByPlayer(): Promise<Game | null> {
+
+  async findActiveByPlayer(_playerId: string): Promise<Game | null> {
         return null;
     }
 }
