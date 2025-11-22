@@ -1,11 +1,13 @@
 import { Socket } from 'socket.io';
 import { DisconnectPlayerUseCase } from '../../../application/use-cases';
 import { GameRoomManager } from '../GameRoomManager';
+import { GameLoop } from '../GameLoop';
 
 export class DisconnectHandler {
     constructor(
         private readonly disconnectPlayerUseCase: DisconnectPlayerUseCase,
-        private readonly roomManager: GameRoomManager
+        private readonly roomManager: GameRoomManager,
+        private readonly gameLoop: GameLoop
     ) {}
 
     register(socket: Socket): void {
@@ -21,6 +23,7 @@ export class DisconnectHandler {
                 rooms.map(async (gameId) => {
                     await this.disconnectPlayerUseCase.execute(gameId, playerId);
                     this.roomManager.leave(gameId, playerId);
+                    this.gameLoop.stop(gameId);
                 })
             );
         });

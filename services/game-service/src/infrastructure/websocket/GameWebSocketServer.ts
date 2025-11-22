@@ -1,5 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { IGameStateBroadcaster } from '../../application/ports/broadcasting/IGameStateBroadcaster';
 import { GameRoomManager } from './GameRoomManager';
 import { ConnectionHandler } from './handlers/ConnectionHandler';
 import { PaddleMoveHandler } from './handlers/PaddleMoveHandler';
@@ -14,7 +15,7 @@ interface GameWebSocketServerDeps {
     readonly authService: GameAuthService;
 }
 
-export class GameWebSocketServer {
+export class GameWebSocketServer implements IGameStateBroadcaster {
     private readonly io: SocketIOServer;
     private readonly deps: GameWebSocketServerDeps;
 

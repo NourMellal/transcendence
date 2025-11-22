@@ -5,9 +5,9 @@ import { CollisionDetector } from './CollisionDetector';
 export class GamePhysics {
     constructor(private readonly collisionDetector: CollisionDetector) {}
 
-    advance(game: Game, deltaTime: number): void {
-      if (game.status === GameStatus.FINISHED || game.status === GameStatus.CANCELLED) {
-            return;
+    advance(game: Game, deltaTime: number): boolean {
+        if (game.status === GameStatus.FINISHED || game.status === GameStatus.CANCELLED) {
+            return false;
         }
 
         const movedBall = game.ball.move(deltaTime);
@@ -37,10 +37,13 @@ export class GamePhysics {
 
             if (limitReached) {
                 game.finish();
-            } else {
-                this.resetBall(game);
+                return true;
             }
+
+            this.resetBall(game);
         }
+
+        return false;
     }
 
     private resetBall(game: Game): void {
