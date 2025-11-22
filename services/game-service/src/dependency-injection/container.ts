@@ -68,8 +68,8 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const listGames = new ListGamesUseCase(repository);
     const joinGame = new JoinGameUseCase(repository);
     const leaveGame = new LeaveGameUseCase(repository);
-    const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics);
-    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics);
+    const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics, eventPublisher);
+    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics, eventPublisher);
     const disconnectPlayer = new DisconnectPlayerUseCase(repository);
 
     const gameLoop = new GameLoop(updateGameState);
@@ -77,7 +77,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const authService = new GameAuthService();
     const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, startGame);
     const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove);
-    const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager);
+    const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager, gameLoop);
 
     const gameController = new GameController({
         createGameUseCase: createGame,

@@ -24,6 +24,8 @@ export async function startGameService(): Promise<void> {
             authService: container.websocket.authService
         });
 
+        container.useCases.updateGameState.setBroadcaster(websocketServer);
+
         await app.listen({ port: config.port, host: '0.0.0.0' });
         logger.info(`🎮 Game Service running on port ${config.port}`);
 
