@@ -27,10 +27,11 @@ export class UpdateGameStateUseCase {
             throw new GameNotFoundError(gameId);
         }
 
-        if (game.status !== GameStatus.IN_PROGRESS) {
+        const statusBeforeTick = game.status;
+        if (statusBeforeTick !== GameStatus.IN_PROGRESS) {
             const snapshot = game.toSnapshot();
             this.gameStateBroadcaster?.broadcastGameState(gameId, snapshot);
-            return { status: game.status };
+            return { status: statusBeforeTick };
         }
 
         const finishedDuringTick = this.gamePhysics.advance(game, deltaTime);

@@ -18,7 +18,8 @@ export class HandlePaddleMoveUseCase {
             throw new GameNotFoundError(input.gameId);
         }
 
-        if (game.status !== GameStatus.IN_PROGRESS) {
+        const statusBeforeMove = game.status;
+        if (statusBeforeMove !== GameStatus.IN_PROGRESS) {
             return;
         }
 
