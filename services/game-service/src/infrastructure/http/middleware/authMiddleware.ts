@@ -2,6 +2,10 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 
 export function createAuthMiddleware(expectedApiKey?: string) {
     return async function authMiddleware(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+        if (request.url === '/health') {
+            return;
+        }
+
         if (!expectedApiKey) {
             return;
         }
