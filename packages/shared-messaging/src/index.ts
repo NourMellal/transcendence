@@ -17,8 +17,7 @@ export * from './events/game/GameFinishedIntegrationEvent';
 export * from './events/game/PlayerJoinedIntegrationEvent';
 
 // Tournament events
-export * from './events/tournament/TournamentCreatedIntegrationEvent';
-export * from './events/tournament/TournamentFinishedIntegrationEvent';
+export * from './events/tournament';
 
 // Friendship events
 export * from './events/friendship/FriendshipRequestedIntegrationEvent';
