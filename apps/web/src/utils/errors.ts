@@ -1,4 +1,4 @@
-import { ApiError } from '../services/api/HttpClient';
+import { ApiError } from '../modules/shared/services/HttpClient';
 
 /**
  * Error handling utilities for the frontend

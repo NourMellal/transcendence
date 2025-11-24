@@ -3,7 +3,7 @@
  * Handles all authentication-related API calls
  */
 
-import { ApiError, HttpClient } from '../api/HttpClient';
+import { ApiError, HttpClient } from '../../modules/shared/services/HttpClient';
 import { httpClient as defaultHttpClient } from '../api/client';
 import type { User } from '../../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../../models/Auth';
