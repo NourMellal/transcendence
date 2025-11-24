@@ -210,8 +210,7 @@ export default class HomePage extends Component<Props, State> {
     const playBtn = this.element.querySelector('[data-action="play-now"]');
     if (playBtn) {
       const handler = () => {
-        // TODO: Navigate to game when ready
-        console.log('Start game - TODO: implement game route');
+        navigate('/game');
       };
       playBtn.addEventListener('click', handler);
       this.subscriptions.push(() => playBtn.removeEventListener('click', handler));
