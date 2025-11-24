@@ -1,24 +1,62 @@
 import { Socket } from 'socket.io';
 import { GameLoop } from '../GameLoop';
-import { GameRoomManager, JoinPayload } from '../GameRoomManager';
-import { StartGameUseCase } from '../../../application/use-cases';
+import { GameRoomManager } from '../GameRoomManager';
+import { JoinGameUseCase, StartGameUseCase } from '../../../application/use-cases';
+
+interface JoinGamePayload {
+    readonly gameId?: string;
+}
+
+interface ReadyPayload {
+    readonly gameId?: string;
+}
 
 export class ConnectionHandler {
     constructor(
         private readonly roomManager: GameRoomManager,
         private readonly gameLoop: GameLoop,
+        private readonly joinGameUseCase: JoinGameUseCase,
         private readonly startGameUseCase: StartGameUseCase
     ) {}
 
     register(socket: Socket): void {
-        socket.on('join-game', async (payload: JoinPayload) => {
-            this.roomManager.join(payload, socket);
+        socket.on('join_game', async (payload: JoinGamePayload) => {
+            const playerId = socket.data.playerId as string | undefined;
+            const gameId = payload?.gameId;
+
+            if (!playerId || !gameId) {
+                socket.emit('error', { message: 'Missing gameId or authenticated player' });
+                return;
+            }
+
+            this.roomManager.join(gameId, playerId, socket);
             try {
-                await this.startGameUseCase.execute(payload.gameId);
-                this.gameLoop.start(payload.gameId);
+                await this.joinGameUseCase.execute(gameId, playerId);
             } catch (error) {
                 socket.emit('error', { message: (error as Error).message });
             }
         });
+
+        socket.on('ready', async (payload?: ReadyPayload) => {
+            const playerId = socket.data.playerId as string | undefined;
+            const gameId = payload?.gameId ?? this.getActiveGameId(socket);
+
+            if (!playerId || !gameId) {
+                socket.emit('error', { message: 'Missing gameId or authenticated player' });
+                return;
+            }
+
+            try {
+                await this.startGameUseCase.execute(gameId);
+                this.gameLoop.start(gameId);
+                socket.nsp.to(gameId).emit('game_start', { gameId });
+            } catch (error) {
+                socket.emit('error', { message: (error as Error).message });
+            }
+        });
+    }
+
+    private getActiveGameId(socket: Socket): string | undefined {
+        return [...socket.rooms].find((room) => room !== socket.id);
     }
 }

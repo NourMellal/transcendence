@@ -21,13 +21,13 @@ secrets.json
 credentials.json
 
 # Database files (CRITICAL - contains user data)
-*.db
+
 *.sqlite
 *.sqlite3
-services/user-service/user-service.db
-services/game-service/game-service.db
-services/chat-service/chat-service.db
-services/tournament-service/tournament-service.db
+services/user-service/*.db*
+services/game-service/*.db*
+services/chat-service/*.db*
+services/tournament-service/*.db*
 
 # Database backups and dumps
 *.sql

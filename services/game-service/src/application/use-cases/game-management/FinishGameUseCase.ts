@@ -21,7 +21,7 @@ export class FinishGameUseCase {
             throw new GameNotFoundError(input.gameId);
         }
 
-        if (game.status === GameStatus.FINISHED) {
+      if (game.status === GameStatus.FINISHED || game.status === GameStatus.CANCELLED) {
             return;
         }
 

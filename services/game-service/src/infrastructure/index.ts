@@ -4,3 +4,4 @@ export * from './messaging';
 export * from './external';
 export * from './config';
 export * from './websocket';
+export * from './auth';

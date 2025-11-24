@@ -6,15 +6,18 @@ import {
     CreateGameUseCase,
     FinishGameUseCase,
     GetGameUseCase,
+    JoinGameUseCase,
     HandlePaddleMoveUseCase,
     ListGamesUseCase,
+    LeaveGameUseCase,
     StartGameUseCase,
     UpdateGameStateUseCase,
-    DisconnectPlayerUseCase
+    DisconnectPlayerUseCase,
 } from '../application/use-cases';
 import { GameController, HealthController } from '../infrastructure/http/controllers';
 import { GamePhysics, CollisionDetector } from '../domain/services';
 import { GameLoop, GameRoomManager, ConnectionHandler, PaddleMoveHandler, DisconnectHandler } from '../infrastructure/websocket';
+import { GameAuthService } from '../infrastructure/auth';
 
 export interface GameServiceContainer {
     readonly controllers: {
@@ -27,6 +30,7 @@ export interface GameServiceContainer {
         readonly connectionHandler: ConnectionHandler;
         readonly paddleMoveHandler: PaddleMoveHandler;
         readonly disconnectHandler: DisconnectHandler;
+        readonly authService: GameAuthService;
     };
     readonly useCases: {
         readonly createGame: CreateGameUseCase;
@@ -34,6 +38,8 @@ export interface GameServiceContainer {
         readonly finishGame: FinishGameUseCase;
         readonly getGame: GetGameUseCase;
         readonly listGames: ListGamesUseCase;
+        readonly joinGame: JoinGameUseCase;
+        readonly leaveGame: LeaveGameUseCase;
         readonly handlePaddleMove: HandlePaddleMoveUseCase;
         readonly updateGameState: UpdateGameStateUseCase;
         readonly disconnectPlayer: DisconnectPlayerUseCase;
@@ -47,7 +53,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const repository = new SQLiteGameRepository(db);
     const messagingConnection = new RabbitMQConnection({
         uri: config.messaging.uri,
-        exchange: config.messaging.exchange
+        exchange: config.messaging.exchange,
     });
     const serializer = new EventSerializer();
     const eventPublisher = new RabbitMQGameEventPublisher(messagingConnection, serializer, config.messaging.exchange);
@@ -60,36 +66,40 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const finishGame = new FinishGameUseCase(repository, eventPublisher);
     const getGame = new GetGameUseCase(repository);
     const listGames = new ListGamesUseCase(repository);
-    const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics);
-    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics);
+    const joinGame = new JoinGameUseCase(repository);
+    const leaveGame = new LeaveGameUseCase(repository);
+    const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics, eventPublisher);
+    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics, eventPublisher);
     const disconnectPlayer = new DisconnectPlayerUseCase(repository);
 
     const gameLoop = new GameLoop(updateGameState);
     const roomManager = new GameRoomManager();
-    const connectionHandler = new ConnectionHandler(roomManager, gameLoop, startGame);
+    const authService = new GameAuthService();
+    const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, startGame);
     const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove);
-    const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager);
+    const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager, gameLoop);
 
     const gameController = new GameController({
         createGameUseCase: createGame,
         listGamesUseCase: listGames,
         getGameUseCase: getGame,
-        startGameUseCase: startGame,
-        finishGameUseCase: finishGame
+        joinGameUseCase: joinGame,
+        leaveGameUseCase: leaveGame,
     });
     const healthController = new HealthController();
 
     return {
         controllers: {
             gameController,
-            healthController
+            healthController,
         },
         websocket: {
             gameLoop,
             roomManager,
             connectionHandler,
             paddleMoveHandler,
-            disconnectHandler
+            disconnectHandler,
+            authService,
         },
         useCases: {
             createGame,
@@ -97,9 +107,11 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
             finishGame,
             getGame,
             listGames,
+            joinGame,
+            leaveGame,
             handlePaddleMove,
             updateGameState,
-            disconnectPlayer
-        }
+            disconnectPlayer,
+        },
     };
 }

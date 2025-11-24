@@ -94,12 +94,12 @@ export const imageUploadSchema = z.object({
     size: z.number().max(5 * 1024 * 1024, 'File size must not exceed 5MB')
 });
 
-// Game validation schemas (placeholder for future use)
+// Game validation schemas (aligned with OAS)
 export const createGameSchema = z.object({
-    gameType: z.enum(['classic', 'tournament'], {
-        errorMap: () => ({ message: 'Game type must be either classic or tournament' })
+  gameMode: z.enum(['CLASSIC', 'TOURNAMENT'], {
+    errorMap: () => ({message: 'Game mode must be CLASSIC or TOURNAMENT'})
     }),
-    maxScore: z.number().min(1).max(21).default(11)
+  isPrivate: z.boolean().optional()
 });
 
 // Chat validation schemas (placeholder for future use)

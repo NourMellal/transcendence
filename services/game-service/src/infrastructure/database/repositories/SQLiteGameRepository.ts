@@ -78,11 +78,31 @@ export class SQLiteGameRepository implements IGameRepository {
 
         query += ' ORDER BY created_at DESC';
         const rows = await this.db.all<GameRow[]>(query, values);
-        return rows.map((row) => this.mapRowToGame(row));
+      let games = rows.map((row) => this.mapRowToGame(row));
+
+      if (params?.playerId) {
+        games = games.filter((game) => game.players.some((player) => player.id === params.playerId));
+      }
+
+      if (typeof params?.offset === 'number' && params.offset > 0) {
+        games = games.slice(params.offset);
+      }
+
+      if (typeof params?.limit === 'number' && params.limit > 0) {
+        games = games.slice(0, params.limit);
+      }
+
+      return games;
     }
 
     async findActiveByPlayer(playerId: string): Promise<Game | null> {
-        const rows = await this.db.all<GameRow[]>(`SELECT * FROM games WHERE status != ?`, GameStatus.FINISHED);
+      const rows = await this.db.all<GameRow[]>(
+        `SELECT *
+         FROM games
+         WHERE status NOT IN (?, ?)`,
+        GameStatus.FINISHED,
+        GameStatus.CANCELLED
+      );
         for (const row of rows) {
             const game = this.mapRowToGame(row);
             if (game.players.some((player) => player.id === playerId)) {

@@ -21,7 +21,7 @@ class InMemoryRepo implements IGameRepository {
         return this.games.get(id) ?? null;
     }
 
-    async list(): Promise<Game[]> {
+  async list(_params?: any): Promise<Game[]> {
         return [...this.games.values()];
     }
 
@@ -64,7 +64,7 @@ describe('CreateGameUseCase', () => {
         const userClient = new FakeUserClient();
         const useCase = new CreateGameUseCase(repo, publisher, userClient);
 
-        const result = await useCase.execute({ playerId: 'player1', mode: 'classic', config: {} });
+        const result = await useCase.execute({ playerId: 'player1', mode: 'CLASSIC', config: {} });
 
         expect(result.id).toBeDefined();
         expect(publisher.events.length).toBe(1);
@@ -80,7 +80,7 @@ describe('CreateGameUseCase', () => {
             useCase.execute({
                 playerId: 'player1',
                 opponentId: 'ghost',
-                mode: 'classic',
+                mode: 'CLASSIC',
                 config: {}
             })
         ).rejects.toBeInstanceOf(InvalidGameStateError);

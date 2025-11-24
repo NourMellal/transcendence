@@ -17,10 +17,12 @@ class InMemoryRepo implements IGameRepository {
     async findById(id: string): Promise<Game | null> {
         return this.games.get(id) ?? null;
     }
-    async list(): Promise<Game[]> {
+
+  async list(_params?: any): Promise<Game[]> {
         return [...this.games.values()];
     }
-    async findActiveByPlayer(): Promise<Game | null> {
+
+  async findActiveByPlayer(_playerId: string): Promise<Game | null> {
         return null;
     }
 }
@@ -39,7 +41,7 @@ describe('FinishGameUseCase', () => {
         const repo = new InMemoryRepo();
         const publisher = new FakePublisher();
         const useCase = new FinishGameUseCase(repo, publisher);
-        const game = Game.create({ playerId: 'player1', opponentId: 'player2', mode: 'classic', config: {} });
+        const game = Game.create({ playerId: 'player1', opponentId: 'player2', mode: 'CLASSIC', config: {} });
         game.start();
         await repo.create(game);
 

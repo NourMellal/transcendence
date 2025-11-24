@@ -5,6 +5,8 @@ export interface ListGamesParams {
     readonly status?: GameStatus;
     readonly mode?: GameMode;
     readonly playerId?: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export interface IGameRepository {
