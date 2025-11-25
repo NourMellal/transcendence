@@ -121,6 +121,9 @@ export class GameRealtimeService {
     this.leaveGame();
     gameWS.disconnect();
     this.activeSubscriptions = 0;
+    this.reconnectUnsub?.();
+    this.reconnectUnsub = undefined;
+    this.skipNextReconnectReplay = false;
   }
 
   private trackSubscription(unsub: Subscription): Subscription {
