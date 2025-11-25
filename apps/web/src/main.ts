@@ -1,18 +1,140 @@
-import { mountRoot } from "./core/utils";
-import { initRouter } from "./routes";
-import "./styles/main.css";
+import './styles/login-page.css';
+import { LoginPage } from './components/LoginPage';
+import { AuthManager } from './components/auth/AuthManager';
+import { GameScreen } from './modules/game/components/GameScreen';
+import { authManager } from './utils/auth';
 
 console.log('🚀 Transcendence - Cyberpunk Edition');
 console.log('🎨 Design system loaded');
 
-// Mount root component
-const app = document.querySelector<HTMLDivElement>('#app');
-if (app) {
-  mountRoot(app);
-  
-  // Initialize router
-  initRouter();
-  
-  console.log('✅ Router initialized with proper architecture');
-  console.log('📍 Routes: / (home), /auth/login, /auth/signup');
+console.log('🚀 ft_transcendence Frontend Starting...');
+console.log('🎨 Loading beautiful botanical login design...');
+
+const DEV : boolean = true
+async function startMockServer(): Promise<void> {
+  if (!DEV) {
+    return;
+  }
+
+  try {
+    const { worker } = await import('./mocks/browser');
+    await worker.start({
+      serviceWorker: {
+        url: '/mockServiceWorker.js',
+      },
+      onUnhandledRequest: 'bypass',
+    });
+    console.log('🛠️ MSW worker started (development only)');
+  } catch (error) {
+    console.warn('⚠️ Failed to start MSW worker:', error);
+  }
+}
+
+function isRegisterRoute(): boolean {
+  const path = window.location.pathname.toLowerCase();
+  const registerPaths = ['/auth/signup', '/auth/register', '/register', '/signup'];
+  const searchIntent =
+    new URLSearchParams(window.location.search).get('view')?.toLowerCase() === 'register';
+  return registerPaths.includes(path) || searchIntent;
+}
+
+function isGameRoute(): boolean {
+  return window.location.pathname.startsWith('/game');
+}
+
+// Initialize the application
+async function initializeApp(): Promise<void> {
+  try {
+    await startMockServer();
+    console.log('📱 Initializing UI Components...');
+
+    // Get the root container
+    const app = document.getElementById('app');
+    if (!app) {
+      throw new Error('App container not found');
+    }
+
+    if (isGameRoute()) {
+      const gameScreen = new GameScreen();
+      const params = new URLSearchParams(window.location.search);
+      const gameId = params.get('gameId') ?? 'local-demo';
+      const state = authManager.getState();
+
+      gameScreen.setContext({
+        gameId,
+        playerId: state.user?.id ?? undefined,
+        username: state.user?.username ?? 'Guest Player',
+        side: 'left',
+      });
+      gameScreen.mount(app);
+    } else {
+      // Create and mount the appropriate auth component
+      const component = isRegisterRoute() ? new AuthManager('register') : new LoginPage();
+      component.mount(app);
+    }
+
+    console.log('✅ Login page mounted successfully!');
+    console.log('🌺 Beautiful tropical botanical design loaded');
+    console.log('🎯 Split-screen layout with modern form design ready');
+
+  } catch (error) {
+    console.error('❌ Failed to initialize app:', error);
+
+    // Show error message to user
+    const app = document.getElementById('app');
+    if (app) {
+      app.innerHTML = `
+        <div style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          padding: 20px;
+          text-align: center;
+          font-family: 'Inter', system-ui, sans-serif;
+          background: linear-gradient(135deg, #40c4c4, #4a9e7e);
+          color: white;
+        ">
+          <div style="
+            background: white;
+            color: #1a1a1a;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+            max-width: 400px;
+            width: 100%;
+          ">
+            <h1 style="color: #dc3545; margin-bottom: 16px; font-size: 24px;">❌ Application Error</h1>
+            <p style="color: #666; margin-bottom: 24px; line-height: 1.5;">Failed to load the application. Please refresh the page to try again.</p>
+            <button
+              onclick="window.location.reload()"
+              style="
+                background: #40c4c4;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                transition: background 0.2s ease;
+              "
+              onmouseover="this.style.background='#36a9a9'"
+              onmouseout="this.style.background='#40c4c4'"
+            >
+              🔄 Refresh Page
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
+// Start the application when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
 }
