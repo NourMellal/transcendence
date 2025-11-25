@@ -79,132 +79,110 @@ Install dependencies and run the web dev server:
 
 ```bash
 pnpm install
-
-# Start dev server
-cd apps/web
-pnpm dev
-
-# Build for production
-pnpm build
-
-# Preview production build
-pnpm preview
+pnpm --filter web run dev
 ```
 
-## Testing the Mock API
+Open `http://localhost:5173` (or the URL printed by the dev server).
 
-When you run `pnpm dev`, the application will start with MSW enabled. Open your browser to `http://localhost:5173` to see an interactive test interface where you can:
+## Where to look
 
-1. Test each endpoint individually
-2. View request/response data
-3. Verify that all endpoints work correctly
+- `apps/web/src/core` — framework primitives (`Component`, `signal`, `Router`, `utils`)
+- `apps/web/src/services` — `HttpClient` and service classes (AuthService, UserService)
+- `apps/web/src/modules` — feature modules (pages, components, routes)
+- `apps/web/src/state` — app-wide signals and actions
 
-The mock API is configured to:
-- Return proper status codes (200, 201, 204, 401)
-- Match the `User` model structure from the OpenAPI spec
-- Handle authentication state
-- Support JSON and multipart form-data
+## Core concepts
 
-## User Model
+- Component: class-based UI unit. Implement `getInitialState()` and `render()`.
+- Signal: tiny observable used for global state and reactivity.
+- Router: SPA router that instantiates page components and publishes the active view via `viewSignal`.
+- Root: the app shell that subscribes to `viewSignal` and mounts the current page into `#app-view`.
 
-All mock responses match this TypeScript interface from the OpenAPI spec:
+## Renderer and lifecycle (practical)
 
-```typescript
-interface User {
-  id: string;           // UUID format
-  username: string;
-  email: string;
-  avatar: string | null;
-  is2FAEnabled: boolean;
-  status: 'ONLINE' | 'OFFLINE' | 'INGAME';
+1. `render()` may return strings, `HTMLElement`, or an array mixing strings and Component instances.
+2. The renderer mounts Component instances into a stable root element created per-instance and stores it on the instance (e.g. `_root`).
+3. On mount the renderer calls `attachEventListeners()` and `onMount()`.
+4. On route change or replacement the renderer calls `unmount()` on the previous component (try/catch), recursively unmounts its children, then removes the root from DOM.
+
+This lifecycle ensures event listeners and subscriptions are cleaned up and prevents leaks.
+
+## HttpClient (summary)
+
+`src/services/api/HttpClient.ts` is a small fetch wrapper exposing `get`, `post`, `put`, `patch`, and `delete`. It throws `ApiError` for non-OK responses and accepts an optional `Signal<string|null>` token to keep the Authorization header reactive.
+
+## How to create a Page (101)
+
+1) Create the Page class
+
+Create `apps/web/src/modules/<feature>/Pages/MyPage/MyPage.ts`:
+
+```ts
+import Component from '../../../../core/Component';
+
+type Props = {};
+type State = { count: number };
+
+export default class MyPage extends Component<Props, State> {
+  constructor(props: Props = {}) { super(props); }
+  getInitialState(): State { return { count: 0 }; }
+
+  render() {
+    return [
+      `<div class="my-page">`,
+      `<h1>My Page</h1>`,
+      new MyChildComponent(),
+      `</div>`
+    ];
+  }
+
+  protected attachEventListeners(): void {
+    // use this.element to query and attach DOM listeners
+  }
+
+  onMount(): void {
+    // optional setup
+  }
+
+  onUnmount(): void {
+    // cleanup timers, subscriptions, etc.
+  }
 }
 ```
 
-## Architecture
+2) Add components
 
-The frontend follows a **service-oriented architecture** ensuring clean separation between UI, API communication, and data models.
+Create child components in the `components/` folder and export them from `index.ts` in the feature.
 
-```
-src/
-├── main.ts                    # Application entry point
-├── services/
-│   ├── api/
-│   │   ├── HttpClient.ts      # Generic HTTP client wrapper
-│   │   ├── UserService.ts     # User-related API calls
-│   │   └── ...                # Other service modules
-│   └── auth/
-│       └── AuthService.ts     # Authentication API calls
-├── models/                    # Frontend data models (DTOs)
-│   ├── User.ts                # User model interfaces
-│   ├── Auth.ts                # Auth-related DTOs
-│   └── index.ts               # Model exports
-├── mocks/                     # MSW mock handlers
-│   ├── browser.ts             # MSW worker setup
-│   ├── handlers.ts            # Mock API handlers
-│   └── data.ts                # Mock data
-├── components/                # UI components (future)
-├── pages/                     # Page controllers (future)
-└── router/                    # Client-side routing (future)
+3) Register route
+
+Add your route in `apps/web/src/modules/<feature>/Router/router.ts`:
+
+```ts
+export const routes = [
+  { path: '/my-page', component: MyPage, props: {} },
+];
+export default routes;
 ```
 
-### Realtime Game Modules
+4) Use services & state
 
-Realtime gameplay, chat, and presence features live under `src/modules`:
+- Import `httpClient` from `src/services/api/client` to call your backend.
+- Use `Signal` from `src/state` for shared state; call `signal.set(...)` to update and `signal.get()` to read.
 
-```
-src/modules/
-├── shared/
-│   ├── services/WebSocketClient.ts     # Auth-aware WS client with reconnect, heartbeat, queueing
-│   └── types/websocket.types.ts        # Message/DTO definitions (game state, chat, presence)
-└── game/
-    ├── services/GameRealtimeService.ts # High-level API for join/leave, chat, presence, paddle moves
-    └── components/
-        ├── GameScreen.ts               # Composed view for canvas + chat + presence
-        ├── GameCanvas.ts               # Handles WS connection + state updates + keyboard inputs
-        ├── GameChatPanel.ts            # Subscribes to chat events and emits new messages
-        └── GamePresenceIndicator.ts    # Tracks live players/presence updates
-```
+5) Ensure cleanup
 
-To preview the realtime UI, navigate to `/game?gameId=<id>` while the dev server is running. The screen bootstraps the WebSocket connection, renders the canvas, and listens for chat/presence updates using the shared client.
+- Implement `onUnmount()` to remove subscriptions and event listeners to avoid leaks.
 
-> **Local mock:** set `VITE_WS_USE_MOCK=true` in `apps/web/.env` (or the shell) to swap the browser's connection for an in-memory `MockGameWebSocket`. This simulates auth, game state ticks, chat echoes, and presence updates so you can exercise the UI without the backend.
+## Recommended development workflow
 
-### Design Principles
+- Create a small Page and route, start the dev server, and visit the path.
+- Use browser devtools to inspect `#app-view` and ensure only one page root is mounted at a time.
+- Add unit tests for components that rely on external subscriptions to assert cleanup is called on `unmount()`.
 
-**What Frontend SHOULD Know:**
-- ✅ HTTP endpoints (e.g., `/api/users/me`)
-- ✅ JSON request & response structures
-- ✅ HTTP methods & status codes
-- ✅ OpenAPI spec (DTOs/contracts)
+## Optional next improvements
 
-**What Frontend SHOULD NOT Know:**
-- ❌ Domain entities or value objects
-- ❌ Use cases or business logic
-- ❌ Repository, service, or database layers
-- ❌ Any internal backend structure
+- Add a scaffold script (node script) to generate Page + component + route files.
+- Add automatic linting/formatting and tests for renderer behavior.
 
-The frontend acts as a **pure REST consumer**, communicating only through the API Gateway.
-
-## Notes
-
-- The mock API runs entirely in the browser using MSW service workers
-- No backend server is required for frontend development
-- State is maintained in memory and resets on page reload
-- OAuth login flow (`/auth/42/login`) is intentionally not mocked as it's a redirect to external SSO
-
-## Testing the WebSocket Client & Game Modules
-
-Manual validation checklist (requires a running WS backend or mock server that understands the documented events):
-
-1. Visit `/game?gameId=<some-id>` so the `GameScreen` mounts.
-2. Ensure the console logs `[WS] Connecting…` followed by `Connected` and `Authenticating…`.
-3. Simulate server responses for:
-   - `game_state_update`: canvas should update ball/paddles/score instantly.
-   - `game_chat_message`: messages appear in the chat panel with timestamps.
-   - `presence_update`: entries show up in the presence list grouped by status.
-4. Disconnect the backend temporarily; confirm auto-reconnect logs with exponential delays and queued paddle/chat messages flush after reconnection.
-5. Call `gameWS.disconnect()` (or leave the page) to verify heartbeats stop and subscriptions are cleaned up.
-
-For automated verification, you can pair the client with a lightweight mock WebSocket server (e.g., using `ws` + MSW or vitest) to assert event flow, message queueing, and heartbeat behavior before integrating against the real Game Service.
-
-When `VITE_WS_USE_MOCK=true`, the bundled `MockGameWebSocket` already exercises most flows (join, state updates, chat echo, presence heartbeat) and logs `[WS Mock]` in the console so QA knows the fake server is in use.
+````

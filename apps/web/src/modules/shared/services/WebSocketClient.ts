@@ -1,4 +1,4 @@
-import { appState } from '@/state/app.state';
+import { appState } from '@/state';
 import {
   createGameSocket,
   type GameSocket,
