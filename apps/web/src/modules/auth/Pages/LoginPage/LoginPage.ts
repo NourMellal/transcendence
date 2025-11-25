@@ -145,6 +145,14 @@ export default class LoginPage extends Component<Props, State> {
               ← Back to Home
             </button>
           </div>
+
+          <div class="demo-game-cta text-center mt-8">
+            <p class="demo-game-text text-sm text-white mb-4">👾 Want to preview the live Pong experience?</p>
+            <button id="demoGameButton" type="button" class="demo-game-button inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium touch-feedback"
+              style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+              Launch realtime demo
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -199,6 +207,16 @@ export default class LoginPage extends Component<Props, State> {
       };
       forgotBtn.addEventListener('click', handler);
       this.subscriptions.push(() => forgotBtn.removeEventListener('click', handler));
+    }
+
+    const demoButton = this.element.querySelector('#demoGameButton') as HTMLButtonElement | null;
+    if (demoButton) {
+      const handler = () => {
+        const demoGameId = 'demo-match';
+        window.location.href = `/game?gameId=${encodeURIComponent(demoGameId)}`;
+      };
+      demoButton.addEventListener('click', handler);
+      this.subscriptions.push(() => demoButton.removeEventListener('click', handler));
     }
 
     // Go to home
