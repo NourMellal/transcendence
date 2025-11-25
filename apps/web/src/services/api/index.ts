@@ -7,7 +7,7 @@
  */
 
 // Export service classes and instances
-export { HttpClient, ApiError } from './HttpClient';
+export { HttpClient, ApiError } from '../../modules/shared/services/HttpClient';
 export { httpClient } from './client';
 export { UserService, userService } from './UserService';
 export { GameService, gameService } from './GameService';
@@ -15,6 +15,6 @@ export { TournamentService, tournamentService } from './TournamentService';
 export { ChatService, chatService } from './ChatService';
 
 // Export types
-export type { ApiResponse, RequestConfig } from './HttpClient';
+export type { ApiResponse, RequestConfig } from '../../modules/shared/services/HttpClient';
 
 // Note: AuthService is in ../auth/AuthService.ts and integrates with existing MSW setup

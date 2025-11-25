@@ -1,4 +1,4 @@
-import { HttpClient } from './HttpClient';
+import { HttpClient } from '../../modules/shared/services/HttpClient';
 
 /**
  * Shared HttpClient instance used by vanilla services.
