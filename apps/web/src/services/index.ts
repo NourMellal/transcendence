@@ -2,6 +2,6 @@
  * Central export for all API services
  */
 
-export { HttpClient } from './api/HttpClient';
+export { HttpClient } from '../modules/shared/services/HttpClient';
 export { UserService } from './api/UserService';
 export { AuthService } from './auth/AuthService';
