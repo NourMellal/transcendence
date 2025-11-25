@@ -1,17 +1,5 @@
 import { io } from 'socket.io-client';
 
-/**
- * 🚨 TEMPORARY AUTH BYPASS FOR TESTING 🚨
- *
- * A hardcoded JWT token is currently used in createGameSocket() to test the real
- * game service without implementing the full login flow first.
- *
- * TODO: Remove the hardcodedToken once the login flow is complete and tokens are
- * properly stored in the auth state.
- *
- * Search for: "TEMPORARY HARDCODED JWT" to find and remove the hack.
- */
-
 export type SocketEventHandler = (...args: any[]) => void;
 
 export interface GameSocket {
@@ -85,18 +73,13 @@ class SocketIOGameSocket implements GameSocket {
 }
 
 export function createGameSocket(url: string, token: string | null): GameSocket {
-  // 🚨 TEMPORARY HARDCODED JWT FOR TESTING - REMOVE AFTER LOGIN IS IMPLEMENTED 🚨
-  // Generated with: jwt.sign({ sub: 'demo-player-123', userId: 'demo-player-123', username: 'Demo Player' }, 'fallback-jwt-secret-for-development', { issuer: 'transcendence', expiresIn: '24h' })
-  const hardcodedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZW1vLXBsYXllci0xMjMiLCJ1c2VySWQiOiJkZW1vLXBsYXllci0xMjMiLCJ1c2VybmFtZSI6IkRlbW8gUGxheWVyIiwiaWF0IjoxNzY0MDc1NTIzLCJleHAiOjE3NjQxNjE5MjMsImlzcyI6InRyYW5zY2VuZGVuY2UifQ.k5Dd2mg0R-KQd3gYmyKZGBDz9vQsXuCC6g-AM-R0LR0';
-  const effectiveToken = token || hardcodedToken;
-
   const socket = io(url, {
     transports: ['websocket'],
     autoConnect: false,
     forceNew: true,
     reconnection: false,
-    query: { token: effectiveToken },
+    query: token ? { token } : undefined,
   });
 
-  return new SocketIOGameSocket(socket, effectiveToken);
+  return new SocketIOGameSocket(socket, token ?? null);
 }
