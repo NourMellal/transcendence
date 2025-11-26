@@ -38,6 +38,7 @@ export const appState = {
     loginError: undefined,
   }),
   notifications: new Signal<string[]>([]),
+  game: new Signal<Game | null>(null), // <-- Added for GameLobby
 };
 
 export class AuthActions {

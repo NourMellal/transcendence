@@ -1,3 +1,20 @@
+// --- Added for GameLobby and GameService ---
+export interface Player {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+  ready?: boolean;
+}
+
+export interface Game {
+  id: string;
+  players: Player[];
+  status: 'WAITING' | 'IN_PROGRESS' | 'FINISHED';
+  settings?: {
+    scoreLimit?: number;
+    ballSpeed?: string;
+  };
+}
 export interface Ball {
   x: number;
   y: number;
