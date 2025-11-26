@@ -7,6 +7,11 @@ import {
 import type { WSConnectionState, WSEventHandler } from '../types/websocket.types';
 
 type QueuedMessage = { event: string; payload: unknown };
+type DeferredConnect = {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
 
 export class WebSocketClient {
   private socket: GameSocket | null = null;
@@ -18,7 +23,7 @@ export class WebSocketClient {
   private messageQueue: QueuedMessage[] = [];
   private connectionState: WSConnectionState = 'disconnected';
   private reconnectTimeout: number | null = null;
-  private connectPromise: { resolve: () => void; reject: (error: Error) => void } | null = null;
+  private connectDeferred: DeferredConnect | null = null;
 
   constructor(private url: string) {
     appState.auth.subscribe((auth) => {
@@ -43,6 +48,10 @@ export class WebSocketClient {
       return;
     }
 
+    if (this.connectDeferred) {
+      return this.connectDeferred.promise;
+    }
+
     if (!this.socket) {
       this.socket = createGameSocket(this.url, this.token);
       this.registerLifecycleEvents();
@@ -50,19 +59,9 @@ export class WebSocketClient {
 
     this.connectionState = 'connecting';
 
-    return new Promise((resolve, reject) => {
-      this.connectPromise = {
-        resolve: () => {
-          this.connectPromise = null;
-          resolve();
-        },
-        reject: (error: Error) => {
-          this.connectPromise = null;
-          reject(error);
-        },
-      };
-      this.socket?.connect();
-    });
+    this.connectDeferred = this.createDeferredConnect();
+    this.socket?.connect();
+    return this.connectDeferred.promise;
   }
 
   on<T>(eventType: string, handler: WSEventHandler<T>): () => void {
@@ -127,15 +126,16 @@ export class WebSocketClient {
       this.reconnectAttempts = 0;
       this.clearReconnectTimer();
       this.flushMessageQueue();
-      this.connectPromise?.resolve();
+      this.connectDeferred?.resolve();
+      this.connectDeferred = null;
     });
 
     this.socket.on('disconnect', (reason?: string) => {
       console.warn('[WS] 🔌 Disconnected', reason);
       this.connectionState = 'disconnected';
-      if (this.connectPromise) {
-        this.connectPromise.reject(new Error(reason || 'socket disconnected'));
-        this.connectPromise = null;
+      if (this.connectDeferred) {
+        this.connectDeferred.reject(new Error(reason || 'socket disconnected'));
+        this.connectDeferred = null;
       } else {
         this.attemptReconnect();
       }
@@ -144,9 +144,9 @@ export class WebSocketClient {
     this.socket.on('connect_error', (error: Error) => {
       console.error('[WS] ❌ Connection error:', error);
       this.connectionState = 'error';
-      if (this.connectPromise) {
-        this.connectPromise.reject(error);
-        this.connectPromise = null;
+      if (this.connectDeferred) {
+        this.connectDeferred.reject(error);
+        this.connectDeferred = null;
       }
       this.attemptReconnect();
     });
@@ -231,6 +231,16 @@ export class WebSocketClient {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
+  }
+
+  private createDeferredConnect(): DeferredConnect {
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
   }
 }
 
