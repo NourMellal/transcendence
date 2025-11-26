@@ -5,9 +5,6 @@ import type { Ball, Paddle } from '../types/game.types';
 interface GameCanvasProps {}
 
 interface GameCanvasState {
-  ball: Ball;
-  player1: Paddle;
-  player2: Paddle;
   isGameRunning: boolean;
 }
 
@@ -21,56 +18,83 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private readonly BASE_HEIGHT = 600;
   
   private mouseY: number = this.BASE_HEIGHT / 2;
+  private touchY: number = this.BASE_HEIGHT / 2;
   private keys: { [key: string]: boolean } = {};
+
+  private ball!: Ball;
+  private player1!: Paddle;
+  private player2!: Paddle;
+  private isRunning: boolean = false;
+
+  // Configurable controls (can be changed later)
+  private readonly player2Controls = {
+    up: 'ArrowUp',
+    down: 'ArrowDown',
+  };
+
+  private mouseMoveHandler?: (e: MouseEvent) => void;
+  private touchMoveHandler?: (e: TouchEvent) => void;
+  private touchStartHandler?: (e: TouchEvent) => void;
+  private pointerMoveHandler?: (e: PointerEvent) => void;
+  private keyDownHandler?: (e: KeyboardEvent) => void;
+  private keyUpHandler?: (e: KeyboardEvent) => void;
+  private startStopHandler?: (e: Event) => void;
+  private restartHandler?: (e: Event) => void;
+  private startStopBtn?: HTMLButtonElement | null;
+  private restartBtn?: HTMLButtonElement | null;
 
   getInitialState(): GameCanvasState {
     return {
-      ball: {
-        x: this.BASE_WIDTH / 2,
-        y: this.BASE_HEIGHT / 2,
-        radius: 5,
-        velocityX: 5,
-        velocityY: 5,
-        speed: 7,
-        maxSpeed: 15
-      },
-      player1: {
-        x: 10,
-        y: this.BASE_HEIGHT / 2 - 50,
-        width: 10,
-        height: 100,
-        score: 0,
-        dy: 0
-      },
-      player2: {
-        x: this.BASE_WIDTH - 20,
-        y: this.BASE_HEIGHT / 2 - 50,
-        width: 10,
-        height: 100,
-        score: 0,
-        dy: 0
-      },
       isGameRunning: false
+    };
+  }
+  
+  private initializeGameObjects(): void {
+    this.ball = {
+      x: this.BASE_WIDTH / 2,
+      y: this.BASE_HEIGHT / 2,
+      radius: 5,
+      velocityX: 5,
+      velocityY: 5,
+      speed: 7,
+      maxSpeed: 15
+    };
+    
+    this.player1 = {
+      x: 10,
+      y: this.BASE_HEIGHT / 2 - 50,
+      width: 10,
+      height: 100,
+      score: 0,
+      dy: 0
+    };
+    
+    this.player2 = {
+      x: this.BASE_WIDTH - 20,
+      y: this.BASE_HEIGHT / 2 - 50,
+      width: 10,
+      height: 100,
+      score: 0,
+      dy: 0
     };
   }
 
   render(): string {
     return `
-      <div class="relative max-w-4xl mx-auto p-4">
-        <div class="glass-panel glass-panel-mobile p-4 sm:p-8" style="border: 1px solid rgba(255, 255, 255, 0.1); padding-top: calc(env(safe-area-inset-top) + 1rem); padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);">
-          <div class="relative aspect-[4/3] rounded-xl overflow-hidden" style="background: var(--color-bg-dark);">
+      <div class="game-canvas-wrapper">
+        <div class="game-panel glass-panel">
+          <div class="game-area aspect-[16/9] rounded-2xl overflow-hidden" style="background: var(--color-bg-dark);">
             <canvas 
               id="game-canvas" 
               class="w-full h-full"
-              style="image-rendering: crisp-edges;"
             ></canvas>
           </div>
 
-          <div class="mt-4 flex gap-2 items-center justify-center">
-            <button id="start-stop-btn" class="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white transition-colors">
+          <div class="mt-2 flex gap-3 items-center justify-center">
+            <button id="start-stop-btn" class="btn-primary btn-touch">
               Start Game
             </button>
-            <button id="restart-btn" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white transition-colors">
+            <button id="restart-btn" class="btn-secondary btn-touch">
               Restart
             </button>
           </div>
@@ -83,12 +107,14 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.canvas = this.element!.querySelector('#game-canvas') as HTMLCanvasElement;
     this.renderer = new GameRenderer(this.canvas);
     
+    this.initializeGameObjects();
+    
     this.resizeCanvas();
     
     this.resizeObserver = new ResizeObserver(() => {
       this.resizeCanvas();
-      if (!this.state.isGameRunning) {
-        this.renderer.render(this.state.ball, this.state.player1, this.state.player2);
+      if (!this.isRunning) {
+        this.renderer.render(this.ball, this.player1, this.player2);
       }
     });
     
@@ -97,29 +123,77 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       this.resizeObserver.observe(container);
     }
     
-    this.renderer.render(this.state.ball, this.state.player1, this.state.player2);
+    this.renderer.render(this.ball, this.player1, this.player2);
   }
 
   protected attachEventListeners(): void {
-    const startStopBtn = this.element!.querySelector('#start-stop-btn') as HTMLButtonElement;
-    const restartBtn = this.element!.querySelector('#restart-btn') as HTMLButtonElement;
+    this.startStopBtn = this.element!.querySelector('#start-stop-btn') as HTMLButtonElement | null;
+    this.restartBtn = this.element!.querySelector('#restart-btn') as HTMLButtonElement | null;
 
-    this.canvas.addEventListener('mousemove', (e: MouseEvent) => {
+    this.mouseMoveHandler = (e: MouseEvent) => {
       const rect = this.canvas.getBoundingClientRect();
       const scaleY = this.BASE_HEIGHT / rect.height;
       this.mouseY = (e.clientY - rect.top) * scaleY;
-    });
+    };
+    this.canvas.addEventListener('mousemove', this.mouseMoveHandler);
 
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
+    this.touchMoveHandler = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleY = this.BASE_HEIGHT / rect.height;
+        this.touchY = (e.touches[0].clientY - rect.top) * scaleY;
+        this.mouseY = this.touchY;
+      }
+    };
+    this.canvas.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
+
+    this.touchStartHandler = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleY = this.BASE_HEIGHT / rect.height;
+        this.touchY = (e.touches[0].clientY - rect.top) * scaleY;
+        this.mouseY = this.touchY;
+      }
+    };
+    this.canvas.addEventListener('touchstart', this.touchStartHandler, { passive: false });
+
+    this.pointerMoveHandler = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleY = this.BASE_HEIGHT / rect.height;
+        this.mouseY = (e.clientY - rect.top) * scaleY;
+      }
+    };
+    this.canvas.addEventListener('pointermove', this.pointerMoveHandler);
+
+    this.keyDownHandler = (e: KeyboardEvent) => {
       this.keys[e.key] = true;
-    });
+    };
+    document.addEventListener('keydown', this.keyDownHandler);
 
-    document.addEventListener('keyup', (e: KeyboardEvent) => {
+    this.keyUpHandler = (e: KeyboardEvent) => {
       this.keys[e.key] = false;
-    });
+    };
+    document.addEventListener('keyup', this.keyUpHandler);
 
-    startStopBtn.addEventListener('click', () => this.toggleGame(startStopBtn));
-    restartBtn.addEventListener('click', () => this.resetGame());
+    if (this.startStopBtn) {
+      this.startStopHandler = (e: Event) => {
+        // allow preventing default if caller needs
+        e?.preventDefault?.();
+        this.toggleGame(this.startStopBtn as HTMLButtonElement);
+      };
+      this.startStopBtn.addEventListener('click', this.startStopHandler);
+    }
+
+    if (this.restartBtn) {
+      this.restartHandler = (e: Event) => {
+        e?.preventDefault?.();
+        this.resetGame();
+      };
+      this.restartBtn.addEventListener('click', this.restartHandler);
+    }
   }
 
   private resizeCanvas(): void {
@@ -149,13 +223,17 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     
-    this.canvas.style.imageRendering = 'crisp-edges';
+  // imageRendering is set in the static canvas markup; no need to set it here again
   }
 
   private toggleGame(button: HTMLButtonElement): void {
-    this.setState({ isGameRunning: !this.state.isGameRunning });
+    const nextRunning = !this.isRunning;
     
-    if (this.state.isGameRunning) {
+    this.isRunning = nextRunning;
+    
+    this.setState({ isGameRunning: nextRunning });
+    
+    if (nextRunning) {
       button.textContent = 'Stop Game';
       button.classList.remove('bg-green-600', 'hover:bg-green-700');
       button.classList.add('bg-red-600', 'hover:bg-red-700');
@@ -181,34 +259,27 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   }
 
   private resetBall(): void {
-    this.setState({
-      ball: {
-        ...this.state.ball,
-        x: this.BASE_WIDTH / 2,
-        y: this.BASE_HEIGHT / 2,
-        velocityX: -this.state.ball.velocityX,
-        speed: 7
-      }
-    });
+    this.ball.x = this.BASE_WIDTH / 2;
+    this.ball.y = this.BASE_HEIGHT / 2;
+    this.ball.velocityX = -this.ball.velocityX;
+    this.ball.speed = 7;
   }
 
   private resetGame(): void {
-    this.setState({
-      player1: { ...this.state.player1, score: 0 },
-      player2: { ...this.state.player2, score: 0 }
-    });
+    this.player1.score = 0;
+    this.player2.score = 0;
     this.resetBall();
   }
 
   private updateGame(): void {
-    if (!this.state.isGameRunning) return;
+    if (!this.isRunning) return;
     
-    const { ball, player1, player2 } = this.state;
+    const { ball, player1, player2 } = this;
     
     player1.y = this.mouseY - player1.height / 2;
     
-    if (this.keys['ArrowUp']) player2.y -= 8;
-    if (this.keys['ArrowDown']) player2.y += 8;
+    if (this.keys[this.player2Controls.up]) player2.y -= 8;
+    if (this.keys[this.player2Controls.down]) player2.y += 8;
     
     player1.y = Math.max(30, Math.min(this.BASE_HEIGHT - player1.height - 30, player1.y));
     player2.y = Math.max(30, Math.min(this.BASE_HEIGHT - player2.height - 30, player2.y));
@@ -234,20 +305,18 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     
     if (ball.x - ball.radius < 0) {
       player2.score++;
-      this.setState({ player2 });
       this.resetBall();
     } else if (ball.x + ball.radius > this.BASE_WIDTH) {
       player1.score++;
-      this.setState({ player1 });
       this.resetBall();
     }
   }
 
   private gameLoop(): void {
-    if (!this.state.isGameRunning) return;
+    if (!this.isRunning) return;
     
     this.updateGame();
-    this.renderer.render(this.state.ball, this.state.player1, this.state.player2);
+    this.renderer.render(this.ball, this.player1, this.player2);
     this.animationId = requestAnimationFrame(() => this.gameLoop());
   }
 
@@ -255,11 +324,54 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
-    
+
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }
-    
+
+    if (this.mouseMoveHandler) {
+      this.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+      this.mouseMoveHandler = undefined;
+    }
+
+    if (this.touchMoveHandler) {
+      this.canvas.removeEventListener('touchmove', this.touchMoveHandler);
+      this.touchMoveHandler = undefined;
+    }
+
+    if (this.touchStartHandler) {
+      this.canvas.removeEventListener('touchstart', this.touchStartHandler);
+      this.touchStartHandler = undefined;
+    }
+
+    if (this.pointerMoveHandler) {
+      this.canvas.removeEventListener('pointermove', this.pointerMoveHandler);
+      this.pointerMoveHandler = undefined;
+    }
+
+    if (this.keyDownHandler) {
+      document.removeEventListener('keydown', this.keyDownHandler);
+      this.keyDownHandler = undefined;
+    }
+
+    if (this.keyUpHandler) {
+      document.removeEventListener('keyup', this.keyUpHandler);
+      this.keyUpHandler = undefined;
+    }
+
+    if (this.startStopBtn && this.startStopHandler) {
+      this.startStopBtn.removeEventListener('click', this.startStopHandler);
+      this.startStopHandler = undefined;
+    }
+
+    if (this.restartBtn && this.restartHandler) {
+      this.restartBtn.removeEventListener('click', this.restartHandler);
+      this.restartHandler = undefined;
+    }
+
+    this.startStopBtn = null;
+    this.restartBtn = null;
+
     this.keys = {};
   }
 }

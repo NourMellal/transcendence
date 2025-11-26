@@ -42,16 +42,18 @@ export class GameRenderer {
     const dpr = window.devicePixelRatio || 1;
     const logicalHeight = this.canvas.height / dpr;
     const logicalWidth = this.canvas.width / dpr;
+    const root = getComputedStyle(document.documentElement);
+    const warnColor = root.getPropertyValue('--color-warning').trim() || '#ffaa00';
+    const accentColor = root.getPropertyValue('--color-brand-accent').trim() || '#ff6600';
 
     const topGradient = this.ctx.createLinearGradient(0, 0, 0, 25);
-    topGradient.addColorStop(0, '#ffaa00');
-    topGradient.addColorStop(1, '#ff6600');
+    topGradient.addColorStop(0, warnColor);
+    topGradient.addColorStop(1, accentColor);
     this.ctx.fillStyle = topGradient;
     this.ctx.fillRect(0, 0, logicalWidth, 25);
-
     const bottomGradient = this.ctx.createLinearGradient(0, logicalHeight - 25, 0, logicalHeight);
-    bottomGradient.addColorStop(0, '#ff6600');
-    bottomGradient.addColorStop(1, '#ffaa00');
+    bottomGradient.addColorStop(0, accentColor);
+    bottomGradient.addColorStop(1, warnColor);
     this.ctx.fillStyle = bottomGradient;
     this.ctx.fillRect(0, logicalHeight - 25, logicalWidth, 25);
   }
@@ -60,9 +62,9 @@ export class GameRenderer {
     const dpr = window.devicePixelRatio || 1;
     const logicalWidth = this.canvas.width / dpr;
     const logicalHeight = this.canvas.height / dpr;
-
     this.ctx.setLineDash([15, 15]);
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    const panelBorder = getComputedStyle(document.documentElement).getPropertyValue('--color-panel-border').trim() || 'rgba(255, 255, 255, 0.2)';
+    this.ctx.strokeStyle = panelBorder;
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.moveTo(logicalWidth / 2, 30);
@@ -81,29 +83,31 @@ export class GameRenderer {
   }
 
   drawBall(ball: Ball): void {
-    const primaryColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-primary').trim() || '#ffaa44';
+    const root = getComputedStyle(document.documentElement);
+    const primaryColor = root.getPropertyValue('--color-primary').trim() || '#ffaa44';
+    const ballColor = root.getPropertyValue('--color-text-primary').trim() || '#ffffff';
 
     this.ctx.shadowBlur = 15;
     this.ctx.shadowColor = primaryColor;
-    
-    this.ctx.fillStyle = '#ffffff';
+
+    this.ctx.fillStyle = ballColor;
     this.ctx.beginPath();
     this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     this.ctx.fill();
-    
+
     this.ctx.shadowBlur = 0;
   }
 
   drawScore(player1Score: number, player2Score: number): void {
     const dpr = window.devicePixelRatio || 1;
     const logicalWidth = this.canvas.width / dpr;
+    const scoreColor = getComputedStyle(document.documentElement).getPropertyValue('--color-brand-secondary').trim() || '#ffcc66';
 
-    this.drawText('SCORE', logicalWidth / 2, 50, '#ffcc66', '20px "Press Start 2P"');
+    this.drawText('SCORE', logicalWidth / 2, 50, scoreColor, '20px "Press Start 2P"');
 
-    this.drawText(player1Score.toString(), logicalWidth / 4, 95, '#ffcc66', '36px "Press Start 2P"');
-    this.drawText('-', logicalWidth / 2, 95, '#ffcc66', '36px "Press Start 2P"');
-    this.drawText(player2Score.toString(), (logicalWidth * 3) / 4, 95, '#ffcc66', '36px "Press Start 2P"');
+    this.drawText(player1Score.toString(), logicalWidth / 4, 95, scoreColor, '36px "Press Start 2P"');
+    this.drawText('-', logicalWidth / 2, 95, scoreColor, '36px "Press Start 2P"');
+    this.drawText(player2Score.toString(), (logicalWidth * 3) / 4, 95, scoreColor, '36px "Press Start 2P"');
   }
 
   render(ball: Ball, player1: Paddle, player2: Paddle): void {
