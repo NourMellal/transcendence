@@ -114,7 +114,6 @@ export class LoginForm extends Component {
               <span class="px-4" style="background: var(--color-bg-dark); color: var(--color-text-muted);">Or continue with</span>
             </div>
           </div>
-
           <!-- 42 OAuth Button -->
           <button 
             type="button"
@@ -138,7 +137,6 @@ export class LoginForm extends Component {
             </p>
           </div>
         </div>
-
         <!-- Back to Home -->
         <div class="text-center mt-4 sm:mt-6">
           <a href="#" class="home-link text-sm transition-colors" style="color: var(--color-text-muted);">

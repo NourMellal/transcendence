@@ -11,6 +11,7 @@
     "lint": "echo 'Linting skipped - no eslint config for web app yet'"
   },
   "dependencies": {
+    "socket.io-client": "^4.8.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
