@@ -1,45 +1,18 @@
 import { io } from 'socket.io-client';
 
-import type {
-  GameSocketIncomingEvents,
-  GameSocketOutgoingEvents,
-} from '../types/websocket.types';
+export type SocketEventHandler = (...args: unknown[]) => void;
 
-type SocketLifecycleEvents = {
-  connect: void;
-  disconnect: string | undefined;
-  connect_error: Error;
-};
-
-type InternalClientEvents = {
-  client_disconnect: { reason: string };
-};
-
-type DefaultIncomingEvents = GameSocketIncomingEvents & SocketLifecycleEvents;
-type DefaultOutgoingEvents = GameSocketOutgoingEvents & InternalClientEvents;
-
-export type SocketEventHandler<T = unknown> = (payload: T) => void;
-
-export interface GameSocket<
-  IncomingEvents extends Record<string, unknown> = DefaultIncomingEvents,
-  OutgoingEvents extends Record<string, unknown> = DefaultOutgoingEvents,
-> {
+export interface GameSocket {
   readonly connected: boolean;
   connect(): void;
   disconnect(reason?: string): void;
-  emit<Event extends keyof OutgoingEvents>(event: Event, payload: OutgoingEvents[Event]): void;
-  emit(event: string, payload?: unknown): void;
-  on<Event extends keyof IncomingEvents>(event: Event, handler: SocketEventHandler<IncomingEvents[Event]>): void;
   on(event: string, handler: SocketEventHandler): void;
-  off<Event extends keyof IncomingEvents>(event: Event, handler: SocketEventHandler<IncomingEvents[Event]>): void;
+  emit(event: string, payload?: unknown): void;
   off(event: string, handler: SocketEventHandler): void;
   updateToken(token: string | null): void;
 }
 
-class SocketIOGameSocket<
-  IncomingEvents extends Record<string, unknown> = DefaultIncomingEvents,
-  OutgoingEvents extends Record<string, unknown> = DefaultOutgoingEvents,
-> implements GameSocket<IncomingEvents, OutgoingEvents> {
+class SocketIOGameSocket implements GameSocket {
   private token: string | null = null;
 
   constructor(private readonly socket: ReturnType<typeof io>, token: string | null) {
@@ -68,25 +41,16 @@ class SocketIOGameSocket<
     }
   }
 
-  emit<Event extends keyof OutgoingEvents>(event: Event, payload: OutgoingEvents[Event]): void;
   emit(event: string, payload?: unknown): void {
     this.socket.emit(event, payload);
   }
 
-  on<Event extends keyof IncomingEvents>(
-    event: Event,
-    handler: SocketEventHandler<IncomingEvents[Event]>
-  ): void;
   on(event: string, handler: SocketEventHandler): void {
-    this.socket.on(event, handler as (...args: any[]) => void);
+    this.socket.on(event, handler);
   }
 
-  off<Event extends keyof IncomingEvents>(
-    event: Event,
-    handler: SocketEventHandler<IncomingEvents[Event]>
-  ): void;
   off(event: string, handler: SocketEventHandler): void {
-    this.socket.off(event, handler as (...args: any[]) => void);
+    this.socket.off(event, handler);
   }
 
   updateToken(token: string | null): void {

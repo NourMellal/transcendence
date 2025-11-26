@@ -130,7 +130,9 @@ export class WebSocketClient {
       this.connectDeferred = null;
     });
 
-    this.socket.on('disconnect', (reason?: string) => {
+    this.socket.on('disconnect', (...args: unknown[]) => {
+      const [reasonArg] = args;
+      const reason = typeof reasonArg === 'string' ? reasonArg : undefined;
       console.warn('[WS] 🔌 Disconnected', reason);
       this.connectionState = 'disconnected';
       if (this.connectDeferred) {
@@ -141,7 +143,9 @@ export class WebSocketClient {
       }
     });
 
-    this.socket.on('connect_error', (error: Error) => {
+    this.socket.on('connect_error', (...args: unknown[]) => {
+      const [errorArg] = args;
+      const error = errorArg instanceof Error ? errorArg : new Error(String(errorArg ?? 'UNKNOWN_ERROR'));
       console.error('[WS] ❌ Connection error:', error);
       this.connectionState = 'error';
       if (this.connectDeferred) {
