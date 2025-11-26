@@ -10,7 +10,7 @@ export interface WSMessage<T = unknown> {
   payload: T;
 }
 
-export type WSEventHandler<T = void> = (payload: T) => void;
+export type WSEventHandler<T = unknown> = (payload: T) => void;
 
 export interface GameStateUpdatePayload {
   gameId: string;

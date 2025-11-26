@@ -22,7 +22,7 @@ export class WebSocketClient {
 
   constructor(private url: string) {
     appState.auth.subscribe((auth) => {
-      this.token = auth.token;
+      this.token = auth.token ?? null;
       if (this.socket) {
         this.socket.updateToken(this.token);
       }
