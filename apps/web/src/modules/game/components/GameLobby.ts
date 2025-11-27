@@ -1,6 +1,20 @@
 import Component from '@/core/Component';
 import { appState } from '@/state';
 import type { GameStateOutput, PlayerInfo } from '../types/game.types';
+import { httpClient } from '@/services/api/client';
+
+interface ApiGame {
+  id: string;
+  player1?: string | null;
+  player2?: string | null;
+  status?: string;
+  score?: {
+    player1: number;
+    player2: number;
+  };
+  createdAt?: string;
+  finishedAt?: string | null;
+}
 
 interface GameLobbyProps {
   gameId: string;
@@ -322,15 +336,72 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
   private async fetchGame(gameId: string): Promise<GameStateOutput> {
     try {
-      const response = await fetch(`http://localhost:3003/api/games/${gameId}`);
-      if (response.ok) {
-        return response.json();
+      const apiGame = await httpClient.get<ApiGame>(`/games/${gameId}`);
+      const mappedGame = this.mapApiGameToLobbyState(apiGame);
+      if (mappedGame) {
+        return mappedGame;
       }
     } catch (error) {
-      console.warn('[GameLobby] API call failed, using mock data for development');
+      console.warn('[GameLobby] API call failed, using mock data for development', error);
     }
 
-    // Fallback mock data for development/testing
+    return this.buildMockGame(gameId);
+  }
+
+  private mapApiGameToLobbyState(apiGame: ApiGame | null | undefined): GameStateOutput | null {
+    if (!apiGame || !apiGame.id) return null;
+
+    const currentUserId = this.state.currentUserId || localStorage.getItem('userId') || '';
+    const players: PlayerInfo[] = [];
+    const playerIds = [apiGame.player1, apiGame.player2].filter(Boolean) as string[];
+
+    if (playerIds.length === 0) {
+      return null;
+    }
+
+    playerIds.forEach((id, index) => {
+      const isCurrent = id === currentUserId;
+      players.push({
+        id,
+        username: isCurrent
+          ? localStorage.getItem('username') || 'You'
+          : `Player ${index + 1}`,
+        avatar: isCurrent
+          ? localStorage.getItem('avatar') || 'https://api.dicebear.com/7.x/avataaars/svg?seed=you'
+          : undefined,
+        ready: false,
+      });
+    });
+
+    return {
+      id: apiGame.id,
+      players,
+      status: this.normalizeStatus(apiGame.status),
+      score: {
+        player1: apiGame.score?.player1 ?? 0,
+        player2: apiGame.score?.player2 ?? 0,
+      },
+      createdAt: apiGame.createdAt ? new Date(apiGame.createdAt) : new Date(),
+      finishedAt: apiGame.finishedAt ? new Date(apiGame.finishedAt) : undefined,
+    };
+  }
+
+  private normalizeStatus(status?: string): GameStateOutput['status'] {
+    const normalized = (status || 'WAITING').toUpperCase();
+    switch (normalized) {
+      case 'IN_PROGRESS':
+      case 'PLAYING':
+        return 'IN_PROGRESS';
+      case 'FINISHED':
+        return 'FINISHED';
+      case 'CANCELLED':
+        return 'CANCELLED';
+      default:
+        return 'WAITING';
+    }
+  }
+
+  private buildMockGame(gameId: string): GameStateOutput {
     const now = new Date();
     return {
       id: gameId,
@@ -359,19 +430,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   private async leaveGame(gameId: string): Promise<void> {
-    const userId = localStorage.getItem('userId');
-    if (!userId) throw new Error('User ID not found');
-
-    const response = await fetch(`http://localhost:3003/api/games/${gameId}/leave`, {
-      method: 'POST',
-      headers: {
-        'x-user-id': userId,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to leave game: ${response.statusText}`);
-    }
+    await httpClient.post(`/games/${gameId}/leave`, {});
   }
 
   private navigateTo(path: string): void {
