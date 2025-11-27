@@ -17,10 +17,10 @@ interface GameLobbyState {
 
 /**
  * GameLobby Component
- * 
+ *
  * Displays the pre-game lobby where players wait for an opponent,
  * see game settings, and prepare to start a match.
- * 
+ *
  * Features:
  * - Real-time opponent status tracking
  * - Ready/Leave actions
@@ -56,14 +56,14 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       const game = await this.fetchGame(this.props.gameId);
       this.state.game = game;
       this.state.isLoading = false;
-      
+
       // Update global app state
       appState.game.set({
         current: game,
         isLoading: false,
         error: null,
       });
-      
+
       this.update({});
 
       // Subscribe to global game state updates for real-time sync
@@ -87,13 +87,13 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       console.error('[GameLobby] Failed to mount:', error);
       this.state.error = 'Failed to load lobby';
       this.state.isLoading = false;
-      
+
       appState.game.set({
         current: null,
         isLoading: false,
         error: 'Failed to load lobby',
       });
-      
+
       this.update({});
     }
   }
@@ -137,7 +137,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
               ${currentPlayer ? this.renderPlayerCard(currentPlayer, 'You', isReady) : ''}
 
               <!-- Opponent Slot -->
-              ${hasOpponent 
+              ${hasOpponent
                 ? this.renderPlayerCard(opponent, 'Opponent', opponent?.ready === true)
                 : this.renderEmptySlot()
               }
@@ -194,8 +194,8 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     return `
       <div class="p-4 rounded-lg transition-all duration-300" style="background: var(--color-input-bg); border: 1px solid var(--color-panel-border);">
         <div class="flex items-center gap-3">
-          <img 
-            src="${player.avatar || '/default-avatar.png'}" 
+          <img
+            src="${player.avatar || '/default-avatar.png'}"
             alt="${player.username}"
             class="w-12 h-12 rounded-full"
             style="border: 2px solid var(--color-primary);"
@@ -322,7 +322,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
   private async fetchGame(gameId: string): Promise<GameStateOutput> {
     try {
-      const response = await fetch(`http://localhost:3000/api/games/${gameId}`);
+      const response = await fetch(`http://localhost:3003/api/games/${gameId}`);
       if (response.ok) {
         return response.json();
       }
@@ -362,7 +362,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     const userId = localStorage.getItem('userId');
     if (!userId) throw new Error('User ID not found');
 
-    const response = await fetch(`http://localhost:3000/api/games/${gameId}/leave`, {
+    const response = await fetch(`http://localhost:3003/api/games/${gameId}/leave`, {
       method: 'POST',
       headers: {
         'x-user-id': userId,
