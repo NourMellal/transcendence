@@ -72,13 +72,18 @@ class SocketIOGameSocket implements GameSocket {
   }
 }
 
-export function createGameSocket(url: string, token: string | null): GameSocket {
+export function createGameSocket(
+  url: string,
+  token: string | null,
+  path?: string
+): GameSocket {
   const socket = io(url, {
     transports: ['websocket'],
     autoConnect: false,
     forceNew: true,
     reconnection: false,
     query: token ? { token } : undefined,
+    ...(path ? { path } : {}),
   });
 
   return new SocketIOGameSocket(socket, token ?? null);

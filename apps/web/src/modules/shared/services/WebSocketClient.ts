@@ -25,7 +25,10 @@ export class WebSocketClient {
   private reconnectTimeout: number | null = null;
   private connectDeferred: DeferredConnect | null = null;
 
-  constructor(private url: string) {
+  constructor(
+    private url: string,
+    private readonly wsPath?: string
+  ) {
     appState.auth.subscribe((auth) => {
       this.token = auth.token ?? null;
       if (this.socket) {
@@ -53,7 +56,7 @@ export class WebSocketClient {
     }
 
     if (!this.socket) {
-      this.socket = createGameSocket(this.url, this.token);
+      this.socket = createGameSocket(this.url, this.token, this.wsPath);
       this.registerLifecycleEvents();
     }
 
@@ -248,6 +251,10 @@ export class WebSocketClient {
   }
 }
 
-export const gameWS = new WebSocketClient(
-  import.meta.env.VITE_WS_GAME_URL || 'http://localhost:3001'
-);
+const defaultWsHost =
+  import.meta.env.VITE_WS_GAME_URL ||
+  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+const defaultWsPath =
+  import.meta.env.VITE_WS_GAME_PATH || '/api/games/ws/socket.io';
+
+export const gameWS = new WebSocketClient(defaultWsHost, defaultWsPath);
