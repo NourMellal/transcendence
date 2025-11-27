@@ -290,8 +290,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
   private async handleReady(): Promise<void> {
     try {
-      // TODO: Implement ready endpoint when backend is ready
-      // For now, just update local state
+      await httpClient.post(`/games/${this.props.gameId}/ready`, {});
       this.state.isReady = true;
       this.update({});
     } catch (error) {

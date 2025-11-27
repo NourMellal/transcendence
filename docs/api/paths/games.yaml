@@ -111,6 +111,28 @@
       '404':
         description: Game not found
 
+/games/{gameId}/ready:
+  post:
+    tags: [Games]
+    operationId: Games_readyUp
+    summary: Mark current player as ready
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Player marked ready (game may start when all ready)
+      '400':
+        description: Cannot ready up
+      '401':
+        description: Not authenticated
+      '404':
+        description: Game not found
+
 /games/{gameId}/leave:
   post:
     tags: [Games]

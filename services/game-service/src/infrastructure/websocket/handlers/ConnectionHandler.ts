@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import { GameLoop } from '../GameLoop';
 import { GameRoomManager } from '../GameRoomManager';
-import { JoinGameUseCase, StartGameUseCase } from '../../../application/use-cases';
+import { JoinGameUseCase, ReadyUpUseCase } from '../../../application/use-cases';
 
 interface JoinGamePayload {
     readonly gameId?: string;
@@ -16,7 +16,7 @@ export class ConnectionHandler {
         private readonly roomManager: GameRoomManager,
         private readonly gameLoop: GameLoop,
         private readonly joinGameUseCase: JoinGameUseCase,
-        private readonly startGameUseCase: StartGameUseCase
+        private readonly readyUpUseCase: ReadyUpUseCase
     ) {}
 
     register(socket: Socket): void {
@@ -47,9 +47,11 @@ export class ConnectionHandler {
             }
 
             try {
-                await this.startGameUseCase.execute(gameId);
-                this.gameLoop.start(gameId);
-                socket.nsp.to(gameId).emit('game_start', { gameId });
+                const { started } = await this.readyUpUseCase.execute(gameId, playerId);
+                if (started) {
+                    this.gameLoop.start(gameId);
+                    socket.nsp.to(gameId).emit('game_start', { gameId });
+                }
             } catch (error) {
                 socket.emit('error', { message: (error as Error).message });
             }

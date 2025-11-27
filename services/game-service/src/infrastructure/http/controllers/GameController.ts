@@ -2,13 +2,15 @@ import { FastifyInstance } from 'fastify';
 import {
     CreateGameUseCase,
     GetGameUseCase,
-  JoinGameUseCase,
-  LeaveGameUseCase,
-  ListGamesUseCase
+    JoinGameUseCase,
+    LeaveGameUseCase,
+    ListGamesUseCase,
+    ReadyUpUseCase,
 } from '../../../application/use-cases';
 import {GameStatus} from '../../../domain/value-objects';
 import {GameStateOutput} from '../../../application/dto';
 import { createGameValidator } from '../validators/createGameValidator';
+import { GameLoop } from '../../websocket';
 
 interface GameControllerDeps {
     readonly createGameUseCase: CreateGameUseCase;
@@ -16,6 +18,8 @@ interface GameControllerDeps {
     readonly getGameUseCase: GetGameUseCase;
   readonly joinGameUseCase: JoinGameUseCase;
   readonly leaveGameUseCase: LeaveGameUseCase;
+  readonly readyUpUseCase: ReadyUpUseCase;
+  readonly gameLoop: GameLoop;
 }
 
 export class GameController {
@@ -67,6 +71,16 @@ export class GameController {
         const game = await this.deps.getGameUseCase.execute(gameId);
         return reply.send(toApiGame(game));
         });
+
+      app.post('/games/:gameId/ready', async (request, reply) => {
+        const {gameId} = request.params as { gameId: string };
+        const userId = getUserId(request.headers['x-user-id']);
+        const { started } = await this.deps.readyUpUseCase.execute(gameId, userId);
+        if (started) {
+          this.deps.gameLoop.start(gameId);
+        }
+        return reply.code(204).send();
+      });
 
       app.post('/games/:gameId/leave', async (request, reply) => {
         const {gameId} = request.params as { gameId: string };

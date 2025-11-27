@@ -29,7 +29,7 @@ describe('Game websocket', () => {
             roomManager,
             gameLoop as any,
             context.useCases.joinGame,
-            context.useCases.startGame,
+            context.useCases.readyUp,
         );
         const paddleMoveHandler = new PaddleMoveHandler(context.useCases.handlePaddleMove);
         const disconnectHandler = new DisconnectHandler(
@@ -74,6 +74,7 @@ describe('Game websocket', () => {
         expect(joinedEvents.some((event) => event?.playerId === PLAYER_2)).toBe(true);
 
         await socket1.dispatch('ready', { gameId: game.id });
+        await socket2.dispatch('ready', { gameId: game.id });
 
         const afterStart = await context.useCases.getGame.execute(game.id);
         expect(afterStart.status).toBe(GameStatus.IN_PROGRESS);

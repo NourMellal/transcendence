@@ -5,4 +5,5 @@ export * from './GetGameUseCase';
 export * from './ListGamesUseCase';
 export * from './JoinGameUseCase';
 export * from './LeaveGameUseCase';
+export * from './ReadyUpUseCase';
 export type {ListGamesResult} from './ListGamesUseCase';

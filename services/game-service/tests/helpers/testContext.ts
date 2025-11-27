@@ -13,6 +13,7 @@ import {
     StartGameUseCase,
     UpdateGameStateUseCase,
     DisconnectPlayerUseCase,
+    ReadyUpUseCase,
 } from '../../src/application/use-cases';
 import { IGameEventPublisher } from '../../src/application/ports/messaging/IGameEventPublisher';
 import { IUserServiceClient } from '../../src/application/ports/external/IUserServiceClient';
@@ -73,6 +74,7 @@ export async function createTestContext() {
     const handlePaddleMove = new HandlePaddleMoveUseCase(repository, physics, eventPublisher);
     const updateGameState = new UpdateGameStateUseCase(repository, physics, eventPublisher);
     const disconnectPlayer = new DisconnectPlayerUseCase(repository);
+    const readyUp = new ReadyUpUseCase(repository, eventPublisher);
 
     const gameController = new GameController({
         createGameUseCase: createGame,
@@ -80,6 +82,8 @@ export async function createTestContext() {
         getGameUseCase: getGame,
         joinGameUseCase: joinGame,
         leaveGameUseCase: leaveGame,
+        readyUpUseCase: readyUp,
+        gameLoop: new GameLoop(updateGameState, 10),
     });
     const healthController = new HealthController();
 
@@ -110,6 +114,7 @@ export async function createTestContext() {
             handlePaddleMove,
             updateGameState,
             disconnectPlayer,
+            readyUp,
         },
         controllers: { gameController, healthController },
         httpServer,
