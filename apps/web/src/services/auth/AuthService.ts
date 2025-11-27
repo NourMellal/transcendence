@@ -3,7 +3,7 @@
  * Handles all authentication-related API calls
  */
 
-import { ApiError, HttpClient } from '../../modules/shared/services/HttpClient';
+import { HttpClient } from '../../modules/shared/services/HttpClient';
 import { httpClient as defaultHttpClient } from '../api/client';
 import type { User } from '../../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../../models/Auth';
@@ -48,9 +48,8 @@ export class AuthService {
       '/auth/login',
       credentials
     );
-    const data = response.data!;
-    this.persistSession(data.user.id);
-    return data;
+    this.persistSession(response.user.id);
+    return response;
   }
 
   /**
@@ -60,9 +59,9 @@ export class AuthService {
   async getStatus(): Promise<User | null> {
     try {
       const response = await this.httpClient.get<User>('/auth/status');
-      return response.data ?? null;
+      return response ?? null;
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
+      if (error instanceof Error && error.message.includes('401')) {
         return null;
       }
       throw error;
@@ -74,8 +73,11 @@ export class AuthService {
    * POST /auth/logout
    */
   async logout(): Promise<void> {
-    await this.httpClient.post<void>('/auth/logout');
-    this.httpClient.clearAuthToken();
+    try {
+      await this.httpClient.post<void>('/auth/logout', {});
+    } catch (error) {
+      console.warn('Logout failed:', error);
+    }
   }
 
   /**
@@ -85,11 +87,9 @@ export class AuthService {
     const response = await this.httpClient.get<OAuthAuthorizationResponse>(
       '/auth/42/login'
     );
-    return (
-      response.data ?? {
-        authorizationUrl: `${window.location.origin}/auth/42/login`,
-      }
-    );
+    return response ?? {
+      authorizationUrl: `${window.location.origin}/auth/42/login`,
+    };
   }
 
   async handle42Callback(code: string, state: string): Promise<LoginResponse> {
@@ -98,9 +98,8 @@ export class AuthService {
         state
       )}`
     );
-    const data = response.data!;
-    this.persistSession(data.user.id);
-    return data;
+    this.persistSession(response.user.id);
+    return response;
   }
 
   async initiate42Login(): Promise<void> {
@@ -109,9 +108,9 @@ export class AuthService {
   }
 
   private persistSession(seed?: string): void {
-    const token = this.httpClient.getAuthToken();
-    if (!token) {
-      this.httpClient.setAuthToken(seed ?? crypto.randomUUID());
+    // Store user ID in localStorage for future reference
+    if (seed) {
+      localStorage.setItem('userId', seed);
     }
   }
 }

@@ -6,8 +6,10 @@ export const mockUser: User = {
   username: 'great_ponger',
   email: 'user@example.com',
   avatar: 'https://example.com/avatars/user1.png',
-  is2FAEnabled: false,
+  isTwoFAEnabled: false,
   status: 'ONLINE',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 // State management for mock
