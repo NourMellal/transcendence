@@ -1,7 +1,7 @@
 // apps/web/src/modules/shared/types/http.types.ts
 
 export interface RequestConfig extends RequestInit {
-  headers: Record<string, string>;
+  headers: Headers | Record<string, string>;
 }
 
 export type RequestInterceptor = (
@@ -11,6 +11,13 @@ export type RequestInterceptor = (
 export type ResponseInterceptor = (
   response: Response
 ) => Response | Promise<Response>;
+
+export interface ApiResponse<T = unknown> {
+  data?: T;
+  status: number;
+  statusText?: string;
+  headers: Headers;
+}
 
 export interface AuthTokens {
   accessToken: string;

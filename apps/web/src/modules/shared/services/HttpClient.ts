@@ -6,10 +6,23 @@ import type {
   ResponseInterceptor,
   RequestConfig,
   QueuedRequest,
-  AuthErrorType
+  ApiResponse
 } from '../types/http.types';
 import { authEvents } from '../utils/AuthEventEmitter';
-import { isTokenExpired, decodeJWT } from '../utils/jwtUtils';
+import { isTokenExpired } from '../utils/jwtUtils';
+
+export class ApiError extends Error {
+  status: number;
+  response?: unknown;
+
+  constructor(message: string, status: number, response?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.response = response;
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
+}
 
 export class HttpClient {
   private baseURL: string;
@@ -88,9 +101,25 @@ export class HttpClient {
   }
 
   /**
+   * Token helpers used by auth flows
+   */
+  getAuthToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  setAuthToken(token: string): void {
+    localStorage.setItem('token', token);
+  }
+
+  clearAuthToken(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+  }
+
+  /**
    * GET request
    */
-  async get<T>(endpoint: string, config: Partial<RequestConfig> = {}): Promise<T> {
+  async get<T>(endpoint: string, config: Partial<RequestConfig> = {}): Promise<ApiResponse<T>> {
     const finalConfig = await this.applyRequestInterceptors({
       method: 'GET',
       headers: {},
@@ -112,7 +141,7 @@ export class HttpClient {
     endpoint: string,
     body: unknown,
     config: Partial<RequestConfig> = {}
-  ): Promise<T> {
+  ): Promise<ApiResponse<T>> {
     const finalConfig = await this.applyRequestInterceptors({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -134,7 +163,7 @@ export class HttpClient {
     endpoint: string,
     body: unknown,
     config: Partial<RequestConfig> = {}
-  ): Promise<T> {
+  ): Promise<ApiResponse<T>> {
     const finalConfig = await this.applyRequestInterceptors({
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -150,9 +179,32 @@ export class HttpClient {
   }
 
   /**
+   * PATCH request
+   */
+  async patch<T>(
+    endpoint: string,
+    body: unknown,
+    config: Partial<RequestConfig> = {}
+  ): Promise<ApiResponse<T>> {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    const finalConfig = await this.applyRequestInterceptors({
+      method: 'PATCH',
+      headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+      body: isFormData ? body as BodyInit : JSON.stringify(body),
+      ...config,
+    });
+
+  let response = await fetch(`${this.baseURL}${endpoint}`, finalConfig);
+  this.responseToRequestMap.set(response, { config: finalConfig, url: `${this.baseURL}${endpoint}` });
+    response = await this.applyResponseInterceptors(response);
+
+    return this.handleResponse<T>(response);
+  }
+
+  /**
    * DELETE request
    */
-  async delete<T>(endpoint: string, config: Partial<RequestConfig> = {}): Promise<T> {
+  async delete<T>(endpoint: string, config: Partial<RequestConfig> = {}): Promise<ApiResponse<T>> {
     const finalConfig = await this.applyRequestInterceptors({
       method: 'DELETE',
       headers: {},
@@ -188,6 +240,13 @@ export class HttpClient {
     }
     
     return finalResponse;
+  }
+
+  private normalizeHeaders(headersInit?: Headers | Record<string, string>): Headers {
+    if (headersInit instanceof Headers) {
+      return new Headers(headersInit);
+    }
+    return new Headers(headersInit || {});
   }
 
   private async handleUnauthorized(response: Response): Promise<Response> {
@@ -272,13 +331,13 @@ export class HttpClient {
         totpCode
       };
 
+      const retryHeaders = this.normalizeHeaders(originalConfig?.headers);
+      retryHeaders.set('Content-Type', 'application/json');
+
       const retryResponse = await fetch(originalUrl, {
         ...originalConfig,
         body: JSON.stringify(bodyWithTotp),
-        headers: {
-          ...(originalConfig?.headers || {}),
-          'Content-Type': 'application/json'
-        }
+        headers: retryHeaders
       });
 
       if (!retryResponse.ok) {
@@ -318,12 +377,7 @@ export class HttpClient {
       for (const queuedRequest of queue) {
         try {
           // Build retry headers
-          let retryHeaders = new Headers();
-          if (queuedRequest.config.headers instanceof Headers) {
-            retryHeaders = new Headers(queuedRequest.config.headers);
-          } else if (queuedRequest.config.headers && typeof queuedRequest.config.headers === 'object') {
-            retryHeaders = new Headers(queuedRequest.config.headers as Record<string, string>);
-          }
+          const retryHeaders = this.normalizeHeaders(queuedRequest.config.headers);
           retryHeaders.set('Authorization', `Bearer ${newToken}`);
 
           // Mark as retried
@@ -450,19 +504,34 @@ export class HttpClient {
     navigate('/login');
   }
 
-  private async handleResponse<T>(response: Response): Promise<T> {
+  private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
+    const { status, statusText, headers } = response;
+    const isNoContent = status === 204 || headers.get('content-length') === '0';
+    const contentType = headers.get('content-type') || '';
+    let parsedBody: any;
+
+    if (!isNoContent) {
+      if (contentType.includes('application/json')) {
+        parsedBody = await response.json().catch(() => undefined);
+      } else {
+        parsedBody = await response.text().catch(() => undefined);
+      }
+    }
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      throw new Error(error.message || 'Request failed');
+      const message =
+        (parsedBody as any)?.message ||
+        (parsedBody as any)?.error ||
+        `HTTP ${status}: ${statusText}`;
+      throw new ApiError(message || 'Request failed', status, parsedBody);
     }
 
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+    return {
+      data: parsedBody as T,
+      status,
+      statusText,
+      headers,
+    };
   }
 
   // OAuth Methods
@@ -525,3 +594,5 @@ export class HttpClient {
 export const httpClient = new HttpClient(
    'http://localhost:3000/api'
 );
+
+export type { ApiResponse, RequestConfig } from '../types/http.types';
