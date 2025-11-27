@@ -1,3 +1,24 @@
+// ===== Game Lobby Types =====
+export interface PlayerInfo {
+  id: string;
+  username: string;
+  avatar?: string;
+  ready?: boolean;
+}
+
+export interface GameStateOutput {
+  id: string;
+  players: PlayerInfo[];
+  status: 'WAITING' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+  score: {
+    player1: number;
+    player2: number;
+  };
+  createdAt: Date;
+  finishedAt?: Date;
+}
+
+// ===== Gameplay Canvas Types =====
 export interface Ball {
   x: number;
   y: number;

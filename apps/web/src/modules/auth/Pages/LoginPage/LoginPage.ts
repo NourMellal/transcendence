@@ -1,5 +1,6 @@
 import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
+import { authService } from '../../../../services/auth/AuthService';
 
 type Props = {};
 type State = {
@@ -218,7 +219,7 @@ export default class LoginPage extends Component<Props, State> {
     }
   }
 
-  private handleLogin(): void {
+  private async handleLogin(): Promise<void> {
     const emailInput = this.element?.querySelector('#email') as HTMLInputElement;
     const passwordInput = this.element?.querySelector('#password') as HTMLInputElement;
     const twoFAInput = this.element?.querySelector('#twofa') as HTMLInputElement;
@@ -235,7 +236,6 @@ export default class LoginPage extends Component<Props, State> {
       return;
     }
 
-    // TODO: Implement actual login logic
     console.log('Login attempt:', { email, password: '***', twoFA });
     
     this.setState({ 
@@ -243,12 +243,14 @@ export default class LoginPage extends Component<Props, State> {
       error: null 
     });
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await authService.login({ email, password, twoFACode: twoFA || undefined });
+      navigate('/');
+    } catch (error) {
       this.setState({ 
         isLoading: false,
-        error: 'Login not yet implemented - TODO: Connect to backend'
+        error: error instanceof Error ? error.message : 'Login failed'
       });
-    }, 1500);
+    }
   }
 }

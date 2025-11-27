@@ -57,12 +57,18 @@ importers:
       lint-staged:
         specifier: ^16.2.6
         version: 16.2.6
+      pnpm:
+        specifier: ^10.23.0
+        version: 10.24.0
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
       sass:
         specifier: ^1.94.0
         version: 1.94.1
+      sass-embedded:
+        specifier: ^1.93.3
+        version: 1.93.3
       tsx:
         specifier: ^4.20.6
         version: 4.20.6
@@ -3868,6 +3874,11 @@ packages:
   pngjs@5.0.0:
     resolution: {integrity: sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==}
     engines: {node: '>=10.13.0'}
+
+  pnpm@10.24.0:
+    resolution: {integrity: sha512-Af+K5xtEGZA7ZcYPstydNM+LtuBtA73hEu8496NNaQTEJLpmvqXNzxKJAjC/OflYBHMUDtnJRv7zKLblI4o0Wg==}
+    engines: {node: '>=18.12'}
+    hasBin: true
 
   polished@4.3.1:
     resolution: {integrity: sha512-OBatVyC/N7SCW/FaDHrSd+vn0o5cS855TOmYi4OkdWUMSJCET/xip//ch8xGUvtr3i44X9LVyWwQlRMTN3pwSA==}
@@ -8905,6 +8916,8 @@ snapshots:
   pluralize@8.0.0: {}
 
   pngjs@5.0.0: {}
+
+  pnpm@10.24.0: {}
 
   polished@4.3.1:
     dependencies:

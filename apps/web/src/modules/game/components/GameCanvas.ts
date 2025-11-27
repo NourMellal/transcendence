@@ -81,22 +81,54 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   render(): string {
     return `
-      <div class="game-canvas-wrapper">
-        <div class="game-panel glass-panel">
-          <div class="game-area aspect-[16/9] rounded-2xl overflow-hidden" style="background: var(--color-bg-dark);">
+      <div class="game-canvas-wrapper space-y-4 sm:space-y-6">
+        <!-- Canvas Container -->
+        <div class="glass-panel-mobile sm:glass-panel relative rounded-xl sm:rounded-2xl overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1);">
+          <div class="game-area aspect-video rounded-lg sm:rounded-xl overflow-hidden" style="background: var(--color-bg-dark);">
             <canvas 
               id="game-canvas" 
               class="w-full h-full"
+              style="display: block; image-rendering: crisp-edges;"
             ></canvas>
           </div>
+        </div>
 
-          <div class="mt-2 flex gap-3 items-center justify-center">
-            <button id="start-stop-btn" class="btn-primary btn-touch">
-              Start Game
-            </button>
-            <button id="restart-btn" class="btn-secondary btn-touch">
-              Restart
-            </button>
+        <!-- Control Buttons -->
+        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center px-4 sm:px-0">
+          <button 
+            id="start-stop-btn" 
+            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
+            style="background: white; color: var(--color-bg-dark);"
+            onmouseover="this.style.background='var(--color-brand-secondary)'; this.style.color='white';"
+            onmouseout="this.style.background='white'; this.style.color='var(--color-bg-dark)';"
+          >
+            ▶️ Start Game
+          </button>
+            
+          <button 
+            id="restart-btn" 
+            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
+            style="border: 2px solid rgba(255, 255, 255, 0.2); color: white; background: rgba(255, 255, 255, 0.05);"
+          >
+            🔄 Restart
+          </button>
+        </div>
+
+        <!-- Score Display -->
+        <div class="glass-panel-mobile sm:glass-panel px-4 sm:px-8 py-4 sm:py-6 rounded-xl sm:rounded-2xl" style="border: 1px solid rgba(255, 255, 255, 0.1);">
+          <div class="grid grid-cols-2 gap-4 sm:gap-8 text-center">
+            <div class="space-y-2">
+              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 1</div>
+              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-primary);">
+                <span id="player1-score">0</span>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 2</div>
+              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-secondary);">
+                <span id="player2-score">0</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

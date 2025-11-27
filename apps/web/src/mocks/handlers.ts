@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { User, UpdateUserRequest } from '../models/User';
+import type { User } from '../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../models/Auth';
 import {
   mockUser,
@@ -10,17 +10,56 @@ import {
 
 const API_BASE = '/api';
 
+// Validation helpers
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validatePassword(password: string): boolean {
+  return !!(password && password.length >= 6);
+}
+
+function validateUsername(username: string): boolean {
+  return !!(username && username.length >= 3);
+}
+
 export const handlers = [
   http.post(`${API_BASE}/auth/signup`, async ({ request }) => {
     try {
       const body = (await request.json()) as SignUpRequest;
+
+      // Validation
+      if (!body.username || !validateUsername(body.username)) {
+        return HttpResponse.json(
+          { error: 'Username must be at least 3 characters long' },
+          { status: 400 }
+        );
+      }
+
+      if (!body.email || !validateEmail(body.email)) {
+        return HttpResponse.json(
+          { error: 'Invalid email format' },
+          { status: 400 }
+        );
+      }
+
+      if (!body.password || !validatePassword(body.password)) {
+        return HttpResponse.json(
+          { error: 'Password must be at least 6 characters long' },
+          { status: 400 }
+        );
+      }
+
       const newUser: User = {
         id: crypto.randomUUID(),
         username: body.username,
         email: body.email,
-        avatar: null,
-        is2FAEnabled: false,
+        avatar: undefined,
+        isTwoFAEnabled: false,
         status: 'ONLINE',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       setCurrentUser(newUser);
       return HttpResponse.json(newUser, { status: 201 });
@@ -35,7 +74,27 @@ export const handlers = [
   http.post(`${API_BASE}/auth/login`, async ({ request }) => {
     try {
       const body = (await request.json()) as LoginRequest;
-      const user = mockUser;
+
+      // Validation
+      if (!body.email || !validateEmail(body.email)) {
+        return HttpResponse.json(
+          { error: 'Invalid email format' },
+          { status: 400 }
+        );
+      }
+
+      if (!body.password) {
+        return HttpResponse.json(
+          { error: 'Password is required' },
+          { status: 400 }
+        );
+      }
+
+      // Mock successful login
+      const user = {
+        ...mockUser,
+        email: body.email, // Use the email from request
+      };
       setCurrentUser(user);
 
       const response: LoginResponse = {
@@ -88,8 +147,14 @@ export const handlers = [
 
       if (contentType?.includes('application/json')) {
         // Handle JSON updates
-        const body = (await request.json()) as Partial<UpdateUserRequest>;
+        const body = (await request.json()) as Partial<Pick<User, 'username'>>;
         if (body.username) {
+          if (!validateUsername(body.username)) {
+            return HttpResponse.json(
+              { error: 'Username must be at least 3 characters long' },
+              { status: 400 }
+            );
+          }
           updates.username = body.username;
         }
       } else if (contentType?.includes('multipart/form-data')) {
@@ -99,6 +164,12 @@ export const handlers = [
         const avatar = formData.get('avatar');
 
         if (username && typeof username === 'string') {
+          if (!validateUsername(username)) {
+            return HttpResponse.json(
+              { error: 'Username must be at least 3 characters long' },
+              { status: 400 }
+            );
+          }
           updates.username = username;
         }
         if (avatar) {

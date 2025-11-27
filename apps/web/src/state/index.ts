@@ -1,4 +1,5 @@
 import Signal from '../core/signal';
+import type { GameStateOutput } from '../modules/game/types/game.types';
 
 // Auth state interface
 export interface AuthState {
@@ -21,6 +22,13 @@ export interface UIState {
   loginError?: string;
 }
 
+// Game state interface
+export interface GameState {
+  current: GameStateOutput | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
 export const appState = {
   auth: new Signal<AuthState>({
     user: null,
@@ -38,6 +46,11 @@ export const appState = {
     loginError: undefined,
   }),
   notifications: new Signal<string[]>([]),
+  game: new Signal<GameState>({
+    current: null,
+    isLoading: false,
+    error: null,
+  }),
 };
 
 export class AuthActions {

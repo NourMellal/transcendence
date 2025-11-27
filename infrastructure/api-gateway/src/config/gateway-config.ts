@@ -2,12 +2,12 @@ import { getEnvVar, getEnvVarAsNumber, createAPIGatewayVault } from '@transcende
 
 const DEFAULT_SERVICE_URLS = {
     user: 'http://localhost:3001',
-    game: 'http://localhost:3002',
-    chat: 'http://localhost:3003',
-    tournament: 'http://localhost:3004'
+    game: 'http://localhost:3003',
+    chat: 'http://localhost:3004',
+    tournament: 'http://localhost:3005'
 } as const;
 
-const DEFAULT_CORS = ['http://localhost:3000'];
+const DEFAULT_CORS = ['http://localhost:3000'];``
 const DEFAULT_RATE_LIMIT_MAX = 100;
 const DEFAULT_RATE_LIMIT_WINDOW = '1 minute';
 
