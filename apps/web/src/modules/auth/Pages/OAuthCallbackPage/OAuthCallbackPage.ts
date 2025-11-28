@@ -2,6 +2,7 @@ import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
 import { authService } from '../../../../services/auth/AuthService';
 import { appState } from '../../../../state';
+import { userService, httpClient } from '../../../../services/api';
 
 type State = {
   status: 'processing' | 'success' | 'error';
@@ -17,11 +18,18 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
 
   async onMount(): Promise<void> {
     const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
     const code = params.get('code');
     const stateParam = params.get('state') ?? '';
 
+    if (token) {
+      await this.handleTokenLogin(token);
+      return;
+    }
+
     if (!code) {
-      this.setState({ status: 'error', message: 'Missing OAuth code in callback.' });
+      const errorMessage = params.get('error') || 'Missing OAuth parameters.';
+      this.setState({ status: 'error', message: errorMessage });
       return;
     }
 
@@ -71,6 +79,26 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
       };
       button.addEventListener('click', handler);
       this.subscriptions.push(() => button.removeEventListener('click', handler));
+    }
+  }
+
+  private async handleTokenLogin(token: string): Promise<void> {
+    try {
+      httpClient.setAuthToken(token);
+      const user = await userService.getMe();
+      appState.auth.set({
+        ...appState.auth.get(),
+        user,
+        token,
+        isAuthenticated: Boolean(user),
+        isLoading: false,
+      });
+      this.setState({ status: 'success' });
+      navigate('/profile');
+    } catch (error) {
+      httpClient.clearAuthToken();
+      const message = error instanceof Error ? error.message : 'Failed to finalize OAuth login.';
+      this.setState({ status: 'error', message });
     }
   }
 }
