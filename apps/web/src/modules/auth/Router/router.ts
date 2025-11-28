@@ -1,5 +1,6 @@
 import LoginPage from '../Pages/LoginPage/LoginPage';
 import SignupPage from '../Pages/SignupPage/SignupPage';
+import OAuthCallbackPage from '../Pages/OAuthCallbackPage/OAuthCallbackPage';
 
 export const routes = [
   {
@@ -10,6 +11,11 @@ export const routes = [
   {
     path: '/auth/signup',
     component: SignupPage,
+    props: {},
+  },
+  {
+    path: '/oauth/callback',
+    component: OAuthCallbackPage,
     props: {},
   },
 ];

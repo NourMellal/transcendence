@@ -1,4 +1,5 @@
 import { authService } from '@/services/auth/AuthService';
+import { appState } from '@/state';
 import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
 
@@ -210,8 +211,10 @@ export default class SignupPage extends Component<Props, State> {
     const oauth42Btn = this.element.querySelector('[data-action="oauth42"]') as HTMLButtonElement | null;
     if (oauth42Btn) {
       const handler = () => {
-        // TODO: Implement OAuth flow
-        console.log('OAuth 42 signup - TODO: implement');
+        authService.start42Login().catch((error) => {
+          console.error('OAuth 42 signup failed', error);
+          this.setState({ error: error instanceof Error ? error.message : '42 signup failed' });
+        });
       };
       oauth42Btn.addEventListener('click', handler);
       this.subscriptions.push(() => oauth42Btn.removeEventListener('click', handler));
@@ -296,28 +299,26 @@ export default class SignupPage extends Component<Props, State> {
   });
 
   try {
-    const user = await authService.signup({
+    const response = await authService.register({
       username,
       email,
       password,
     });
 
-    console.log('Signup successful:', {
-      id: user.id,
-      username: user.username,
-      email: user.email,
+    appState.auth.set({
+      ...appState.auth.get(),
+      user: response.user ?? null,
+      isAuthenticated: Boolean(response.user),
+      isLoading: false,
     });
 
-    // Update UI state after successful signup
     this.setState({
       isLoading: false,
       success: true,
       error: null,
     });
 
-    // Optionally: redirect, close modal, or trigger login automatically
-    // this.router.navigate('/dashboard');
-    // or AuthActions.loginSuccess(user, ...)
+    navigate('/profile');
 
   } catch (error: any) {
     console.error('Signup error:', error);
