@@ -34,11 +34,13 @@ type OAuthCallbackQuery = {
 export class AuthController {
     private readonly successRedirect =
         process.env.OAUTH_42_SUCCESS_REDIRECT ||
-        'http://localhost:5173/oauth/callback';
+        process.env.USER_SERVICE_SUCCESS_REDIRECT ||
+        'http://localhost:3003/profile';
 
     private readonly failureRedirect =
         process.env.OAUTH_42_FAILURE_REDIRECT ||
-        'http://localhost:5173/oauth/error';
+        process.env.USER_SERVICE_FAILURE_REDIRECT ||
+        'http://localhost:3003/auth/error';
 
     constructor(
         private readonly signupUseCase: ISignupUseCase,
