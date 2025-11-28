@@ -85,16 +85,9 @@ export class AuthService {
   /**
    * Initiate 42 OAuth login
    */
-  async start42Login(): Promise<OAuthAuthorizationResponse> {
-    const response = await this.http.get<OAuthAuthorizationResponse>(
-      '/auth/42/login'
-    );
-
-    return (
-      response.data ?? {
-        authorizationUrl: `${window.location.origin}/auth/42/login`,
-      }
-    );
+  start42Login(): void {
+    // Redirect browser to gateway route; no fetch to 42.fr to avoid CORS issues
+    window.location.href = '/api/auth/42/login';
   }
 
   async handle42Callback(code: string, state: string): Promise<LoginResponse> {
@@ -110,8 +103,7 @@ export class AuthService {
   }
 
   async initiate42Login(): Promise<void> {
-    const { authorizationUrl } = await this.start42Login();
-    window.location.href = authorizationUrl;
+    this.start42Login();
   }
 
   private persistSession(seed?: string): void {

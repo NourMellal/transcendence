@@ -174,10 +174,7 @@ export default class LoginPage extends Component<Props, State> {
     const oauth42Btn = this.element.querySelector('[data-action="oauth42"]') as HTMLButtonElement | null;
     if (oauth42Btn) {
       const handler = () => {
-        authService.start42Login().catch((error) => {
-          console.error('OAuth 42 login failed', error);
-          this.setState({ error: error instanceof Error ? error.message : 'OAuth login failed' });
-        });
+        authService.start42Login();
       };
       oauth42Btn.addEventListener('click', handler);
       this.subscriptions.push(() => oauth42Btn.removeEventListener('click', handler));

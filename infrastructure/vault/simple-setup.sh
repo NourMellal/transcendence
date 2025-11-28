@@ -119,7 +119,11 @@ vault_put "secret/data/api/oauth" "$(cat <<'EOF'
   "data": {
     "42_client_id": "u-s4t2ud-80df82f5f03f170e85551315bc0d1f198408525f7339f44afe588b037ed41a0d",
     "42_client_secret": "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",
-    "42_callback_url": "http://localhost:3000/auth/42/callback"
+    "42_redirect_uri": "http://localhost:3000/api/auth/42/callback",
+    "42_authorize_url": "https://api.intra.42.fr/oauth/authorize",
+    "42_token_url": "https://api.intra.42.fr/oauth/token",
+    "42_profile_url": "https://api.intra.42.fr/v2/me",
+    "42_scope": "public"
   }
 }
 EOF

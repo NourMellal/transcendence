@@ -48,10 +48,10 @@ export class OAuth42Service implements OAuthService {
             clientId: requireConfigValue('OAUTH_42_CLIENT_ID', '42_client_id'),
             clientSecret: requireConfigValue('OAUTH_42_CLIENT_SECRET', '42_client_secret'),
             redirectUri: requireConfigValue('OAUTH_42_REDIRECT_URI', '42_redirect_uri'),
-            authorizeUrl: resolveConfigValue('OAUTH_42_AUTHORIZE_URL', '42_authorize_url') || 'https://api.intra.42.fr/oauth/authorize',
-            tokenUrl: resolveConfigValue('OAUTH_42_TOKEN_URL', '42_token_url') || 'https://api.intra.42.fr/oauth/token',
-            profileUrl: resolveConfigValue('OAUTH_42_PROFILE_URL', '42_profile_url') || 'https://api.intra.42.fr/v2/me',
-            scope: resolveConfigValue('OAUTH_42_SCOPE', '42_scope') || 'public',
+            authorizeUrl: requireConfigValue('OAUTH_42_AUTHORIZE_URL', '42_authorize_url'),
+            tokenUrl: requireConfigValue('OAUTH_42_TOKEN_URL', '42_token_url'),
+            profileUrl: requireConfigValue('OAUTH_42_PROFILE_URL', '42_profile_url'),
+            scope: requireConfigValue('OAUTH_42_SCOPE', '42_scope'),
         };
         this.initialized = true;
 
