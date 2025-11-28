@@ -93,6 +93,7 @@ export interface OAuthCallbackRequestDTO {
 export interface OAuthCallbackResponseDTO {
     readonly sessionToken: string;
     readonly userId: string;
+    readonly refreshToken: string;
 }
 
 export interface RefreshTokenRequestDTO {

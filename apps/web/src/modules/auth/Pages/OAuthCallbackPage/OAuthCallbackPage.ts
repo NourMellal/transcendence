@@ -19,11 +19,12 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
   async onMount(): Promise<void> {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    const refreshToken = params.get('refreshToken');
     const code = params.get('code');
     const stateParam = params.get('state') ?? '';
 
     if (token) {
-      await this.handleTokenLogin(token);
+      await this.handleTokenLogin(token, refreshToken ?? undefined);
       return;
     }
 
@@ -82,9 +83,12 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
     }
   }
 
-  private async handleTokenLogin(token: string): Promise<void> {
+  private async handleTokenLogin(token: string, refreshToken?: string): Promise<void> {
     try {
       httpClient.setAuthToken(token);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
       const user = await userService.getMe();
       appState.auth.set({
         ...appState.auth.get(),

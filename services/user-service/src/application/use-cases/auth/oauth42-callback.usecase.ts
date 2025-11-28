@@ -4,7 +4,8 @@ import { createUser } from '../../../domain/entities/user.entity';
 import type {
     IOAuth42CallbackUseCase,
     OAuthService,
-    UserRepository
+    UserRepository,
+    SessionRepository
 } from '../../../domain/ports';
 import { OAuthStateManager } from '../../services/oauth-state.manager';
 import type { JWTConfig } from '@transcendence/shared-utils';
@@ -19,6 +20,7 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
     constructor(
         private readonly oauthService: OAuthService,
         private readonly userRepository: UserRepository,
+        private readonly sessionRepository: SessionRepository,
         private readonly jwtProvider: JWTProvider,
         private readonly stateManager: OAuthStateManager
     ) { }
@@ -80,9 +82,12 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
             }
         );
 
+        const refreshToken = await this.createRefreshSession(user.id.toString());
+
         return {
             sessionToken: accessToken,
             userId: user.id.toString(),
+            refreshToken,
         };
     }
 
@@ -108,5 +113,21 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
         const combined = `${firstName ?? ''} ${lastName ?? ''}`.trim();
         const value = combined || fallback;
         return new DisplayName(value);
+    }
+
+    private async createRefreshSession(userId: string): Promise<string> {
+        const refreshToken = crypto.randomBytes(48).toString('hex');
+        const ttlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7');
+        const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+
+        await this.sessionRepository.save({
+            id: crypto.randomUUID(),
+            userId,
+            token: refreshToken,
+            expiresAt,
+            createdAt: new Date(),
+        });
+
+        return refreshToken;
     }
 }
