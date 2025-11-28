@@ -47,6 +47,10 @@ import { PresenceController } from './infrastructure/http/controllers/presence.c
 import { FriendController } from './infrastructure/http/controllers/friend.controller';
 import { SQLiteUnitOfWork } from './infrastructure/database/sqlite-unit-of-work';
 import { PasswordHasherAdapter } from './infrastructure/adapters/security/password-hasher.adapter';
+import { createMessagingConfig } from './infrastructure/messaging/config/messaging.config';
+import { RabbitMQConnection } from './infrastructure/messaging/RabbitMQConnection';
+import { EventSerializer } from './infrastructure/messaging/serialization/EventSerializer';
+import { RabbitMQUserEventsPublisher } from './infrastructure/messaging/RabbitMQPublisher';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
@@ -60,6 +64,17 @@ async function main() {
     const oauthStateManager = new OAuthStateManager();
     const twoFAService = createTwoFAService();
     const passwordHasher = new PasswordHasherAdapter();
+    const messagingConfig = createMessagingConfig();
+    const messagingConnection = new RabbitMQConnection({
+        uri: messagingConfig.uri,
+        exchange: messagingConfig.exchange,
+    });
+    const eventSerializer = new EventSerializer();
+    const userEventsPublisher = new RabbitMQUserEventsPublisher(
+        messagingConnection,
+        eventSerializer,
+        messagingConfig.exchange
+    );
 
     // Initialize shared database connection
     const db = await open({
@@ -96,7 +111,8 @@ async function main() {
         sessionRepository,
         friendshipRepository,
         presenceRepository,
-        unitOfWork
+        unitOfWork,
+        userEventsPublisher
     );
     const generate2FAUseCase = new Generate2FAUseCaseImpl(userRepository, twoFAService);
     const enable2FAUseCase = new Enable2FAUseCaseImpl(userRepository, twoFAService);
@@ -182,6 +198,7 @@ async function main() {
     const shutdown = async () => {
         fastify.log.info('Shutting down...');
         await jwtService.shutdown();
+        await messagingConnection.close();
         await fastify.close();
         process.exit(0);
     };
