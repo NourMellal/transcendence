@@ -28,4 +28,16 @@ export class RabbitMQConnection {
 
         return this.channel;
     }
+
+    async close(): Promise<void> {
+        if (this.channel) {
+            await this.channel.close();
+            this.channel = undefined;
+        }
+
+        if (this.connection) {
+            await this.connection.close();
+            this.connection = undefined;
+        }
+    }
 }
