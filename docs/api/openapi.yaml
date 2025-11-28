@@ -150,8 +150,8 @@ paths:
     $ref: './paths/games.yaml#/~1games~1{gameId}~1leave'
   /games/my-games:
     $ref: './paths/games.yaml#/~1games~1my-games'
-  /games/ws:
-    $ref: './paths/games.yaml#/~1games~1ws'
+  /games/ws/socket.io:
+    $ref: './paths/games.yaml#/~1games~1ws~1socket.io'
   
   # Chat endpoints
   /chat/messages:
