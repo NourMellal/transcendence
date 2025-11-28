@@ -1,5 +1,7 @@
 # 🔐 Vault in Thi### 2. **What We Store in Vault**
 
+> Need the full list of secrets per service, with production-ready rotation tips? See [Vault Secrets Inventory & Rotation](../deployment/vault-secrets.md) for the authoritative table and runbooks.
+
 | Secret Type | Why? | Example |
 |-------------|------|---------|
 | **JWT Keys** | Sign authentication tokens | `secret_key: "abc123..."` |
