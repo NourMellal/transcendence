@@ -147,6 +147,38 @@ export async function registerGameRoutes(
     });
 
     /**
+     * POST /api/games/:gameId/ready
+     * Protected - Mark player as ready
+     */
+    fastify.post('/api/games/:gameId/ready', {
+        preHandler: [
+            requireAuth,
+            validateRequestParams(gameIdParamSchema)
+        ]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { gameId } = request.params as { gameId: string };
+
+        const response = await fetch(`${gameServiceUrl}/games/${gameId}/ready`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+        });
+
+        if (response.status === 204) {
+            return reply.code(response.status).send();
+        }
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
      * POST /api/games/:gameId/leave
      * Protected - Leave game
      */

@@ -13,6 +13,7 @@ import {
     StartGameUseCase,
     UpdateGameStateUseCase,
     DisconnectPlayerUseCase,
+    ReadyUpUseCase,
 } from '../application/use-cases';
 import { GameController, HealthController } from '../infrastructure/http/controllers';
 import { GamePhysics, CollisionDetector } from '../domain/services';
@@ -43,6 +44,7 @@ export interface GameServiceContainer {
         readonly handlePaddleMove: HandlePaddleMoveUseCase;
         readonly updateGameState: UpdateGameStateUseCase;
         readonly disconnectPlayer: DisconnectPlayerUseCase;
+        readonly readyUp: ReadyUpUseCase;
     };
 }
 
@@ -68,6 +70,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const listGames = new ListGamesUseCase(repository);
     const joinGame = new JoinGameUseCase(repository);
     const leaveGame = new LeaveGameUseCase(repository);
+    const readyUp = new ReadyUpUseCase(repository, eventPublisher);
     const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics, eventPublisher);
     const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics, eventPublisher);
     const disconnectPlayer = new DisconnectPlayerUseCase(repository);
@@ -75,7 +78,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const gameLoop = new GameLoop(updateGameState);
     const roomManager = new GameRoomManager();
     const authService = new GameAuthService();
-    const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, startGame);
+    const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, readyUp);
     const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove);
     const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager, gameLoop);
 
@@ -85,6 +88,8 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         getGameUseCase: getGame,
         joinGameUseCase: joinGame,
         leaveGameUseCase: leaveGame,
+        readyUpUseCase: readyUp,
+        gameLoop,
     });
     const healthController = new HealthController();
 
@@ -109,9 +114,10 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
             listGames,
             joinGame,
             leaveGame,
-            handlePaddleMove,
-            updateGameState,
-            disconnectPlayer,
-        },
-    };
+        handlePaddleMove,
+        updateGameState,
+        disconnectPlayer,
+        readyUp,
+    },
+  };
 }

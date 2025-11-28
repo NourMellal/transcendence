@@ -17,6 +17,7 @@ export interface GamePlayerState {
     id: string;
     paddle: Paddle;
     isConnected: boolean;
+    ready: boolean;
 }
 
 export interface GameSnapshot {
@@ -36,6 +37,7 @@ export interface GameSnapshot {
             width: number;
         };
         isConnected: boolean;
+        ready?: boolean;
     }>;
     readonly score: { player1: number; player2: number };
     readonly config: GameConfig;
@@ -91,6 +93,7 @@ export class Game {
             {
                 id: props.playerId,
                 isConnected: true,
+                ready: false,
                 paddle: Paddle.create(
                     Position.create(24, (config.arenaHeight - paddleHeight) / 2),
                     paddleHeight,
@@ -103,6 +106,7 @@ export class Game {
             players.push({
                 id: props.opponentId,
                 isConnected: true,
+                ready: false,
                 paddle: Paddle.create(
                     Position.create(config.arenaWidth - 24 - paddleWidth, (config.arenaHeight - paddleHeight) / 2),
                     paddleHeight,
@@ -134,6 +138,7 @@ export class Game {
         const players = snapshot.players.map((player) => ({
             id: player.id,
             isConnected: player.isConnected,
+            ready: player.ready ?? false,
             paddle: Paddle.create(
                 Position.create(player.paddle.position.x, player.paddle.position.y),
                 player.paddle.height,
@@ -273,6 +278,21 @@ export class Game {
         this.touch();
     }
 
+    markPlayerReady(playerId: string): boolean {
+        const player = this.findPlayer(playerId);
+        if (!player) {
+            throw new Error(`Player ${playerId} not in game`);
+        }
+
+        player.ready = true;
+        this.touch();
+        return this.arePlayersReady();
+    }
+
+    arePlayersReady(): boolean {
+        return this.props.players.length >= 2 && this.props.players.every((player) => player.ready);
+    }
+
     addOpponent(playerId: string): void {
         if (this.props.players.length >= 2) {
             return;
@@ -287,7 +307,8 @@ export class Game {
                 Position.create(this.props.config.arenaWidth - 24 - paddleWidth, (this.props.config.arenaHeight - paddleHeight) / 2),
                 paddleHeight,
                 paddleWidth
-            )
+            ),
+            ready: false,
         });
       this.touch();
     }
@@ -310,6 +331,7 @@ export class Game {
             players: this.props.players.map((player) => ({
                 id: player.id,
                 isConnected: player.isConnected,
+                ready: player.ready,
                 paddle: {
                     position: {
                         x: player.paddle.position.x,
