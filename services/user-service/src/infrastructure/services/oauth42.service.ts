@@ -20,7 +20,7 @@ export class OAuth42Service implements OAuthService {
     private initialized = false;
     private config!: OAuth42Config;
 
-    constructor(private readonly options: Partial<OAuth42Config> = {}) { }
+    constructor() { }
 
     async initialize(): Promise<void> {
         if (this.initialized) {
@@ -34,45 +34,24 @@ export class OAuth42Service implements OAuthService {
         }
 
         const apiConfig = await this.vaultHelper.getAPIConfig();
-
-        const redirectUri =
-            process.env.OAUTH_42_REDIRECT_URI ||
-            apiConfig?.['42_redirect_uri'] ||
-            this.options.redirectUri ||
-            'http://localhost:3001/auth/42/callback';
+        const resolveConfigValue = (envKey: string, vaultKey: string): string | undefined =>
+            process.env[envKey] ?? apiConfig?.[vaultKey];
+        const requireConfigValue = (envKey: string, vaultKey: string): string => {
+            const value = resolveConfigValue(envKey, vaultKey);
+            if (!value) {
+                throw new Error(`[OAuth42Service] Missing configuration: set ${envKey} or Vault key ${vaultKey}`);
+            }
+            return value;
+        };
 
         this.config = {
-            clientId:
-                process.env.OAUTH_42_CLIENT_ID ||
-                apiConfig?.['42_client_id'] ||
-                this.options.clientId ||
-                '',
-            clientSecret:
-                process.env.OAUTH_42_CLIENT_SECRET ||
-                apiConfig?.['42_client_secret'] ||
-                this.options.clientSecret ||
-                '',
-            redirectUri,
-            authorizeUrl:
-                process.env.OAUTH_42_AUTHORIZE_URL ||
-                apiConfig?.['42_authorize_url'] ||
-                this.options.authorizeUrl ||
-                'https://api.intra.42.fr/oauth/authorize',
-            tokenUrl:
-                process.env.OAUTH_42_TOKEN_URL ||
-                apiConfig?.['42_token_url'] ||
-                this.options.tokenUrl ||
-                'https://api.intra.42.fr/oauth/token',
-            profileUrl:
-                process.env.OAUTH_42_PROFILE_URL ||
-                apiConfig?.['42_profile_url'] ||
-                this.options.profileUrl ||
-                'https://api.intra.42.fr/v2/me',
-            scope:
-                process.env.OAUTH_42_SCOPE ||
-                apiConfig?.['42_scope'] ||
-                this.options.scope ||
-                'public',
+            clientId: requireConfigValue('OAUTH_42_CLIENT_ID', '42_client_id'),
+            clientSecret: requireConfigValue('OAUTH_42_CLIENT_SECRET', '42_client_secret'),
+            redirectUri: requireConfigValue('OAUTH_42_REDIRECT_URI', '42_redirect_uri'),
+            authorizeUrl: resolveConfigValue('OAUTH_42_AUTHORIZE_URL', '42_authorize_url') || 'https://api.intra.42.fr/oauth/authorize',
+            tokenUrl: resolveConfigValue('OAUTH_42_TOKEN_URL', '42_token_url') || 'https://api.intra.42.fr/oauth/token',
+            profileUrl: resolveConfigValue('OAUTH_42_PROFILE_URL', '42_profile_url') || 'https://api.intra.42.fr/v2/me',
+            scope: resolveConfigValue('OAUTH_42_SCOPE', '42_scope') || 'public',
         };
         this.initialized = true;
 
