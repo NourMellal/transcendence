@@ -5,6 +5,7 @@ import {
     createMockSessionRepository,
     createMockUserRepository,
     createMockPresenceRepository,
+    createMockUserEventsPublisher,
 } from '../../../../helpers/mock-repositories';
 import { createTestUser } from '../../../../helpers/entity-factories';
 import { UserId } from '../../../../../src/domain/value-objects';
@@ -16,6 +17,7 @@ describe('DeleteUserUseCase', () => {
     let friendshipRepository: ReturnType<typeof createMockFriendshipRepository>;
     let presenceRepository: ReturnType<typeof createMockPresenceRepository>;
     let unitOfWork: UnitOfWork;
+    let userEventsPublisher: ReturnType<typeof createMockUserEventsPublisher>;
 
     const factory = () =>
         new DeleteUserUseCase(
@@ -23,7 +25,8 @@ describe('DeleteUserUseCase', () => {
             sessionRepository,
             friendshipRepository,
             presenceRepository,
-            unitOfWork
+            unitOfWork,
+            userEventsPublisher
         );
 
     beforeEach(() => {
@@ -34,6 +37,7 @@ describe('DeleteUserUseCase', () => {
         unitOfWork = {
             withTransaction: vi.fn(async (handler) => handler()),
         };
+        userEventsPublisher = createMockUserEventsPublisher();
     });
 
     it('deletes user and related data', async () => {
@@ -47,6 +51,12 @@ describe('DeleteUserUseCase', () => {
         expect(friendshipRepository.deleteAllForUser).toHaveBeenCalledWith('user-1');
         expect(presenceRepository.markOffline).toHaveBeenCalledWith('user-1', expect.any(Date));
         expect(userRepository.delete).toHaveBeenCalledWith('user-1');
+        expect(userEventsPublisher.publishUserDeleted).toHaveBeenCalledWith({
+            userId: 'user-1',
+            deletedAt: expect.any(Date),
+            initiatedBy: 'user-1',
+            reason: undefined,
+        });
         expect(result).toEqual({ success: true });
     });
 
@@ -55,5 +65,6 @@ describe('DeleteUserUseCase', () => {
         const useCase = factory();
 
         await expect(useCase.execute({ userId: 'bad', initiatedBy: 'bad' })).rejects.toThrow('User not found');
+        expect(userEventsPublisher.publishUserDeleted).not.toHaveBeenCalled();
     });
 });

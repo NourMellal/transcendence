@@ -4,6 +4,7 @@ import {
     UserRepository,
     UnitOfWork,
     UserPresenceRepository,
+    UserEventsPublisher,
 } from '../../../domain/ports';
 import type { IDeleteUserUseCase } from '../../../domain/ports';
 import type { DeleteUserInputDTO, DeleteUserResponseDTO } from '../../dto/user.dto';
@@ -14,7 +15,8 @@ export class DeleteUserUseCase implements IDeleteUserUseCase {
         private readonly sessionRepository: SessionRepository,
         private readonly friendshipRepository: FriendshipRepository,
         private readonly presenceRepository: UserPresenceRepository,
-        private readonly unitOfWork: UnitOfWork
+        private readonly unitOfWork: UnitOfWork,
+        private readonly userEventsPublisher: UserEventsPublisher
     ) {}
 
     async execute(input: DeleteUserInputDTO): Promise<DeleteUserResponseDTO> {
@@ -22,6 +24,8 @@ export class DeleteUserUseCase implements IDeleteUserUseCase {
         if (!userId) {
             throw new Error('User ID is required');
         }
+
+        const deletedAt = new Date();
 
         await this.unitOfWork.withTransaction(async () => {
             const user = await this.userRepository.findById(userId);
@@ -37,6 +41,19 @@ export class DeleteUserUseCase implements IDeleteUserUseCase {
             await this.userRepository.delete(userId);
 
         });
+        try {
+            await this.userEventsPublisher.publishUserDeleted({
+                userId,
+                deletedAt,
+                reason: input.reason,
+                initiatedBy: input.initiatedBy,
+            });
+        } catch (error) {
+            console.error('[DeleteUserUseCase] Failed to publish user.deleted event', {
+                userId,
+                err: error,
+            });
+        }
 
         return { success: true };
     }
