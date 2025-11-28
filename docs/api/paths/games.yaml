@@ -3,6 +3,8 @@
     tags: [Games]
     operationId: Games_listGames
     summary: List all games
+    security:
+      - jwtAuth: []
     parameters:
       - name: status
         in: query
@@ -36,17 +38,100 @@
                     $ref: '../components/schemas/game.yaml#/Game'
                 total:
                   type: integer
+              required: [games, total]
+            examples:
+              sample:
+                summary: Waiting and in-progress games
+                value:
+                  games:
+                    - id: "6c1f8e42-3f3b-4a5f-8d3d-9b5a6c1f8e42"
+                      mode: CLASSIC
+                      player1: "11111111-2222-3333-4444-555555555555"
+                      player2: null
+                      status: WAITING
+                      score:
+                        player1: 0
+                        player2: 0
+                      settings:
+                        arenaWidth: 800
+                        arenaHeight: 600
+                        scoreLimit: 11
+                        paddleSpeed: 8
+                        ballSpeed: 5
+                      winner: null
+                      createdAt: "2025-01-05T10:00:00Z"
+                      finishedAt: null
+                    - id: "c2f605a6-5409-4f6b-a1c9-4ab51b2a28ac"
+                      mode: TOURNAMENT
+                      player1: "aaaa1111-bbbb-cccc-dddd-eeeeeeeeeeee"
+                      player2: "bbbb2222-cccc-dddd-eeee-ffffffffffff"
+                      status: PLAYING
+                      score:
+                        player1: 7
+                        player2: 9
+                      settings:
+                        arenaWidth: 1024
+                        arenaHeight: 768
+                        scoreLimit: 15
+                        paddleSpeed: 10
+                        ballSpeed: 7
+                      winner: null
+                      createdAt: "2025-01-05T09:55:00Z"
+                      finishedAt: null
+                  total: 2
+      '400':
+        description: Invalid filter parameters
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Invalid input
+              message: "offset must be greater than or equal to 0"
+              code: INVALID_INPUT
+      '500':
+        description: Unexpected error while listing games
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Internal Server Error
+              message: "Unable to fetch games"
+              code: INTERNAL_ERROR
 
   post:
     tags: [Games]
     operationId: Games_createGame
     summary: Create a new game
+    security:
+      - jwtAuth: []
     requestBody:
       required: true
       content:
         application/json:
           schema:
             $ref: '../components/schemas/game.yaml#/CreateGameRequest'
+          examples:
+            classicLobby:
+              summary: Public classic lobby with tuned physics
+              value:
+                gameMode: CLASSIC
+                isPrivate: false
+                settings:
+                  scoreLimit: 11
+                  paddleSpeed: 9
+                  ballSpeed: 6
+            privateInvite:
+              summary: Private invite with fixed arena size
+              value:
+                gameMode: TOURNAMENT
+                isPrivate: true
+                opponentId: "c0ffee00-1234-5678-9abc-0000c0ffee00"
+                settings:
+                  arenaWidth: 960
+                  arenaHeight: 640
+                  scoreLimit: 7
     responses:
       '201':
         description: Game created successfully
@@ -54,16 +139,62 @@
           application/json:
             schema:
               $ref: '../components/schemas/game.yaml#/Game'
+            example:
+              id: "f6d2bc6f-12cd-4c3f-8d88-9b5a6c1f8e42"
+              mode: CLASSIC
+              player1: "11111111-2222-3333-4444-555555555555"
+              player2: null
+              status: WAITING
+              score:
+                player1: 0
+                player2: 0
+              settings:
+                arenaWidth: 800
+                arenaHeight: 600
+                scoreLimit: 11
+                paddleSpeed: 9
+                ballSpeed: 6
+              winner: null
+              createdAt: "2025-01-05T10:02:00Z"
+              finishedAt: null
       '400':
         description: Invalid input
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Invalid input
+              message: "gameMode must be CLASSIC or TOURNAMENT"
+              code: INVALID_INPUT
       '401':
         description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Unauthorized
+              message: "Bearer token is missing or expired"
+              code: UNAUTHORIZED
+      '500':
+        description: Unexpected error while creating a game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Internal Server Error
+              message: "Failed to create game"
+              code: INTERNAL_ERROR
 
 /games/{gameId}:
   get:
     tags: [Games]
     operationId: Games_getGame
     summary: Get game by ID
+    security:
+      - jwtAuth: []
     parameters:
       - name: gameId
         in: path
@@ -78,14 +209,62 @@
           application/json:
             schema:
               $ref: '../components/schemas/game.yaml#/Game'
+            example:
+              id: "6c1f8e42-3f3b-4a5f-8d3d-9b5a6c1f8e42"
+              mode: CLASSIC
+              player1: "11111111-2222-3333-4444-555555555555"
+              player2: "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
+              status: FINISHED
+              score:
+                player1: 11
+                player2: 8
+              settings:
+                arenaWidth: 800
+                arenaHeight: 600
+                scoreLimit: 11
+                paddleSpeed: 8
+                ballSpeed: 5
+              winner: "11111111-2222-3333-4444-555555555555"
+              createdAt: "2025-01-05T09:45:00Z"
+              finishedAt: "2025-01-05T10:00:15Z"
+      '401':
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Unauthorized
+              message: "Bearer token is missing or expired"
+              code: UNAUTHORIZED
       '404':
         description: Game not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Not Found
+              message: "No game exists with the provided id"
+              code: NOT_FOUND
+      '500':
+        description: Unexpected error while retrieving a game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Internal Server Error
+              message: "Unable to retrieve game"
+              code: INTERNAL_ERROR
 
 /games/{gameId}/join:
   post:
     tags: [Games]
     operationId: Games_joinGame
     summary: Join an existing game
+    security:
+      - jwtAuth: []
     parameters:
       - name: gameId
         in: path
@@ -100,22 +279,70 @@
           application/json:
             schema:
               $ref: '../components/schemas/game.yaml#/Game'
+            example:
+              id: "6c1f8e42-3f3b-4a5f-8d3d-9b5a6c1f8e42"
+              mode: CLASSIC
+              player1: "11111111-2222-3333-4444-555555555555"
+              player2: "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
+              status: WAITING
+              score:
+                player1: 0
+                player2: 0
+              settings:
+                scoreLimit: 11
+                paddleSpeed: 8
+                ballSpeed: 5
+              winner: null
+              createdAt: "2025-01-05T10:00:00Z"
+              finishedAt: null
       '400':
         description: Cannot join game (full, finished, etc.)
         content:
           application/json:
             schema:
               $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Invalid input
+              message: "Game is already full or finished"
+              code: GAME_JOIN_DENIED
       '401':
         description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Unauthorized
+              message: "Bearer token is missing or expired"
+              code: UNAUTHORIZED
       '404':
         description: Game not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Not Found
+              message: "No game exists with the provided id"
+              code: NOT_FOUND
+      '500':
+        description: Unexpected error while joining a game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Internal Server Error
+              message: "Unable to join game"
+              code: INTERNAL_ERROR
 
 /games/{gameId}/ready:
   post:
     tags: [Games]
     operationId: Games_readyUp
     summary: Mark current player as ready
+    security:
+      - jwtAuth: []
     parameters:
       - name: gameId
         in: path
@@ -128,16 +355,52 @@
         description: Player marked ready (game may start when all ready)
       '400':
         description: Cannot ready up
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Invalid input
+              message: "Player is not part of this game"
+              code: READY_DENIED
       '401':
         description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Unauthorized
+              message: "Bearer token is missing or expired"
+              code: UNAUTHORIZED
       '404':
         description: Game not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Not Found
+              message: "No game exists with the provided id"
+              code: NOT_FOUND
+      '500':
+        description: Unexpected error while readying up
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Internal Server Error
+              message: "Unable to update ready status"
+              code: INTERNAL_ERROR
 
 /games/{gameId}/leave:
   post:
     tags: [Games]
     operationId: Games_leaveGame
     summary: Leave a game
+    security:
+      - jwtAuth: []
     parameters:
       - name: gameId
         in: path
@@ -150,16 +413,52 @@
         description: Successfully left game
       '400':
         description: Cannot leave game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Invalid input
+              message: "Player is not part of this game"
+              code: LEAVE_DENIED
       '401':
         description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Unauthorized
+              message: "Bearer token is missing or expired"
+              code: UNAUTHORIZED
       '404':
         description: Game not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Not Found
+              message: "No game exists with the provided id"
+              code: NOT_FOUND
+      '500':
+        description: Unexpected error while leaving a game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Internal Server Error
+              message: "Unable to leave game"
+              code: INTERNAL_ERROR
 
 /games/my-games:
   get:
     tags: [Games]
     operationId: Games_getMyGames
     summary: Get current user's games
+    security:
+      - jwtAuth: []
     parameters:
       - name: status
         in: query
@@ -175,38 +474,60 @@
               type: array
               items:
                 $ref: '../components/schemas/game.yaml#/Game'
+            example:
+              - id: "6c1f8e42-3f3b-4a5f-8d3d-9b5a6c1f8e42"
+                mode: CLASSIC
+                player1: "11111111-2222-3333-4444-555555555555"
+                player2: null
+                status: WAITING
+                score:
+                  player1: 0
+                  player2: 0
+                settings:
+                  scoreLimit: 11
+                  paddleSpeed: 8
+                  ballSpeed: 5
+                winner: null
+                createdAt: "2025-01-05T10:00:00Z"
+                finishedAt: null
       '401':
         description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Unauthorized
+              message: "Bearer token is missing or expired"
+              code: UNAUTHORIZED
+      '500':
+        description: Unexpected error while fetching user's games
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+            example:
+              error: Internal Server Error
+              message: "Unable to load games"
+              code: INTERNAL_ERROR
 
-/games/ws:
+/games/ws/socket.io:
   get:
     tags: [Games, WebSocket]
     operationId: Games_websocketConnection
-    summary: WebSocket connection for real-time Pong gameplay
+    summary: WebSocket connection for real-time Pong gameplay via Socket.IO
     description: |
-      Establish WebSocket connection for real-time game updates.
-      
-      **Authentication:** JWT token required via query parameter `?token=<jwt>`
-      
-      **Client → Server Messages:**
-      - `{ "type": "join_game", "gameId": "uuid" }` - Join a game
-      - `{ "type": "paddle_move", "y": number }` - Update paddle position
-      - `{ "type": "ready" }` - Signal ready to start
-      
-      **Server → Client Messages:**
-      - `{ "type": "game_state", "ball": {...}, "paddle1": {...}, "paddle2": {...}, "score": {...} }`
-      - `{ "type": "game_start", "gameId": "uuid" }`
-      - `{ "type": "game_end", "winnerId": "uuid", "finalScore": {...} }`
-      - `{ "type": "player_joined", "playerId": "uuid" }`
-      - `{ "type": "player_left", "playerId": "uuid" }`
-      - `{ "type": "error", "message": "..." }`
+      Establish a Socket.IO connection for real-time game updates and paddle input routing.
+
+      Connect through the API Gateway at `/api/games/ws/socket.io` with the query string `token=<JWT>`.
+      For the list of emitted and accepted events, see [Game WebSocket events](../websocket/game-events.md).
     parameters:
       - name: token
         in: query
         required: true
         schema:
           type: string
-        description: JWT authentication token
+        description: JWT bearer token used for authenticating the Socket.IO handshake.
     responses:
       '101':
         description: Switching Protocols - WebSocket connection established
