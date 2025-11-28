@@ -89,17 +89,21 @@ describe('UserEventHandler', () => {
     const serializer = new EventSerializer();
     let channel: InMemoryChannel;
     let repository: InMemoryGameRepository;
+    let notifier: { emitToGame: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
         channel = new InMemoryChannel();
         repository = new InMemoryGameRepository();
+        notifier = {
+            emitToGame: vi.fn(),
+        };
     });
 
     it('cancels active games for deleted users and acknowledges the message', async () => {
         const game = Game.create({ playerId: 'user-1', opponentId: 'user-2', mode: 'CLASSIC', config: {} });
         repository.games.push(game);
 
-        const handler = new UserEventHandler(channel as Channel, serializer, repository);
+        const handler = new UserEventHandler(channel as Channel, serializer, repository, notifier);
         const event = createUserDeletedEvent({ userId: 'user-1', deletedAt: new Date('2024-01-01T00:00:00Z') });
         const message = buildMessage(serializer, event);
 
@@ -107,12 +111,13 @@ describe('UserEventHandler', () => {
         await handler.handle(message);
 
         expect(repository.games[0].status).toBe(GameStatus.CANCELLED);
+        expect(notifier.emitToGame).toHaveBeenCalledWith(game.id, 'game:cancelled', expect.any(Object));
         expect(channel.ack).toHaveBeenCalledWith(message);
         expect(channel.nack).not.toHaveBeenCalled();
     });
 
     it('nacks when the payload does not validate', async () => {
-        const handler = new UserEventHandler(channel as Channel, serializer, repository);
+        const handler = new UserEventHandler(channel as Channel, serializer, repository, notifier);
         const invalidEvent = {
             metadata: {
                 eventId: '1',
