@@ -486,7 +486,10 @@ export class HttpClient {
 
     // Reset app auth state
     try {
-      appState.auth.set({ user: null, isLoading: false, token: '' });
+      appState.auth.set({
+        user: null, isLoading: false, token: '',
+        isAuthenticated: false
+      });
     } catch (e) {
       // if for some reason signal can't be set, still proceed to clear storage
       console.warn('[HttpClient] Unable to reset appState.auth', e);
@@ -591,7 +594,7 @@ export class HttpClient {
   }
 }
 
-export const httpClient = new HttpClient(
+export default   new HttpClient(
    'http://localhost:3000/api'
 );
 

@@ -3,8 +3,7 @@
  * Handles all authentication-related API calls
  */
 
-import { HttpClient } from '../../modules/shared/services/HttpClient';
-import { httpClient as defaultHttpClient } from '../api/client';
+import httpClient, { HttpClient } from '../../modules/shared/services/HttpClient';
 import type { User } from '../../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../../models/Auth';
 
@@ -13,14 +12,15 @@ type OAuthAuthorizationResponse = {
 };
 
 export class AuthService {
-  constructor(private readonly httpClient: HttpClient = defaultHttpClient) {}
+  // use the existing instance by default
+  constructor(private readonly http: HttpClient = httpClient) {}
 
   /**
    * Register a new user
    * POST /auth/signup
    */
   async signup(data: SignUpRequest): Promise<User> {
-    const response = await this.httpClient.post<User>('/auth/signup', data);
+    const response = await this.http.post<User>('/auth/signup', data);
     return response.data!;
   }
 
@@ -44,12 +44,14 @@ export class AuthService {
   async login(
     credentials: LoginRequest & { twoFACode?: string }
   ): Promise<LoginResponse> {
-    const response = await this.httpClient.post<LoginResponse>(
+    const response = await this.http.post<LoginResponse>(
       '/auth/login',
       credentials
     );
-    this.persistSession(response.user.id);
-    return response;
+
+    const data = response.data!;
+    this.persistSession(data.user!.id);
+    return data;
   }
 
   /**
@@ -58,9 +60,9 @@ export class AuthService {
    */
   async getStatus(): Promise<User | null> {
     try {
-      const response = await this.httpClient.get<User>('/auth/status');
-      return response ?? null;
-    } catch (error) {
+      const response = await this.http.get<User>('/auth/status');
+      return response.data ?? null;
+    } catch (error: any) {
       if (error instanceof Error && error.message.includes('401')) {
         return null;
       }
@@ -74,7 +76,7 @@ export class AuthService {
    */
   async logout(): Promise<void> {
     try {
-      await this.httpClient.post<void>('/auth/logout', {});
+      await this.http.post<void>('/auth/logout', {});
     } catch (error) {
       console.warn('Logout failed:', error);
     }
@@ -84,22 +86,27 @@ export class AuthService {
    * Initiate 42 OAuth login
    */
   async start42Login(): Promise<OAuthAuthorizationResponse> {
-    const response = await this.httpClient.get<OAuthAuthorizationResponse>(
+    const response = await this.http.get<OAuthAuthorizationResponse>(
       '/auth/42/login'
     );
-    return response ?? {
-      authorizationUrl: `${window.location.origin}/auth/42/login`,
-    };
+
+    return (
+      response.data ?? {
+        authorizationUrl: `${window.location.origin}/auth/42/login`,
+      }
+    );
   }
 
   async handle42Callback(code: string, state: string): Promise<LoginResponse> {
-    const response = await this.httpClient.get<LoginResponse>(
-      `/auth/42/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(
-        state
-      )}`
+    const response = await this.http.get<LoginResponse>(
+      `/auth/42/callback?code=${encodeURIComponent(
+        code
+      )}&state=${encodeURIComponent(state)}`
     );
-    this.persistSession(response.user.id);
-    return response;
+
+    const data = response.data!;
+    this.persistSession(data.user!.id);
+    return data;
   }
 
   async initiate42Login(): Promise<void> {
@@ -108,11 +115,11 @@ export class AuthService {
   }
 
   private persistSession(seed?: string): void {
-    // Store user ID in localStorage for future reference
     if (seed) {
       localStorage.setItem('userId', seed);
     }
   }
 }
 
+// 👇 uses the imported shared instance, no new HttpClient here
 export const authService = new AuthService();

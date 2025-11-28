@@ -29,11 +29,18 @@ ensure_command() {
 vault_put() {
     local path="$1"
     local payload="$2"
-    curl -sS -X POST \
+    log "INF" "Writing to ${path}"
+    curl -sSf -X POST \
         -H "Content-Type: application/json" \
         -H "X-Vault-Token: ${VAULT_TOKEN}" \
         "${VAULT_ADDR}/v1/${path}" \
-        -d "${payload}" >/dev/null
+        -d "${payload}" >/dev/null \
+    || { 
+        log "ERR" "Failed to write ${path}"
+        echo "Payload was:"
+        echo "${payload}"
+        exit 1
+    }
 }
 
 ensure_command curl
@@ -41,7 +48,7 @@ ensure_command openssl
 ensure_command python3
 
 log "INF" "Using Vault @ ${VAULT_ADDR}"
-if ! curl -sS "${VAULT_ADDR}/v1/sys/health" >/dev/null; then
+if ! curl -sSf "${VAULT_ADDR}/v1/sys/health" >/dev/null; then
     log "ERR" "Vault is not reachable. Start it first (e.g. docker compose up -d vault)."
     exit 1
 fi
@@ -89,13 +96,19 @@ vault_put "secret/data/security/config" "$(cat <<EOF
 EOF
 )"
 
+# IMPORTANT: fixed JSON here (cors_origins as array, proper commas)
 vault_put "secret/data/gateway/config" "$(cat <<EOF
 {
   "data": {
-    "cors_origins": "http://localhost:3000,http://localhost:8080",
+    "cors_origins": [
+      "http://localhost:3003",
+      "http://localhost:8080",
+      "http://localhost:3001"
+    ],
     "internalApiKey": "${INTERNAL_API_KEY}",
-    "rateLimitMax": "100",
-    "rateLimitWindow": "1 minute"
+    "rateLimitMax": "50",
+    "rateLimitWindow": "1 minute",
+    "debug_marker": "${CURRENT_TIME}"
   }
 }
 EOF
@@ -178,7 +191,7 @@ EOF
 
 log "INF" "Applying API Gateway ACL policy..."
 
-curl -sS -X PUT \
+curl -sSf -X PUT \
   -H "Content-Type: application/json" \
   -H "X-Vault-Token: ${VAULT_TOKEN}" \
   "${VAULT_ADDR}/v1/sys/policies/acl/api-gateway" \
@@ -190,7 +203,7 @@ EOF
 )" >/dev/null
 
 log "INF" "Creating scoped token for API Gateway..."
-GATEWAY_TOKEN="$(curl -sS -X POST \
+GATEWAY_TOKEN="$(curl -sSf -X POST \
   -H "Content-Type: application/json" \
   -H "X-Vault-Token: ${VAULT_TOKEN}" \
   "${VAULT_ADDR}/v1/auth/token/create" \

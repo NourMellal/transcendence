@@ -160,9 +160,10 @@ export default class LoginPage extends Component<Props, State> {
     // Form submission
     const form = this.element.querySelector('[data-form="login"]') as HTMLFormElement | null;
     if (form) {
-      const handler = (e: Event) => {
+      const handler = (e: Event) => {  
         e.preventDefault();
-        this.handleLogin();
+        this.handleLogin();  
+        
       };
       form.addEventListener('submit', handler);
       this.subscriptions.push(() => form.removeEventListener('submit', handler));
@@ -244,7 +245,8 @@ export default class LoginPage extends Component<Props, State> {
     });
 
     try {
-      await authService.login({ email, password, twoFACode: twoFA || undefined });
+     const response =    await authService.login({ email, password, twoFACode: twoFA || undefined });  
+     alert(response.message) ;   
       navigate('/');
     } catch (error) {
       this.setState({ 

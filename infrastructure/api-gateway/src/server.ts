@@ -324,7 +324,8 @@ async function start() {
         console.log('═══════════════════════════════════════════════════════');
         console.log(`📍 Gateway URL: http://localhost:${config.port}`);
         console.log(`📚 API Docs:    http://localhost:${config.port}/api/docs/`);
-        console.log(`💚 Health:      http://localhost:${config.port}/health`);
+        console.log(`💚 Health:      http://localhost:${config.port}/health`);  
+        console.log(`🌐 CORS Origins: ${config.corsOrigins.join(', ')}`);
         console.log('═══════════════════════════════════════════════════════');
         console.log('📡 Proxied Services:');
         console.log(`   • User Service:       ${config.userServiceUrl}`);
