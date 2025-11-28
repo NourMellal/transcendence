@@ -1,0 +1,316 @@
+name: WebSocketEvents
+version: 0.1.0
+description: |
+  Socket.IO event contracts for real-time Pong gameplay and chat.
+  Connections terminate at the API Gateway by default and are proxied to
+  the game service's Socket.IO server. Clients may also connect directly to
+  the game service during local development.
+
+endpoint:
+  transport: socket.io
+  gateway:
+    url: http://localhost:3000
+    path: /api/games/ws/socket.io
+  direct:
+    url: http://localhost:3002
+    path: /socket.io
+  notes: |
+    - The gateway strips the `/api/games/ws` prefix and forwards traffic to the
+      game-service Socket.IO server.
+    - Chat uses the same Socket.IO connection and namespace; chat-specific
+      events are included below.
+
+authentication:
+  method: JWT
+  carrier: query
+  parameter: token
+  example: http://localhost:3000/api/games/ws/socket.io/?token=<jwt>
+  failureEvents:
+    - event: error
+      payload:
+        type: object
+        properties:
+          message:
+            type: string
+        example:
+          message: "Unauthorized: missing token"
+
+client_to_server_events:
+  join_game:
+    summary: Join a game room and subscribe to state updates.
+    payloadSchema:
+      type: object
+      required: [gameId]
+      properties:
+        gameId:
+          type: string
+          format: uuid
+    example:
+      gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+    emitsOnError:
+      - error
+
+  ready:
+    summary: Signal readiness; starts the loop once all players are ready.
+    payloadSchema:
+      type: object
+      properties:
+        gameId:
+          type: string
+          format: uuid
+    example:
+      gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+    emitsOnError:
+      - error
+
+  paddle_move:
+    summary: Update paddle intent for the current tick.
+    payloadSchema:
+      type: object
+      required: [direction]
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [up, down]
+        deltaTime:
+          type: number
+          description: Client-side delta in seconds (fallback 0.016s if omitted).
+        y:
+          type: number
+          description: Optional analog input; translated to a direction when provided.
+    example:
+      gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+      direction: down
+      deltaTime: 0.016
+    emitsOnError:
+      - error
+
+  send_message:
+    summary: Send a chat message tied to a game room or direct recipient.
+    payloadSchema:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+        gameId:
+          type: string
+          format: uuid
+        recipientId:
+          type: string
+          format: uuid
+    examples:
+      - content: "gg wp"
+        gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+      - content: "Ready?"
+        recipientId: "6fe471c9-a8c8-4410-a9d7-28b301a8f8df"
+    emitsOnError:
+      - error
+
+  typing:
+    summary: Emit a typing indicator for chat.
+    payloadSchema:
+      type: object
+      properties:
+        recipientId:
+          type: string
+          format: uuid
+    example:
+      recipientId: "6fe471c9-a8c8-4410-a9d7-28b301a8f8df"
+
+server_to_client_events:
+  game_state:
+    summary: Game loop broadcast with authoritative state.
+    payloadSchema:
+      type: object
+      required: [ball, paddles, score]
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        ball:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            velocityX:
+              type: number
+            velocityY:
+              type: number
+        paddles:
+          type: object
+          properties:
+            left:
+              type: object
+              properties:
+                y:
+                  type: number
+            right:
+              type: object
+              properties:
+                y:
+                  type: number
+        score:
+          type: object
+          properties:
+            left:
+              type: integer
+            right:
+              type: integer
+    example:
+      gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+      ball: { x: 120, y: 90, velocityX: 320, velocityY: -240 }
+      paddles:
+        left: { y: 80 }
+        right: { y: 110 }
+      score: { left: 3, right: 2 }
+
+  game_start:
+    summary: Indicates the countdown/start signal for a match.
+    payloadSchema:
+      type: object
+      required: [gameId]
+      properties:
+        gameId:
+          type: string
+          format: uuid
+    example:
+      gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+
+  game_end:
+    summary: Final result for a completed match.
+    payloadSchema:
+      type: object
+      required: [gameId, winnerId, finalScore]
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        winnerId:
+          type: string
+          format: uuid
+        finalScore:
+          type: object
+          properties:
+            left:
+              type: integer
+            right:
+              type: integer
+    example:
+      gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+      winnerId: "6fe471c9-a8c8-4410-a9d7-28b301a8f8df"
+      finalScore: { left: 5, right: 2 }
+
+  player_joined:
+    summary: Another player entered the room.
+    payloadSchema:
+      type: object
+      required: [playerId]
+      properties:
+        playerId:
+          type: string
+          format: uuid
+    example:
+      playerId: "6fe471c9-a8c8-4410-a9d7-28b301a8f8df"
+
+  player_left:
+    summary: A player disconnected or left the room.
+    payloadSchema:
+      type: object
+      required: [playerId]
+      properties:
+        playerId:
+          type: string
+          format: uuid
+    example:
+      playerId: "e1bfbef3-28f3-4cac-b58d-836cab1a8c59"
+
+  new_message:
+    summary: Chat message delivery.
+    payloadSchema:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            senderId:
+              type: string
+              format: uuid
+            content:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            gameId:
+              type: string
+              format: uuid
+            recipientId:
+              type: string
+              format: uuid
+    example:
+      message:
+        id: "f9a2e9fb-0b8f-45bb-9c02-f22f37c9c5e1"
+        senderId: "6fe471c9-a8c8-4410-a9d7-28b301a8f8df"
+        content: "Nice block!"
+        createdAt: "2024-04-21T12:34:56.000Z"
+        gameId: "8bb9026f-9959-4a0d-9f4b-1b814b6aeb24"
+
+  user_typing:
+    summary: Typing indicator for chat participants.
+    payloadSchema:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+    example:
+      userId: "6fe471c9-a8c8-4410-a9d7-28b301a8f8df"
+      username: "pongster42"
+
+  user_online:
+    summary: Presence signal indicating a user came online.
+    payloadSchema:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+    example:
+      userId: "6fe471c9-a8c8-4410-a9d7-28b301a8f8df"
+
+  user_offline:
+    summary: Presence signal indicating a user went offline.
+    payloadSchema:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+    example:
+      userId: "e1bfbef3-28f3-4cac-b58d-836cab1a8c59"
+
+  error:
+    summary: Error envelope emitted by the server.
+    payloadSchema:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+    examples:
+      - message: "Missing gameId or authenticated player"
+      - message: "Unauthorized: missing token"
