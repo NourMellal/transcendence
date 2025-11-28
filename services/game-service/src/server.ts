@@ -7,6 +7,9 @@ export async function startGameService(): Promise<void> {
     try {
         const config = await loadGameServiceConfig();
         const container = await createContainer(config);
+        const userEventsQueue = `${config.messaging.queuePrefix}.user-events`;
+        await container.messaging.userEventsHandler.start(userEventsQueue, config.messaging.exchange);
+        logger.info(`📨 Subscribed to user events queue "${userEventsQueue}"`);
 
         const app = createHttpServer({
             routes: {
@@ -25,6 +28,16 @@ export async function startGameService(): Promise<void> {
         });
 
         container.useCases.updateGameState.setBroadcaster(websocketServer);
+
+        const shutdown = async () => {
+            logger.info('Shutting down Game Service...');
+            await app.close();
+            await container.messaging.connection.close();
+            process.exit(0);
+        };
+
+        process.on('SIGINT', shutdown);
+        process.on('SIGTERM', shutdown);
 
         await app.listen({ port: config.port, host: '0.0.0.0' });
         logger.info(`🎮 Game Service running on port ${config.port}`);
