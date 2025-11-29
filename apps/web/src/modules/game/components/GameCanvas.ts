@@ -45,10 +45,25 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private pointerMoveHandler?: (e: PointerEvent) => void;
   private keyDownHandler?: (e: KeyboardEvent) => void;
   private keyUpHandler?: (e: KeyboardEvent) => void;
-  private startStopHandler?: (e: Event) => void;
-  private restartHandler?: (e: Event) => void;
   private startStopBtn?: HTMLButtonElement | null;
   private restartBtn?: HTMLButtonElement | null;
+  private handleButtonClick = (e: Event): void => {
+    const target = e.target as HTMLElement;
+    const button = target.closest('[data-action]') as HTMLElement;
+    
+    if (!button) return;
+    
+    const action = button.dataset.action;
+    console.log('[GameCanvas] Button clicked with action:', action);
+    
+    if (action === 'start-game') {
+      console.log('[GameCanvas] Start game action triggered');
+      this.toggleGame(this.startStopBtn as HTMLButtonElement);
+    } else if (action === 'restart-game') {
+      console.log('[GameCanvas] Restart game action triggered');
+      this.resetGame();
+    }
+  };
 
   getInitialState(): GameCanvasState {
     return {
@@ -104,7 +119,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
         <!-- Control Buttons -->
         <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center px-4 sm:px-0">
           <button 
-            id="start-stop-btn" 
+            id="start-stop-btn"
+            data-action="start-game"
             class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
             style="background: white; color: var(--color-bg-dark);"
             onmouseover="this.style.background='var(--color-brand-secondary)'; this.style.color='white';"
@@ -114,7 +130,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
           </button>
             
           <button 
-            id="restart-btn" 
+            id="restart-btn"
+            data-action="restart-game"
             class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
             style="border: 2px solid rgba(255, 255, 255, 0.2); color: white; background: rgba(255, 255, 255, 0.05);"
           >
@@ -174,12 +191,43 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     }
     
     this.renderer.render(this.ball, this.player1, this.player2);
+    
+    // Attach event listeners after DOM is ready
+    this.attachEventListeners();
   }
 
   protected attachEventListeners(): void {
-    this.startStopBtn = this.element!.querySelector('#start-stop-btn') as HTMLButtonElement | null;
-    this.restartBtn = this.element!.querySelector('#restart-btn') as HTMLButtonElement | null;
+    console.log('[GameCanvas] Attaching event listeners...');
+    
+    if (!this.element) {
+      console.warn('[GameCanvas] Element not found, skipping event listeners');
+      return;
+    }
+    
+    // Re-query canvas after re-render
+    this.canvas = this.element.querySelector('#game-canvas') as HTMLCanvasElement;
+    if (!this.canvas) {
+      console.warn('[GameCanvas] Canvas not found, skipping event listeners');
+      return;
+    }
+    
+    // Recreate renderer with the new canvas
+    this.renderer = new GameRenderer(this.canvas);
+    this.resizeCanvas();
+    
+    // Query button references for updating text/disabled state
+    this.startStopBtn = this.element.querySelector('#start-stop-btn') as HTMLButtonElement | null;
+    this.restartBtn = this.element.querySelector('#restart-btn') as HTMLButtonElement | null;
 
+    console.log('[GameCanvas] Start button found:', !!this.startStopBtn);
+    console.log('[GameCanvas] Restart button found:', !!this.restartBtn);
+
+    // Use event delegation on the parent element - this survives re-renders
+    // Remove old listener first to prevent duplicates
+    this.element.removeEventListener('click', this.handleButtonClick);
+    this.element.addEventListener('click', this.handleButtonClick);
+
+    // Setup mouse/touch handlers for paddle control
     this.mouseMoveHandler = (e: MouseEvent) => {
       const rect = this.canvas.getBoundingClientRect();
       const scaleY = this.BASE_HEIGHT / rect.height;
@@ -218,6 +266,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     };
     this.canvas.addEventListener('pointermove', this.pointerMoveHandler);
 
+    // Setup keyboard handlers
     this.keyDownHandler = (e: KeyboardEvent) => {
       this.keys[e.key] = true;
       
@@ -233,23 +282,6 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       this.keys[e.key] = false;
     };
     document.addEventListener('keyup', this.keyUpHandler);
-
-    if (this.startStopBtn) {
-      this.startStopHandler = (e: Event) => {
-        // allow preventing default if caller needs
-        e?.preventDefault?.();
-        this.toggleGame(this.startStopBtn as HTMLButtonElement);
-      };
-      this.startStopBtn.addEventListener('click', this.startStopHandler);
-    }
-
-    if (this.restartBtn) {
-      this.restartHandler = (e: Event) => {
-        e?.preventDefault?.();
-        this.resetGame();
-      };
-      this.restartBtn.addEventListener('click', this.restartHandler);
-    }
   }
 
   private setupWebSocket(): void {
@@ -357,18 +389,22 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   }
 
   private toggleGame(button: HTMLButtonElement): void {
+    console.log('[GameCanvas] toggleGame called, current isRunning:', this.isRunning);
     const nextRunning = !this.isRunning;
     
     this.isRunning = nextRunning;
+    console.log('[GameCanvas] Setting isRunning to:', nextRunning);
     
     this.setState({ isGameRunning: nextRunning });
     
     if (nextRunning) {
+      console.log('[GameCanvas] Starting game loop...');
       button.textContent = 'Stop Game';
       button.classList.remove('bg-green-600', 'hover:bg-green-700');
       button.classList.add('bg-red-600', 'hover:bg-red-700');
       this.gameLoop();
     } else {
+      console.log('[GameCanvas] Stopping game...');
       button.textContent = 'Start Game';
       button.classList.remove('bg-red-600', 'hover:bg-red-700');
       button.classList.add('bg-green-600', 'hover:bg-green-700');
