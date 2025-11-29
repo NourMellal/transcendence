@@ -1,11 +1,16 @@
 import Component from '../../../core/Component';
 import { GameRenderer } from '../utils/GameRenderer';
 import type { Ball, Paddle } from '../types/game.types';
+import { gameSocket } from '../utils/gameSocket';
+import { isOnlineMode } from '../utils/featureFlags';
 
-interface GameCanvasProps {}
+interface GameCanvasProps {
+  gameId?: string; // Optional: for online mode
+}
 
 interface GameCanvasState {
   isGameRunning: boolean;
+  connectionStatus?: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
 }
 
 export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
@@ -13,6 +18,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private renderer!: GameRenderer;
   private animationId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private isOnline: boolean = false;
+  private lastPaddleY: number = -1;
   
   private readonly BASE_WIDTH = 800;
   private readonly BASE_HEIGHT = 600;
@@ -45,7 +52,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   getInitialState(): GameCanvasState {
     return {
-      isGameRunning: false
+      isGameRunning: false,
+      connectionStatus: 'disconnected',
     };
   }
   
@@ -141,6 +149,16 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     
     this.initializeGameObjects();
     
+    // Determine if we're in online mode
+    this.isOnline = isOnlineMode() && !!this.props.gameId;
+    
+    if (this.isOnline) {
+      console.log('[GameCanvas] Online mode - setting up WebSocket...');
+      this.setupWebSocket();
+    } else {
+      console.log('[GameCanvas] Local mode - using client-side physics');
+    }
+    
     this.resizeCanvas();
     
     this.resizeObserver = new ResizeObserver(() => {
@@ -202,6 +220,12 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     this.keyDownHandler = (e: KeyboardEvent) => {
       this.keys[e.key] = true;
+      
+      // In online mode, emit paddle movement to server
+      if (this.isOnline && this.props.gameId) {
+        const paddleY = this.player1.y; // Assuming current player is player1
+        this.emitPaddleMove(paddleY);
+      }
     };
     document.addEventListener('keydown', this.keyDownHandler);
 
@@ -225,6 +249,80 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
         this.resetGame();
       };
       this.restartBtn.addEventListener('click', this.restartHandler);
+    }
+  }
+
+  private setupWebSocket(): void {
+    if (!this.props.gameId) return;
+
+    console.log('[GameCanvas] Connecting WebSocket for game:', this.props.gameId);
+
+    // Track connection status
+    gameSocket.onConnectionStatusChange((status) => {
+      console.log('[GameCanvas] Connection status:', status);
+      this.setState({ connectionStatus: status });
+    });
+
+    // Subscribe to game state updates from server
+    gameSocket.on('game:state_update', (data) => {
+      if (data.gameId === this.props.gameId) {
+        // Update ball and paddles from server state
+        this.ball.x = data.ball.x;
+        this.ball.y = data.ball.y;
+        this.ball.velocityX = data.ball.velocityX;
+        this.ball.velocityY = data.ball.velocityY;
+
+        this.player1.y = data.player1.y;
+        this.player1.score = data.player1.score;
+
+        this.player2.y = data.player2.y;
+        this.player2.score = data.player2.score;
+
+        // Render the updated state
+        if (!this.isRunning) {
+          this.renderer.render(this.ball, this.player1, this.player2);
+        }
+      }
+    });
+
+    // Subscribe to game finished event
+    gameSocket.on('game:finished', (data) => {
+      if (data.gameId === this.props.gameId) {
+        console.log('[GameCanvas] Game finished:', data);
+        this.isRunning = false;
+        this.setState({ isGameRunning: false });
+        
+        // Update final scores
+        if (data.finalScore) {
+          this.player1.score = data.finalScore.player1 || 0;
+          this.player2.score = data.finalScore.player2 || 0;
+        }
+
+        // Stop animation loop
+        if (this.animationId) {
+          cancelAnimationFrame(this.animationId);
+          this.animationId = null;
+        }
+      }
+    });
+
+    // Subscribe to game errors
+    gameSocket.on('game:error', (data) => {
+      console.error('[GameCanvas] Game error:', data);
+    });
+
+    // Connect to game room
+    gameSocket.connect(this.props.gameId);
+  }
+
+  private emitPaddleMove(paddleY: number): void {
+    // Throttle paddle move emissions (only send if position changed significantly)
+    if (Math.abs(paddleY - this.lastPaddleY) > 2) {
+      gameSocket.emit('game:paddle_move', {
+        gameId: this.props.gameId!,
+        paddleY,
+      });
+      this.lastPaddleY = paddleY;
     }
   }
 
@@ -306,6 +404,22 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private updateGame(): void {
     if (!this.isRunning) return;
     
+    // In online mode, server handles physics - we only update our paddle
+    if (this.isOnline) {
+      const { player1 } = this;
+      
+      // Update our paddle position from mouse/touch input
+      player1.y = this.mouseY - player1.height / 2;
+      player1.y = Math.max(30, Math.min(this.BASE_HEIGHT - player1.height - 30, player1.y));
+      
+      // Emit paddle position to server
+      this.emitPaddleMove(player1.y);
+      
+      // Server will send game:state_update events with ball and opponent paddle
+      return;
+    }
+    
+    // Local mode: run full client-side physics
     const { ball, player1, player2 } = this;
     
     player1.y = this.mouseY - player1.height / 2;
@@ -359,6 +473,12 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
+    }
+
+    // Disconnect WebSocket in online mode
+    if (this.isOnline) {
+      console.log('[GameCanvas] Disconnecting WebSocket...');
+      gameSocket.disconnect();
     }
 
     if (this.mouseMoveHandler) {
