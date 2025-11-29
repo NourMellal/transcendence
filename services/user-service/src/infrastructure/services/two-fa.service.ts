@@ -33,7 +33,7 @@ export class TotpTwoFAService implements TwoFAService {
 
         try {
             return authenticator.verify({ secret, token: t });
-        } catch (err) {
+        } catch {
             // Any unexpected error should be treated as a failed verification
             return false;
         }
