@@ -48,6 +48,10 @@ coverage/
 # IDE and Editor files
 .vscode/
 .idea/
+
+# Issue tracking files
+issue*.txt
+tt.txt
 *.swp
 *.swo
 *~
