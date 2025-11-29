@@ -1,6 +1,8 @@
 import Component from '../../../../core/Component';
 import { appState } from '../../../../state';
 import type { User } from '../../../../models';
+import navBar from '../../components/navBar';
+import { sideBar } from '../../components';
 
 type State = {
   user: User | null;
@@ -15,38 +17,34 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     };
   }
 
-  onMount(): void {
+  onMount(): void {      
+
+    const navbar  = new navBar({}) ;    
+    const sidebar  = new sideBar({}) ;   
+
+    sidebar.mount("#sideBar") ; 
+    navbar.mount("#navBar")  ;        
     this.unsubscribe = appState.auth.subscribe((auth) => {
       this.setState({ user: auth.user });
     });
   }
 
   onUnmount(): void {
-    this.unsubscribe?.();
+    this.unsubscribe?.();  
   }
+  protected attachEventListeners(): void {
+    
+  }
+  render(): string {  
+   
+    return `   
+        <div class='profileContainer flex'>      
+        <div id='sideBar' >  
 
-  render(): string {
-    if (!this.state.user) {
-      return `
-        <div class="page profile-page">
-          <p>Please log in to view your profile.</p>
-        </div>
-      `;
-    }
-
-    const user = this.state.user;
-    return `
-      <div class="page profile-page">
-        <section>
-          <h1>Welcome, ${user.displayName ?? user.username}</h1>
-          <dl>
-            <dt>Username</dt>
-            <dd>${user.username}</dd>
-            <dt>Email</dt>
-            <dd>${user.email}</dd>
-          </dl>
-        </section>
-      </div>
+        </div> 
+         <div   id='navBar'>  
+        </div>  
+        </div> 
     `;
   }
 }

@@ -137,7 +137,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   onMount(): void {
     this.canvas = this.element!.querySelector('#game-canvas') as HTMLCanvasElement;
-    this.renderer = new GameRenderer(this.canvas);
+    this.renderer = new GameRenderer(this.canvas );
     
     this.initializeGameObjects();
     
