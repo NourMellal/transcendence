@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'services/user-service/**'
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'services/user-service/**'
+
+jobs:
+  user-service:
+    name: CI — user-service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies (workspace)
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint user-service
+        run: pnpm --filter @transcendence/user-service run lint
+
+      - name: Test user-service
+        run: pnpm --filter @transcendence/user-service run test -- --coverage
+
+      - name: Build user-service
+        run: pnpm --filter @transcendence/user-service run build
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: services/user-service/coverage/lcov.info
+          flags: user-service
+          fail_ci_if_error: true
