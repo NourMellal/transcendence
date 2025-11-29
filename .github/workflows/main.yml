@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies (workspace)
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace dependencies
+        run: pnpm --filter @transcendence/shared-types --filter @transcendence/shared-utils --filter @transcendence/shared-validation --filter @transcendence/shared-messaging run build
+
       - name: Lint user-service
         run: pnpm --filter @transcendence/user-service run lint
 
