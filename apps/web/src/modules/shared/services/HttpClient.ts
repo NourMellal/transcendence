@@ -591,8 +591,10 @@ export class HttpClient {
   }
 }
 
-export const httpClient = new HttpClient(
-   'http://localhost:3000/api'
-);
+const defaultApiBaseUrl =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://localhost:3002/api';
+
+export const httpClient = new HttpClient(defaultApiBaseUrl);
 
 export type { ApiResponse, RequestConfig } from '../types/http.types';
