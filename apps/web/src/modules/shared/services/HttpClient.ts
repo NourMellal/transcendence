@@ -11,11 +11,6 @@ import type {
 import { authEvents } from '../utils/AuthEventEmitter';
 import { isTokenExpired } from '../utils/jwtUtils';
 
-const DEFAULT_API_URL = 'http://localhost:3000';
-
-export const API_BASE_URL = (import.meta?.env?.VITE_API_URL as string | undefined || DEFAULT_API_URL)
-  .replace(/\/+$/, '');
-
 export class ApiError extends Error {
   status: number;
   response?: unknown;
@@ -39,7 +34,7 @@ export class HttpClient {
   // Queue for requests waiting for token refresh
   private requestQueue: QueuedRequest[] = [];
 
-  constructor(baseURL: string = API_BASE_URL) {
+  constructor(baseURL: string) {
     this.baseURL = baseURL;
     this.setupDefaultInterceptors();
   }
@@ -229,21 +224,21 @@ export class HttpClient {
     config: RequestConfig
   ): Promise<RequestConfig> {
     let finalConfig = config;
-    
+
     for (const interceptor of this.requestInterceptors) {
       finalConfig = await interceptor(finalConfig);
     }
-    
+
     return finalConfig;
   }
 
   private async applyResponseInterceptors(response: Response): Promise<Response> {
     let finalResponse = response;
-    
+
     for (const interceptor of this.responseInterceptors) {
       finalResponse = await interceptor(finalResponse);
     }
-    
+
     return finalResponse;
   }
 
@@ -437,12 +432,12 @@ export class HttpClient {
 
   private async refreshToken(): Promise<string> {
     const refreshToken = localStorage.getItem('refreshToken');
-    
+
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
 
-    const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
+    const response = await fetch(`${this.baseURL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
@@ -453,13 +448,13 @@ export class HttpClient {
     }
 
     const data = await response.json();
-    
+
     localStorage.setItem('refreshToken', data.refreshToken);
     // also persist access token so other parts of app can read it
     if (data.accessToken) {
       localStorage.setItem('token', data.accessToken);
     }
-    
+
     return data.accessToken;
   }
 
@@ -472,7 +467,7 @@ export class HttpClient {
     // Try to revoke token on server
     if (refreshToken) {
       try {
-        await this.post('/api/auth/logout', { refreshToken });
+        await this.post('/auth/logout', { refreshToken });
         console.log('[HttpClient] ✅ Token revoked on server');
       } catch (error) {
         console.warn('[HttpClient] ⚠️ Failed to revoke token on server:', error);
@@ -546,7 +541,7 @@ export class HttpClient {
    * @param provider - OAuth provider ('42', 'google', 'github')
    */
   async initiateOAuthLogin(provider: '42' | 'google' | 'github' = '42'): Promise<void> {
-    const authUrl = `${this.baseURL}/api/auth/${provider}/login`;
+    const authUrl = `${this.baseURL}/auth/${provider}/login`;
     console.log('[HttpClient] 🔐 Initiating OAuth login with', provider);
 
     // Redirect to OAuth provider
@@ -596,6 +591,10 @@ export class HttpClient {
   }
 }
 
-export const httpClient = new HttpClient();
+const defaultApiBaseUrl =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://localhost:3002/api';
+
+export const httpClient = new HttpClient(defaultApiBaseUrl);
 
 export type { ApiResponse, RequestConfig } from '../types/http.types';
