@@ -253,7 +253,11 @@ export class WebSocketClient {
 
 const defaultWsHost =
   import.meta.env.VITE_WS_GAME_URL ||
-  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL.replace(/\/?api$/, '')
+    : typeof window !== 'undefined'
+      ? window.location.origin
+      : 'http://localhost:3002');
 const defaultWsPath =
   import.meta.env.VITE_WS_GAME_PATH || '/api/games/ws/socket.io';
 
