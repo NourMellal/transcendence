@@ -11,6 +11,11 @@ import type {
 import { authEvents } from '../utils/AuthEventEmitter';
 import { isTokenExpired } from '../utils/jwtUtils';
 
+const DEFAULT_API_URL = 'http://localhost:3000';
+
+export const API_BASE_URL = (import.meta?.env?.VITE_API_URL as string | undefined || DEFAULT_API_URL)
+  .replace(/\/+$/, '');
+
 export class ApiError extends Error {
   status: number;
   response?: unknown;
@@ -34,7 +39,7 @@ export class HttpClient {
   // Queue for requests waiting for token refresh
   private requestQueue: QueuedRequest[] = [];
 
-  constructor(baseURL: string) {
+  constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
     this.setupDefaultInterceptors();
   }
@@ -437,7 +442,7 @@ export class HttpClient {
       throw new Error('No refresh token available');
     }
 
-    const response = await fetch(`${this.baseURL}/auth/refresh`, {
+    const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
@@ -467,7 +472,7 @@ export class HttpClient {
     // Try to revoke token on server
     if (refreshToken) {
       try {
-        await this.post('/auth/logout', { refreshToken });
+        await this.post('/api/auth/logout', { refreshToken });
         console.log('[HttpClient] ✅ Token revoked on server');
       } catch (error) {
         console.warn('[HttpClient] ⚠️ Failed to revoke token on server:', error);
@@ -541,7 +546,7 @@ export class HttpClient {
    * @param provider - OAuth provider ('42', 'google', 'github')
    */
   async initiateOAuthLogin(provider: '42' | 'google' | 'github' = '42'): Promise<void> {
-    const authUrl = `${this.baseURL}/auth/${provider}/login`;
+    const authUrl = `${this.baseURL}/api/auth/${provider}/login`;
     console.log('[HttpClient] 🔐 Initiating OAuth login with', provider);
 
     // Redirect to OAuth provider
@@ -591,8 +596,6 @@ export class HttpClient {
   }
 }
 
-export const httpClient = new HttpClient(
-   'http://localhost:3000/api'
-);
+export const httpClient = new HttpClient();
 
 export type { ApiResponse, RequestConfig } from '../types/http.types';

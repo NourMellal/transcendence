@@ -20,7 +20,7 @@ export class AuthService {
    * POST /auth/signup
    */
   async signup(data: SignUpRequest): Promise<User> {
-    const response = await this.httpClient.post<User>('/auth/signup', data);
+    const response = await this.httpClient.post<User>('/api/auth/signup', data);
     return response.data!;
   }
 
@@ -45,7 +45,7 @@ export class AuthService {
     credentials: LoginRequest & { twoFACode?: string }
   ): Promise<LoginResponse> {
     const response = await this.httpClient.post<LoginResponse>(
-      '/auth/login',
+      '/api/auth/login',
       credentials
     );
     this.persistSession(response.user.id);
@@ -58,7 +58,7 @@ export class AuthService {
    */
   async getStatus(): Promise<User | null> {
     try {
-      const response = await this.httpClient.get<User>('/auth/status');
+      const response = await this.httpClient.get<User>('/api/auth/status');
       return response ?? null;
     } catch (error) {
       if (error instanceof Error && error.message.includes('401')) {
@@ -74,7 +74,7 @@ export class AuthService {
    */
   async logout(): Promise<void> {
     try {
-      await this.httpClient.post<void>('/auth/logout', {});
+      await this.httpClient.post<void>('/api/auth/logout', {});
     } catch (error) {
       console.warn('Logout failed:', error);
     }
@@ -85,7 +85,7 @@ export class AuthService {
    */
   async start42Login(): Promise<OAuthAuthorizationResponse> {
     const response = await this.httpClient.get<OAuthAuthorizationResponse>(
-      '/auth/42/login'
+      '/api/auth/42/login'
     );
     return response ?? {
       authorizationUrl: `${window.location.origin}/auth/42/login`,
@@ -94,7 +94,7 @@ export class AuthService {
 
   async handle42Callback(code: string, state: string): Promise<LoginResponse> {
     const response = await this.httpClient.get<LoginResponse>(
-      `/auth/42/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(
+      `/api/auth/42/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(
         state
       )}`
     );

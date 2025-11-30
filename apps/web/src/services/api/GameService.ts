@@ -1,11 +1,13 @@
 import { httpClient } from './client';
-import { 
-  Game, 
-  GameDTOs, 
-  GameState, 
+import {
+  Game,
+  GameDTOs,
+  GameState,
   Match,
-  PaginatedResponse 
+  PaginatedResponse
 } from '../../models';
+
+const API_PREFIX = '/api';
 
 /**
  * Game Service
@@ -16,7 +18,7 @@ export class GameService {
    * Create a new game
    */
   async createGame(request: GameDTOs.CreateGameRequest): Promise<GameDTOs.CreateGameResponse> {
-    const response = await httpClient.post<GameDTOs.CreateGameResponse>('/games', request);
+    const response = await httpClient.post<GameDTOs.CreateGameResponse>(`${API_PREFIX}/games`, request);
     return response.data!;
   }
 
@@ -24,7 +26,7 @@ export class GameService {
    * Join an existing game
    */
   async joinGame(request: GameDTOs.JoinGameRequest): Promise<GameDTOs.JoinGameResponse> {
-    const response = await httpClient.post<GameDTOs.JoinGameResponse>('/games/join', request);
+    const response = await httpClient.post<GameDTOs.JoinGameResponse>(`${API_PREFIX}/games/join`, request);
     return response.data!;
   }
 
@@ -32,14 +34,14 @@ export class GameService {
    * Leave a game
    */
   async leaveGame(gameId: string): Promise<void> {
-    await httpClient.post(`/games/${gameId}/leave`);
+    await httpClient.post(`${API_PREFIX}/games/${gameId}/leave`);
   }
 
   /**
    * Get game details
    */
   async getGame(gameId: string): Promise<Game> {
-    const response = await httpClient.get<Game>(`/games/${gameId}`);
+    const response = await httpClient.get<Game>(`${API_PREFIX}/games/${gameId}`);
     return response.data!;
   }
 
@@ -47,7 +49,7 @@ export class GameService {
    * Get current game state
    */
   async getGameState(gameId: string): Promise<GameState> {
-    const response = await httpClient.get<GameState>(`/games/${gameId}/state`);
+    const response = await httpClient.get<GameState>(`${API_PREFIX}/games/${gameId}/state`);
     return response.data!;
   }
 
@@ -55,21 +57,21 @@ export class GameService {
    * Send player move input
    */
   async sendMoveInput(gameId: string, input: GameDTOs.MoveInput): Promise<void> {
-    await httpClient.post(`/games/${gameId}/move`, input);
+    await httpClient.post(`${API_PREFIX}/games/${gameId}/move`, input);
   }
 
   /**
    * Start a game (for game creator)
    */
   async startGame(gameId: string): Promise<void> {
-    await httpClient.post(`/games/${gameId}/start`);
+    await httpClient.post(`${API_PREFIX}/games/${gameId}/start`);
   }
 
   /**
    * Cancel a game (for game creator or admin)
    */
   async cancelGame(gameId: string): Promise<void> {
-    await httpClient.post(`/games/${gameId}/cancel`);
+    await httpClient.post(`${API_PREFIX}/games/${gameId}/cancel`);
   }
 
   /**
@@ -77,7 +79,7 @@ export class GameService {
    */
   async getAvailableGames(page = 1, limit = 20): Promise<GameDTOs.GameListResponse> {
     const response = await httpClient.get<GameDTOs.GameListResponse>(
-      `/games/available?page=${page}&limit=${limit}`
+      `${API_PREFIX}/games/available?page=${page}&limit=${limit}`
     );
     return response.data!;
   }
@@ -86,7 +88,7 @@ export class GameService {
    * Get list of user's games (current and completed)
    */
   async getMyGames(status?: 'waiting' | 'playing' | 'finished', page = 1, limit = 20): Promise<GameDTOs.GameListResponse> {
-    let endpoint = `/games/me?page=${page}&limit=${limit}`;
+    let endpoint = `${API_PREFIX}/games/me?page=${page}&limit=${limit}`;
     if (status) {
       endpoint += `&status=${status}`;
     }
@@ -99,7 +101,7 @@ export class GameService {
    * Get match details (completed game)
    */
   async getMatch(matchId: string): Promise<Match> {
-    const response = await httpClient.get<Match>(`/matches/${matchId}`);
+    const response = await httpClient.get<Match>(`${API_PREFIX}/matches/${matchId}`);
     return response.data!;
   }
 
@@ -108,7 +110,7 @@ export class GameService {
    */
   async getRecentMatches(page = 1, limit = 20): Promise<PaginatedResponse<Match>> {
     const response = await httpClient.get<PaginatedResponse<Match>>(
-      `/matches/recent?page=${page}&limit=${limit}`
+      `${API_PREFIX}/matches/recent?page=${page}&limit=${limit}`
     );
     return response.data!;
   }
@@ -117,7 +119,7 @@ export class GameService {
    * Invite user to a game
    */
   async invitePlayer(gameId: string, userId: string): Promise<void> {
-    await httpClient.post(`/games/${gameId}/invite`, { userId });
+    await httpClient.post(`${API_PREFIX}/games/${gameId}/invite`, { userId });
   }
 
   /**
@@ -125,7 +127,7 @@ export class GameService {
    */
   async acceptInvitation(invitationId: string): Promise<GameDTOs.JoinGameResponse> {
     const response = await httpClient.post<GameDTOs.JoinGameResponse>(
-      `/games/invitations/${invitationId}/accept`
+      `${API_PREFIX}/games/invitations/${invitationId}/accept`
     );
     return response.data!;
   }
@@ -134,7 +136,7 @@ export class GameService {
    * Decline game invitation
    */
   async declineInvitation(invitationId: string): Promise<void> {
-    await httpClient.post(`/games/invitations/${invitationId}/decline`);
+    await httpClient.post(`${API_PREFIX}/games/invitations/${invitationId}/decline`);
   }
 
   /**
@@ -153,7 +155,7 @@ export class GameService {
       game: Game;
       invitedBy: string;
       createdAt: string;
-    }>>('/games/invitations');
+    }>>(`${API_PREFIX}/games/invitations`);
     return response.data!;
   }
 
@@ -161,7 +163,7 @@ export class GameService {
    * Find match (matchmaking)
    */
   async findMatch(gameType: 'pong' | 'custom' = 'pong'): Promise<GameDTOs.JoinGameResponse> {
-    const response = await httpClient.post<GameDTOs.JoinGameResponse>('/games/matchmaking', { gameType });
+    const response = await httpClient.post<GameDTOs.JoinGameResponse>(`${API_PREFIX}/games/matchmaking`, { gameType });
     return response.data!;
   }
 
@@ -169,7 +171,7 @@ export class GameService {
    * Cancel matchmaking
    */
   async cancelMatchmaking(): Promise<void> {
-    await httpClient.delete('/games/matchmaking');
+    await httpClient.delete(`${API_PREFIX}/games/matchmaking`);
   }
 }
 
