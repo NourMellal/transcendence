@@ -1,9 +1,11 @@
 import { httpClient } from './client';
-import { 
-  ChatMessage, 
+import {
+  ChatMessage,
   Notification,
-  PaginatedResponse 
+  PaginatedResponse
 } from '../../models';
+
+const API_PREFIX = '/api';
 
 /**
  * Chat Service
@@ -14,7 +16,7 @@ export class ChatService {
    * Send a direct message to another user
    */
   async sendDirectMessage(recipientId: string, content: string): Promise<ChatMessage> {
-    const response = await httpClient.post<ChatMessage>('/chat/messages', {
+    const response = await httpClient.post<ChatMessage>(`${API_PREFIX}/chat/messages`, {
       recipientId,
       content,
       type: 'text'
@@ -26,7 +28,7 @@ export class ChatService {
    * Send a game invitation through chat
    */
   async sendGameInvitation(recipientId: string, gameId: string): Promise<ChatMessage> {
-    const response = await httpClient.post<ChatMessage>('/chat/messages', {
+    const response = await httpClient.post<ChatMessage>(`${API_PREFIX}/chat/messages`, {
       recipientId,
       content: `Game invitation: ${gameId}`,
       type: 'game_invite',
@@ -40,11 +42,11 @@ export class ChatService {
    */
   async getDirectMessages(
     userId: string, 
-    page = 1, 
+    page = 1,
     limit = 50
   ): Promise<PaginatedResponse<ChatMessage>> {
     const response = await httpClient.get<PaginatedResponse<ChatMessage>>(
-      `/chat/messages/direct/${userId}?page=${page}&limit=${limit}`
+      `${API_PREFIX}/chat/messages/direct/${userId}?page=${page}&limit=${limit}`
     );
     return response.data!;
   }
@@ -65,7 +67,7 @@ export class ChatService {
       avatar?: string;
       lastMessage?: ChatMessage;
       unreadCount: number;
-    }>>('/chat/conversations');
+    }>>(`${API_PREFIX}/chat/conversations`);
     return response.data!;
   }
 
@@ -73,7 +75,7 @@ export class ChatService {
    * Mark messages as read
    */
   async markAsRead(userId: string): Promise<void> {
-    await httpClient.post(`/chat/conversations/${userId}/read`);
+    await httpClient.post(`${API_PREFIX}/chat/conversations/${userId}/read`);
   }
 
   /**
@@ -81,7 +83,7 @@ export class ChatService {
    */
   async getNotifications(page = 1, limit = 20): Promise<PaginatedResponse<Notification>> {
     const response = await httpClient.get<PaginatedResponse<Notification>>(
-      `/notifications?page=${page}&limit=${limit}`
+      `${API_PREFIX}/notifications?page=${page}&limit=${limit}`
     );
     return response.data!;
   }
@@ -90,28 +92,28 @@ export class ChatService {
    * Mark notification as read
    */
   async markNotificationAsRead(notificationId: string): Promise<void> {
-    await httpClient.patch(`/notifications/${notificationId}/read`);
+    await httpClient.patch(`${API_PREFIX}/notifications/${notificationId}/read`);
   }
 
   /**
    * Mark all notifications as read
    */
   async markAllNotificationsAsRead(): Promise<void> {
-    await httpClient.patch('/notifications/read-all');
+    await httpClient.patch(`${API_PREFIX}/notifications/read-all`);
   }
 
   /**
    * Delete notification
    */
   async deleteNotification(notificationId: string): Promise<void> {
-    await httpClient.delete(`/notifications/${notificationId}`);
+    await httpClient.delete(`${API_PREFIX}/notifications/${notificationId}`);
   }
 
   /**
    * Get unread notification count
    */
   async getUnreadCount(): Promise<{ messages: number; notifications: number }> {
-    const response = await httpClient.get<{ messages: number; notifications: number }>('/chat/unread-count');
+    const response = await httpClient.get<{ messages: number; notifications: number }>(`${API_PREFIX}/chat/unread-count`);
     return response.data!;
   }
 
@@ -119,14 +121,14 @@ export class ChatService {
    * Block user from sending messages
    */
   async blockUser(userId: string): Promise<void> {
-    await httpClient.post('/chat/block', { userId });
+    await httpClient.post(`${API_PREFIX}/chat/block`, { userId });
   }
 
   /**
    * Unblock user
    */
   async unblockUser(userId: string): Promise<void> {
-    await httpClient.delete(`/chat/block/${userId}`);
+    await httpClient.delete(`${API_PREFIX}/chat/block/${userId}`);
   }
 
   /**
@@ -141,7 +143,7 @@ export class ChatService {
       userId: string;
       username: string;
       blockedAt: string;
-    }>>('/chat/blocked');
+    }>>(`${API_PREFIX}/chat/blocked`);
     return response.data!;
   }
 
@@ -149,7 +151,7 @@ export class ChatService {
    * Delete conversation (clear message history)
    */
   async deleteConversation(userId: string): Promise<void> {
-    await httpClient.delete(`/chat/conversations/${userId}`);
+    await httpClient.delete(`${API_PREFIX}/chat/conversations/${userId}`);
   }
 }
 
