@@ -1,222 +1,299 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Science+Gothic:wght@100..900&display=swap");
 
-body {  
-     background-color:#030712 ; 
-     min-height: 100vh ;     
-      #root { 
-            height:  100% ;
-      #app-view {
-            display: flex ;
-            justify-content: center;  
-      
-      .login-container {  
-            width: 90% ;   
-            display:  flex ;  
-            justify-content: center;   
-            height: 80%;   
-            .left-login {  
-                  width: 35% ;   
-                  min-height: 90vh ;
-                  background-image: url("../../public/ef9c7552-7843-4f6d-b216-a273f225e524.png");
-                  background-size: cover;  
-             } 
-             .right-login {  
-                  width:  45%;  
-                  border-top-right-radius: 8px;
-                  border-bottom-right-radius: 8px;
-                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08); 
-                  padding: 16px;
-                  transition: box-shadow 0.3s ease, transform 0.2s ease;  
-                  display: flex ; 
-                  flex-direction: column ; 
-                  background: rgba(66, 218, 235, 0.03);
-                  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-                  backdrop-filter: blur(6.7px);
-                  -webkit-backdrop-filter: blur(6.7px);
-                  border: 1px solid rgba(66, 218, 235, 0.3);    
-                        #form-header { 
-                              color: white ;   
-                              font-family: "Inter", sans-serif;
-                              font-optical-sizing: auto;
-                              font-weight:500;
-                              font-style: normal;
-                              margin-left: 10%;
-                        }
-              }
-      }   
-     
-   
-} 
+body {
+  background-color: #0b0d1c;
+  min-height: 100vh;
+  margin: 0;
+  overflow: hidden;
+
+  #root {
+    height: 100%;
+  }
 }
-}  
-   
-.profileContainer { 
-             display: flex  ; 
-             width: 100%  ;
-             height: 100vh ;     
-             background-color: #171848;
-             #navBar {  
-                  width: 85% ;  
-                  nav { 
-                         background-color: #38396f ;  
-                         #sideInner { 
-                              padding-left :  1rem  ;      
-                              padding-right :  2rem  ;      
-                        }
 
-                  }    
-                  #notif-msg { 
-                        display: flex ;  
-                        gap: 1rem ;    
-                  button {  
-                        border: solid 0.7px  #6f70a1  ; 
-                        padding: 5px ;  
-                        width: 36px;
-                        height: 34px;
-                        border-radius: 20% ;
-                        svg {  
-                              color:  #6f70a1 ;   
-                              border:  1px black ;
-                        }
-                         
-                  }
-                  }    
-                  .right-ele {  
-                        gap: 1.5rem ;
-                  }
-                  .avatar-block { 
-                        display: flex ;  
-                        height: 100% ;  
-                        gap: 1.5rem ;   
-                        #avatar-infos { 
-                              display: flex; 
-                              flex-direction: column ;      
-                              padding-top: 5px ;  
-                              span {  
-                                    font-family: 'Inter' ;  
-                              }
-                              span:nth-of-type(1) { 
-                                    font-size: 15px ;  
-                                    font-weight: 500 ;
-                              }   
-                              #games-streak { 
-                                     display: flex;  
-                                     font-size: 9px ;   
-                                    align-items: center ;  
-                                    gap: 5px ;
-                                     span {  
-                                          font-size: 12px ;  
-                                     }  
-                                     svg { 
-                                          color: rgb(51 255 0);
-                                     }
-                              }                 
-                        }
-                        .avatar {  
-                              height:  3rem;  
-                              border-radius: 11px 11px 0px 0px;
-                        }
-                  }
-             }  
-  #sideBar {  
-    width: 15%; 
-    height: 100vh;
-    background: #26264f;
-    padding: 20px;
-    color: #d0d4f7;
+/* ——————————————————————————————— */
+/* LOGIN PAGE — CLEAN + REDUCED SPACING */
+/* ——————————————————————————————— */
+
+#app-view {
+  display: flex;
+  justify-content: center;
+
+  .login-container {
+    width: 90%;
+    display: flex;
+    justify-content: center;
+    height: 80%;
+
+    .left-login {
+      width: 35%;
+      min-height: 90vh;
+      background-image: url("../../public/ef9c7552-7843-4f6d-b216-a273f225e524.png");
+      background-size: cover;
+    }
+
+    .right-login {
+      width: 45%;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(66, 218, 235, 0.03);
+      border: 1px solid rgba(66, 218, 235, 0.25);
+
+      #form-header {
+        color: white;
+        font-family: "Inter";
+        font-size: 18px;
+        margin-left: 8%;
+      }
+    }
+  }
+}
+
+/* ——————————————————————————————— */
+/* MAIN APP — CRYPTO DASHBOARD STYLE   */
+/* ——————————————————————————————— */
+
+.profileContainer {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  background-color: #0f1124;
+  overflow: hidden;
+
+  /* ——————————————————————————————— */
+  /* SIDEBAR — MINIMAL & TIGHT LAYOUT   */
+  /* ——————————————————————————————— */
+
+  #left {
+    width: 14%;
+    background: #14162d;
+    padding: 14px 16px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
 
-    .logo {
-        font-size: 18px;
-        font-weight: 700;
-        margin-bottom: 25px;
-    }
+    #sideBar {
+      color: #cdd0f5;
+      font-family: "Inter";
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
 
-    .status {
-        font-size: 14px;
-        line-height: 1.4;
-        margin-bottom: 25px;
+      .logo {
+        font-family: "Science Gothic";
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        color: #7cabff;
+        text-shadow: 0 0 10px rgba(124, 171, 255, 0.4);
+      }
+
+      .status {
+        font-size: 12px;
+        gap: 6px;
+
+        p {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
 
         .dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          box-shadow: 0 0 6px #23ca85;
 
-            &.online {
-                background: #28e79a;
-            }
+          &.online {
+            background: #23ca85;
+          }
         }
-    }
+      }
 
-    .section {
-        margin-bottom: 24px;
+      #line {
+        width: 90%;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          rgba(124, 171, 255, 0.1),
+          rgba(124, 171, 255, 0.5),
+          rgba(124, 171, 255, 0.1)
+        );
+        margin: 6px auto;
+      }
 
+      .section {
         .section-title {
-            color: #8c92c9;
-            font-size: 12px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
+          font-size: 10.5px;
+          color: #656caa;
+          margin-bottom: 6px;
+          letter-spacing: 1.1px;
+          font-weight: 600;
         }
 
         .item {
-            display: block;
-            padding: 10px 12px;
-            background: transparent;
-            border-radius: 8px;
-            color: #e2e5ff;
-            text-decoration: none;
-            font-size: 14px;
-            margin-bottom: 6px;
-            transition: 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          cursor: pointer;
+          border-radius: 6px;
+          transition: background 0.25s ease, transform 0.15s ease;
+          font-size: 13px;
 
-            &:hover {
-                background: rgba(255, 255, 255, 0.05);
+          svg {
+            opacity: 0.85;
+            width: 16px;
+          }
+
+          &:hover {
+            background: rgba(124, 171, 255, 0.12);
+            transform: translateX(4px);
+
+            svg {
+              color: #7cabff;
             }
+          }
 
-            &.create {
-                color: #7cabff;
-                font-weight: 600;
+          &.active {
+            background: rgba(124, 171, 255, 0.18);
+            border-left: 2px solid #7cabff;
+
+            svg {
+              color: #7cabff;
             }
+          }
 
-            .tag {
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                display: inline-block;
-                margin-left: 6px;
+          &.create {
+            color: #7cabff;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(124, 171, 255, 0.4);
+          }
 
-                &.gold { background: #ffc700; }
-                &.silver { background: #c9d1d9; }
-                &.blue { background: #0098ff; }
+          .tag {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: auto;
+
+            &.gold {
+              background: #ffc700;
+              box-shadow: 0 0 5px #ffc700;
             }
+            &.silver {
+              background: #c9d1d9;
+              box-shadow: 0 0 5px #c9d1d9;
+            }
+            &.blue {
+              background: #0098ff;
+              box-shadow: 0 0 5px #0098ff;
+            }
+          }
         }
+      }
     }
 
     .solana-box {
-        margin-top: auto;
-        background: #0e1533;
-        padding: 15px;
-        border-radius: 12px;
-        color: #fff;
+      margin-top: auto;
+      background: rgba(14, 21, 51, 0.7);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(124, 171, 255, 0.2);
+      color: #fff;
 
-        .price {
-            font-size: 16px;
-            font-weight: 600;
+      .price {
+        font-size: 14px;
+        font-weight: 600;
 
-            .green {
-                color: #00ff9b;
-                font-size: 13px;
-            }
+        .green {
+          color: #00ff9b;
+          font-size: 11px;
         }
+      }
 
-        .tx {
-            font-size: 13px;
-            opacity: 0.7;
-        }
+      .tx {
+        font-size: 11px;
+        opacity: 0.7;
+      }
     }
+  }
+
+  /* ——————————————————————————————— */
+  /* TOP NAVBAR — COMPACT & CRYPTO LOOK */
+  /* ——————————————————————————————— */
+
+  #navBar {
+    width: 86%;
+    display: flex;
+    flex-direction: column;
+#sideInner { 
+       margin-left: auto ;
 }
-                  
-            }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 1.2rem;
+      background-color: #13162f;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    #notif-msg {
+      display: flex;
+      gap: 0.5rem;
+
+      button {
+        border: solid 0.5px #6f70a1;
+        padding: 4px;
+        width: 30px;
+        height: 30px;
+        border-radius: 20%;
+
+        svg {
+          color: #7f80b7;
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+
+    .avatar-block {
+      display: flex;
+      gap: 1rem;
+
+      #avatar-infos {
+        display: flex;
+        flex-direction: column;
+        padding-top: 2px;
+
+        span:nth-of-type(1) {
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        #games-streak {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          span {
+            font-size: 11px;
+          }
+
+          svg {
+            color: #00ff5e;
+            width: 10px;
+          }
+        }
+      }
+
+      .avatar {
+        height: 2.5rem;
+        border-radius: 10px 10px 0 0;
+      }
+    }
+  }
+}

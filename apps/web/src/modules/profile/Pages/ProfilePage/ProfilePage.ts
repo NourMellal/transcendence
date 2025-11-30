@@ -22,7 +22,7 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     const navbar  = new navBar({}) ;    
     const sidebar  = new sideBar({}) ;   
 
-    sidebar.mount("#sideBar") ; 
+    sidebar.mount("#left") ; 
     navbar.mount("#navBar")  ;        
     this.unsubscribe = appState.auth.subscribe((auth) => {
       this.setState({ user: auth.user });
@@ -39,11 +39,11 @@ export default class ProfilePage extends Component<Record<string, never>, State>
    
     return `   
         <div class='profileContainer flex'>      
-        <div id='sideBar' >  
+        <div   id='left'>  
+       </div>  
+        <div id='navBar' >  
 
         </div> 
-         <div   id='navBar'>  
-        </div>  
         </div> 
     `;
   }
