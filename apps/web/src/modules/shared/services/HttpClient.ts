@@ -224,21 +224,21 @@ export class HttpClient {
     config: RequestConfig
   ): Promise<RequestConfig> {
     let finalConfig = config;
-    
+
     for (const interceptor of this.requestInterceptors) {
       finalConfig = await interceptor(finalConfig);
     }
-    
+
     return finalConfig;
   }
 
   private async applyResponseInterceptors(response: Response): Promise<Response> {
     let finalResponse = response;
-    
+
     for (const interceptor of this.responseInterceptors) {
       finalResponse = await interceptor(finalResponse);
     }
-    
+
     return finalResponse;
   }
 
@@ -432,7 +432,7 @@ export class HttpClient {
 
   private async refreshToken(): Promise<string> {
     const refreshToken = localStorage.getItem('refreshToken');
-    
+
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
@@ -448,13 +448,13 @@ export class HttpClient {
     }
 
     const data = await response.json();
-    
+
     localStorage.setItem('refreshToken', data.refreshToken);
     // also persist access token so other parts of app can read it
     if (data.accessToken) {
       localStorage.setItem('token', data.accessToken);
     }
-    
+
     return data.accessToken;
   }
 
