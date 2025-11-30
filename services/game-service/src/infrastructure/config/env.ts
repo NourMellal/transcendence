@@ -23,6 +23,10 @@ export interface GameServiceConfig {
     readonly messaging: MessagingConfig;
 }
 
+function resolveDatabaseFilePath(): string {
+    return process.env.GAME_SERVICE_DB_PATH || process.env.GAME_DB_PATH || join(process.cwd(), 'var', 'game-service.db');
+}
+
 function buildEnvFallback(): GameServiceConfig {
     return {
         port: getEnvVarAsNumber('GAME_SERVICE_PORT', 3002),
@@ -36,7 +40,7 @@ function buildEnvFallback(): GameServiceConfig {
             port: getEnvVarAsNumber('REDIS_PORT', 6379),
             password: process.env.REDIS_PASSWORD
         },
-        databaseFile: process.env.GAME_DB_PATH || join(process.cwd(), 'var', 'game-service.db'),
+        databaseFile: resolveDatabaseFilePath(),
         internalApiKey: process.env.INTERNAL_API_KEY,
         userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
         messaging: createMessagingConfig()
@@ -62,7 +66,7 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
                 port: redisConfig.port ?? 6379,
                 password: redisConfig.password
             },
-            databaseFile: process.env.GAME_DB_PATH || join(process.cwd(), 'var', 'game-service.db'),
+            databaseFile: resolveDatabaseFilePath(),
             internalApiKey: process.env.INTERNAL_API_KEY,
             userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
             messaging: createMessagingConfig()
