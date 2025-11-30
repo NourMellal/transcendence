@@ -2,7 +2,7 @@ import Component from '@/core/Component';
 import { appState } from '@/state';
 import type { GameStateOutput, PlayerInfo } from '../types/game.types';
 import { gameService } from '../services/GameService';
-import { gameSocket } from '../utils/gameSocket';
+import { gameWS } from '@/modules/shared/services/WebSocketClient';
 
 interface GameLobbyProps {
   gameId: string;
@@ -34,6 +34,7 @@ interface GameLobbyState {
 export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   private unsubscribeGame?: () => void;
   private timeoutInterval?: number;
+  private wsUnsubscribers: Array<() => void> = [];
 
   constructor(props: GameLobbyProps) {
     super(props);
@@ -77,7 +78,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
       // Connect WebSocket for real-time updates
       console.log('[GameLobby] Connecting WebSocket for real-time updates...');
-      this.setupWebSocket();
+      await this.setupWebSocket();
 
       this.update({});
 
@@ -316,6 +317,8 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   private async handleReady(): Promise<void> {
     try {
       console.log('[GameLobby] Marking player as ready...');
+      await gameWS.connect();
+      gameWS.send('ready', { gameId: this.props.gameId });
       const updatedGame = await gameService.setReady(this.props.gameId);
       
       this.state.isReady = true;
@@ -370,79 +373,78 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     this.update({});
   }
 
-  private setupWebSocket(): void {
+  private async setupWebSocket(): Promise<void> {
     console.log('[GameLobby] Setting up WebSocket connection...');
 
-    // Track connection status changes
-    gameSocket.onConnectionStatusChange((status) => {
-      console.log('[GameLobby] Connection status:', status);
+    const updateConnectionStatus = (status: GameLobbyState['connectionStatus']) => {
       this.state.connectionStatus = status;
       this.update({});
-    });
+    };
 
-    // Subscribe to player joined event
-    gameSocket.on('game:player_joined', (data) => {
-      console.log('[GameLobby] Player joined:', data);
-      if (this.state.game && data.gameId === this.state.game.id) {
-        // Refresh game state to get updated player list
-        gameService.getGame(data.gameId).then((game) => {
-          this.state.game = game;
-          this.update({});
-        }).catch((error) => {
-          console.error('[GameLobby] Failed to refresh game after player joined:', error);
-        });
-      }
-    });
-
-    // Subscribe to player ready event
-    gameSocket.on('game:player_ready', (data) => {
-      console.log('[GameLobby] Player ready:', data);
-      if (this.state.game && data.gameId === this.state.game.id) {
-        // Update the specific player's ready status
-        const player = this.state.game.players.find((p) => p.id === data.playerId);
-        if (player) {
-          player.ready = true;
-          this.update({});
+    this.wsUnsubscribers.push(
+      gameWS.on('connect', () => {
+        console.log('[GameLobby] ✅ Connected to game socket');
+        updateConnectionStatus('connected');
+        gameWS.send('join_game', { gameId: this.props.gameId });
+      }),
+      gameWS.on('disconnect', (reason?: string) => {
+        console.warn('[GameLobby] 🔌 Disconnected from game socket', reason);
+        updateConnectionStatus('disconnected');
+      }),
+      gameWS.on('reconnect_attempt', () => updateConnectionStatus('reconnecting')),
+      gameWS.on('reconnect_failed', () => updateConnectionStatus('failed')),
+      gameWS.on('player_joined', (data: any) => {
+        console.log('[GameLobby] Player joined:', data);
+        if (this.state.game && data.gameId === this.state.game.id) {
+          gameService
+            .getGame(data.gameId)
+            .then((game) => {
+              this.state.game = game;
+              this.update({});
+            })
+            .catch((error) => {
+              console.error('[GameLobby] Failed to refresh game after player joined:', error);
+            });
         }
-      }
-    });
-
-    // Subscribe to game started event
-    gameSocket.on('game:started', (data) => {
-      console.log('[GameLobby] Game started:', data);
-      if (this.state.game && data.gameId === this.state.game.id) {
-        this.state.game.status = 'IN_PROGRESS';
-        this.update({});
-        // Auto-navigate to game canvas
-        setTimeout(() => {
-          this.navigateTo(`/game/play/${data.gameId}`);
-        }, 500);
-      }
-    });
-
-    // Subscribe to player left event
-    gameSocket.on('game:player_left', (data) => {
-      console.log('[GameLobby] Player left:', data);
-      if (this.state.game && data.gameId === this.state.game.id) {
-        // Refresh game state
-        gameService.getGame(data.gameId).then((game) => {
-          this.state.game = game;
+      }),
+      gameWS.on('player_left', (data: any) => {
+        console.log('[GameLobby] Player left:', data);
+        if (this.state.game && data.gameId === this.state.game.id) {
+          gameService
+            .getGame(data.gameId)
+            .then((game) => {
+              this.state.game = game;
+              this.update({});
+            })
+            .catch((error) => {
+              console.error('[GameLobby] Failed to refresh game after player left:', error);
+            });
+        }
+      }),
+      gameWS.on('game_start', (data: any) => {
+        console.log('[GameLobby] Game started:', data);
+        if (this.state.game && data.gameId === this.state.game.id) {
+          this.state.game.status = 'IN_PROGRESS';
           this.update({});
-        }).catch((error) => {
-          console.error('[GameLobby] Failed to refresh game after player left:', error);
-        });
-      }
-    });
+          setTimeout(() => {
+            this.navigateTo(`/game/play/${data.gameId}`);
+          }, 500);
+        }
+      }),
+      gameWS.on('error', (data: any) => {
+        console.error('[GameLobby] Game error:', data);
+        const message = typeof data === 'object' && data && 'message' in data ? (data as any).message : undefined;
+        this.state.error = message || 'An error occurred in the game';
+        this.update({});
+      })
+    );
 
-    // Subscribe to game errors
-    gameSocket.on('game:error', (data) => {
-      console.error('[GameLobby] Game error:', data);
-      this.state.error = data.message || 'An error occurred in the game';
-      this.update({});
-    });
+    const currentState = gameWS.getState();
+    if (currentState !== this.state.connectionStatus) {
+      updateConnectionStatus(currentState as GameLobbyState['connectionStatus']);
+    }
 
-    // Connect to the game room
-    gameSocket.connect(this.props.gameId);
+    await gameWS.connect();
   }
 
   private formatTime(seconds: number): string {
@@ -462,8 +464,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       clearInterval(this.timeoutInterval);
     }
 
+    this.wsUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.wsUnsubscribers = [];
+
     // Disconnect WebSocket
     console.log('[GameLobby] Disconnecting WebSocket...');
-    gameSocket.disconnect();
+    gameWS.disconnect();
   }
 }
