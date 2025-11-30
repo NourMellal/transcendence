@@ -1,5 +1,6 @@
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
+import crypto from 'crypto';
 import type { Session } from '../../../domain/entities/user.entity';
 import type { SessionRepository } from '../../../domain/ports';
 
@@ -28,7 +29,8 @@ export class SQLiteSessionRepository implements SessionRepository {
 
     async findByToken(token: string): Promise<Session | null> {
         const db = this.ensureDb();
-        const row = await db.get('SELECT * FROM sessions WHERE token = ?', [token]);
+        const hashed = this.hashToken(token);
+        const row = await db.get('SELECT * FROM sessions WHERE token = ?', [hashed]);
         return row ? this.mapRow(row) : null;
     }
 
@@ -40,13 +42,14 @@ export class SQLiteSessionRepository implements SessionRepository {
 
     async save(session: Session): Promise<void> {
         const db = this.ensureDb();
+        const hashed = this.hashToken(session.token);
         await db.run(
             `INSERT INTO sessions (id, user_id, token, expires_at, created_at)
              VALUES (?, ?, ?, ?, ?)`,
             [
                 session.id,
                 session.userId,
-                session.token,
+                hashed,
                 session.expiresAt.toISOString(),
                 session.createdAt.toISOString(),
             ]
@@ -55,7 +58,8 @@ export class SQLiteSessionRepository implements SessionRepository {
 
     async delete(token: string): Promise<void> {
         const db = this.ensureDb();
-        await db.run('DELETE FROM sessions WHERE token = ?', [token]);
+        const hashed = this.hashToken(token);
+        await db.run('DELETE FROM sessions WHERE token = ?', [hashed]);
     }
 
     async deleteAllForUser(userId: string): Promise<void> {
@@ -78,5 +82,9 @@ export class SQLiteSessionRepository implements SessionRepository {
             expiresAt: new Date(row.expires_at),
             createdAt: new Date(row.created_at),
         };
+    }
+
+    private hashToken(token: string): string {
+        return crypto.createHash('sha256').update(token).digest('hex');
     }
 }

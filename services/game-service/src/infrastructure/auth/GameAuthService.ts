@@ -23,7 +23,7 @@ export class GameAuthService {
             this.jwtConfig = {
                 secretKey: process.env.JWT_SECRET || 'fallback-jwt-secret-for-development',
                 issuer: process.env.JWT_ISSUER || 'transcendence',
-                expirationHours: Number(process.env.JWT_EXPIRATION_HOURS ?? '24'),
+                expirationHours: Number(process.env.JWT_EXPIRATION_HOURS ?? '0.25'),
             };
         }
 

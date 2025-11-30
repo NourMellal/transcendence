@@ -31,7 +31,7 @@ export default class LoginPage extends Component<Props, State> {
 
   render() {
     const { show2FA, isLoading, error } = this.state;
-    
+
     return `
       <div class="relative min-h-screen flex items-center justify-center mobile-xs-px-4 px-4 sm:px-6 landscape-mobile-adjust safe-area-inset">
         <div class="absolute inset-0 bg-gradient-to-br from-[var(--color-bg-dark)] via-[var(--color-bg-dark)] to-[var(--color-bg-darker)]">
@@ -50,7 +50,7 @@ export default class LoginPage extends Component<Props, State> {
               ${error}
             </div>
             ` : ''}
-            
+
             ${isLoading ? `
             <div class="border px-4 py-3 rounded-lg mb-4" style="background: rgba(0, 217, 255, 0.1); border-color: rgba(0, 217, 255, 0.2); color: var(--color-primary)">
               <div class="flex items-center gap-3">
@@ -64,9 +64,9 @@ export default class LoginPage extends Component<Props, State> {
               <!-- Email Field -->
               <div class="space-y-2">
                 <label for="email" class="block text-sm font-medium" style="color: var(--color-text-secondary)">Email</label>
-                <input 
-                  type="email" 
-                  id="email" 
+                <input
+                  type="email"
+                  id="email"
                   name="email"
                   class="input-touch glass-input w-full px-4 py-3 rounded-xl"
                   placeholder="your.email@example.com"
@@ -77,9 +77,9 @@ export default class LoginPage extends Component<Props, State> {
               <!-- Password Field -->
               <div class="space-y-2">
                 <label for="password" class="block text-sm font-medium" style="color: var(--color-text-secondary)">Password</label>
-                <input 
-                  type="password" 
-                  id="password" 
+                <input
+                  type="password"
+                  id="password"
                   name="password"
                   class="input-touch glass-input w-full px-4 py-3 rounded-xl"
                   placeholder="Enter your password"
@@ -91,9 +91,9 @@ export default class LoginPage extends Component<Props, State> {
               ${show2FA ? `
               <div class="space-y-2">
                 <label for="twofa" class="block text-sm font-medium" style="color: var(--color-text-secondary)">Two-Factor Code</label>
-                <input 
-                  type="text" 
-                  id="twofa" 
+                <input
+                  type="text"
+                  id="twofa"
                   name="twofa"
                   class="input-touch glass-input w-full px-4 py-3 rounded-xl font-mono text-center tracking-widest"
                   placeholder="000000"
@@ -104,7 +104,7 @@ export default class LoginPage extends Component<Props, State> {
               ` : ''}
 
               <!-- Submit Button -->
-              <button 
+              <button
                 type="submit"
                 class="btn-touch w-full py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 touch-feedback"
                 style="background: white; color: var(--color-bg-dark);"
@@ -116,7 +116,7 @@ export default class LoginPage extends Component<Props, State> {
               </button>
 
               <!-- 42 OAuth Button -->
-              <button 
+              <button
                 type="button"
                 data-action="oauth42"
                 class="btn-touch w-full py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 touch-feedback"
@@ -132,7 +132,7 @@ export default class LoginPage extends Component<Props, State> {
             <!-- Footer Links -->
             <div class="mt-6 text-center space-y-2">
               <p class="text-sm" style="color: var(--color-text-secondary)">
-                Don't have an account? 
+                Don't have an account?
                 <button data-action="go-signup" class="font-semibold hover:underline transition" style="color: var(--color-primary)">Sign up</button>
               </p>
               <button data-action="forgot-password" class="text-sm hover:underline transition" style="color: var(--color-text-muted)">
@@ -161,10 +161,9 @@ export default class LoginPage extends Component<Props, State> {
     // Form submission
     const form = this.element.querySelector('[data-form="login"]') as HTMLFormElement | null;
     if (form) {
-      const handler = (e: Event) => {  
+      const handler = (e: Event) => {
         e.preventDefault();
-        this.handleLogin();  
-        
+        this.handleLogin();
       };
       form.addEventListener('submit', handler);
       this.subscriptions.push(() => form.removeEventListener('submit', handler));
@@ -238,10 +237,10 @@ export default class LoginPage extends Component<Props, State> {
     }
 
     console.log('Login attempt:', { email, password: '***', twoFA });
-    
-    this.setState({ 
+
+    this.setState({
       isLoading: true,
-      error: null 
+      error: null
     });
 
     try {
@@ -254,7 +253,7 @@ export default class LoginPage extends Component<Props, State> {
       });
       navigate('/profile');
     } catch (error) {
-      this.setState({ 
+      this.setState({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Login failed'
       });

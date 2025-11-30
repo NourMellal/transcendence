@@ -1,15 +1,19 @@
 import { mountRoot } from "./core/utils";
 import { initRouter } from "./routes";
 import "./styles/main.css";
+import { authService } from "./services/auth/AuthService";
 
 console.log('🚀 Transcendence - Cyberpunk Edition');
 console.log('🎨 Design system loaded');
 
 // App bootstrap
-(() => {
+(async () => {
   const app = document.querySelector<HTMLDivElement>('#app');
 
   if (app) {
+    // Hydrate session before rendering
+    await authService.hydrateFromStorage();
+
     // Mount root component
     mountRoot(app);
     // Initialize router
