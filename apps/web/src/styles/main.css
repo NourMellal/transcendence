@@ -76,7 +76,6 @@
   /* Default scrolling behavior - can be overridden by login-page when needed */
   html {
     overflow-y: auto;
-    overflow-x: hidden;
     height: auto;
   }
 
