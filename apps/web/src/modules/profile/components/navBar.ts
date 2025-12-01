@@ -31,7 +31,7 @@ onMount(): void {
    
     return `
 <nav class="relative bg-gray-800 dark:bg-gray-800/50 dark:after:pointer-events-none dark:after:absolute dark:after:inset-x-0 dark:after:bottom-0 dark:after:h-px dark:after:bg-white/10">
-  <div class="mx-auto mn" id='sideInner' >
+  <div  id='sideInner' >
     <div class="relative flex h-16 items-center justify-between">
 
       <!-- Left: Logo -->

@@ -30,6 +30,8 @@ body {
       width: 35%;
       min-height: 90vh;
       background-image: url("../../public/ef9c7552-7843-4f6d-b216-a273f225e524.png");
+
+
       background-size: cover;
     }
 
@@ -64,7 +66,135 @@ body {
   overflow: hidden;
 
   /* ——————————————————————————————— */
-  /* SIDEBAR — MINIMAL & TIGHT LAYOUT   */
+  /* RIGHT SIDE — PROFILE CARD          */
+  /* ——————————————————————————————— */
+
+  #right {
+    width: -moz-available;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+.profile-card {
+  width: 80%;
+  min-height: 520px;
+  border-radius: 34px;
+  position: relative;
+  overflow: hidden;
+  align-self: center;
+
+  background: linear-gradient(
+      145deg,
+      rgba(32, 45, 85, 0.55),
+      rgba(10, 12, 25, 0.88)
+    ),
+    url("../../public/assets/images/profile-card.jpg") center/cover;
+
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.65),
+    0 0 20px rgba(124, 171, 255, 0.25);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 1.5rem;
+
+  /* animated neon border */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(
+      115deg,
+      rgba(124, 171, 255, 0.7),
+      rgba(0, 247, 255, 0.4),
+      rgba(124, 171, 255, 0.7)
+    );
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: borderGlow 4s linear infinite;
+  }
+}
+
+@keyframes borderGlow {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* Avatar */
+#card-avatar {
+width: 145px;
+  height: 141px;
+  border-radius: 22px;
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url("/public/assets/images/ape.png");
+  background-size: cover;
+  border: 2px solid rgba(124, 171, 255, 0.45);
+  background-position: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* User Info Glass Bar */
+#userInfos {
+  width: 90%;
+  height: 130px;
+  margin-inline: auto;
+
+  background: rgba(16, 20, 51, 0.42);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45),
+    inset 0 0 20px rgba(124, 171, 255, 0.08);
+}
+
+/* Stats inside glass bar */
+.infosElement {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+
+  font-family: "Inter", sans-serif;
+
+  #title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(190, 195, 220, 0.65);
+    letter-spacing: 0.5px;
+  }
+
+  #value {
+    color: white;
+    font-size: 23px;
+    font-weight: 700;
+    text-shadow: 0 0 12px rgba(124, 171, 255, 0.45);
+  }
+}
+
+  }
+
+  /* ——————————————————————————————— */
+  /* LEFT SIDEBAR                       */
   /* ——————————————————————————————— */
 
   #left {
@@ -80,8 +210,8 @@ body {
       font-family: "Inter";
       display: flex;
       flex-direction: column;
-      gap: 1.2rem;
-
+      gap: 3.2rem;
+      
       .logo {
         font-family: "Science Gothic";
         font-size: 17px;
@@ -222,20 +352,27 @@ body {
   }
 
   /* ——————————————————————————————— */
-  /* TOP NAVBAR — COMPACT & CRYPTO LOOK */
+  /* TOP NAVBAR                         */
   /* ——————————————————————————————— */
 
   #navBar {
-    width: 86%;
     display: flex;
     flex-direction: column;
-#sideInner { 
-       margin-left: auto ;
-}
+
+    #sideInner {
+      width: 90%;
+      align-self: center;  
+      .h-16 
+      {  
+        height: 2.3rem ;
+      } 
+    }
+
     nav {
       display: flex;
+      width: 100%;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       padding: 0.6rem 1.2rem;
       background-color: #13162f;
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
