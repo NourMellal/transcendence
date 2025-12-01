@@ -312,7 +312,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
     readyBtn?.addEventListener('click', () => this.handleReady());
     leaveBtn?.addEventListener('click', () => this.handleLeave());
-    backBtn?.addEventListener('click', () => this.navigateTo('/dashboard'));
+    backBtn?.addEventListener('click', () => this.navigateTo('/profile'));
   }
 
   private async handleReady(): Promise<void> {
@@ -340,11 +340,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       console.log('[GameLobby] Leaving game...');
       await gameService.leaveGame(this.props.gameId);
       console.log('[GameLobby] ✅ Successfully left game');
-      this.navigateTo('/dashboard');
+      this.navigateTo('/profile');
     } catch (error) {
       console.error('[GameLobby] ❌ Failed to leave game:', error);
       // Still navigate away even if leave fails
-      this.navigateTo('/dashboard');
+      this.navigateTo('/profile');
     }
   }
 
