@@ -3,14 +3,19 @@ import path from 'node:path';
 
 export default defineConfig({
   server: {
-    port: 3003,
+    port: 3000,
+    host: true, // Expose on all network interfaces (0.0.0.0) for Docker/microservices
     proxy: {
       '/api': {
-        target: process.env.VITE_PROXY_TARGET || 'http://localhost:3000',
+        target: 'http://localhost:3002',
         changeOrigin: true,
-        secure: false
-      }
-    }
+      },
+      '/api/games/ws/socket.io': {
+        target: 'ws://localhost:3002',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',
