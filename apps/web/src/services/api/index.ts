@@ -10,7 +10,6 @@
 export { HttpClient, ApiError } from '../../modules/shared/services/HttpClient';
 export { httpClient } from './client';
 export { UserService, userService } from './UserService';
-export { GameService, gameService } from './GameService';
 export { TournamentService, tournamentService } from './TournamentService';
 export { ChatService, chatService } from './ChatService';
 

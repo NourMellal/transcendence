@@ -56,16 +56,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     try {
       // Get current user ID from auth state
       const auth = appState.auth.get();
-      this.state.currentUserId = auth?.userId || localStorage.getItem('userId') || null;
-
-      if (!this.state.currentUserId) {
-        throw new Error('Authentication required to join game lobby');
-      }
+      this.state.currentUserId = (auth?.user as any)?.id ?? null;
 
       // Fetch initial lobby state via GameService
-      console.log('[GameLobby] Fetching game via GameService...');
       const game = await gameService.getGame(this.props.gameId);
-      
+
       this.state.game = game;
       this.state.isLoading = false;
 
@@ -76,8 +71,12 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         error: null,
       });
 
+      // If we still don't know current user, infer from lobby (single-player case)
+      if (!this.state.currentUserId && game.players?.length === 1) {
+        this.state.currentUserId = game.players[0]?.id ?? null;
+      }
+
       // Connect WebSocket for real-time updates
-      console.log('[GameLobby] Connecting WebSocket for real-time updates...');
       await this.setupWebSocket();
 
       this.update({});
@@ -370,8 +369,6 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   private async setupWebSocket(): Promise<void> {
-    console.log('[GameLobby] Setting up WebSocket connection...');
-
     const updateConnectionStatus = (status: GameLobbyState['connectionStatus']) => {
       this.state.connectionStatus = status;
       this.update({});

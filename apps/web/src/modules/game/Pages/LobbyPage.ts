@@ -27,7 +27,8 @@ export class LobbyPage extends Component<LobbyPageProps, {}> {
   }
 
   onMount(): void {
-    const container = this.element?.querySelector('#lobby-container') as HTMLElement;
+    // Our render returns the container itself, so use this.element directly
+    const container = this.element as HTMLElement | null;
     if (container) {
       this.lobby = new GameLobby({ gameId: this.props.id });
       this.lobby.mount(container);
