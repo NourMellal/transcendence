@@ -1,8 +1,8 @@
 import { httpClient } from '@/modules/shared/services/HttpClient';
-import type { 
-  GameStateOutput, 
-  CreateGameRequest, 
-  CreateGameResponse 
+import type {
+  GameStateOutput,
+  CreateGameRequest,
+  CreateGameResponse
 } from '../types/game.types';
 
 /**
@@ -25,12 +25,12 @@ export interface SetReadyResponse {
 
 /**
  * GameService - HTTP API client for game CRUD operations
- * 
+ *
  * All requests go through API Gateway at /api/games
  * Follows AGENTS.md principles: clean service layer, direct HTTP calls
  */
 class GameService {
-  private readonly basePath = '/api/games';
+   private readonly basePath = '/games';
 
   /**
    * Create a new game with specified settings
@@ -39,11 +39,8 @@ class GameService {
   async createGame(request: CreateGameRequest): Promise<CreateGameResponse> {
     try {
       console.log('[GameService] Creating game with request:', request);
-      
-      const response = await httpClient.post<CreateGameResponse>(
-        this.basePath,
-        request
-      );
+
+      const response = await httpClient.post<CreateGameResponse>(this.basePath, request);
 
       console.log('[GameService] ✅ Game created:', response.data);
       return response.data;
@@ -60,13 +57,11 @@ class GameService {
   async getGame(gameId: string): Promise<GameStateOutput> {
     try {
       console.log('[GameService] Fetching game:', gameId);
-      
-      const response = await httpClient.get<{ game: GameStateOutput }>(
-        `${this.basePath}/${gameId}`
-      );
 
-      console.log('[GameService] ✅ Game fetched:', response.data.game.status);
-      return response.data.game;
+      const response = await httpClient.get<GameStateOutput>(`${this.basePath}/${gameId}`);
+
+      console.log('[GameService] ✅ Game fetched:', (response.data as any)?.status);
+      return response.data;
     } catch (error) {
       console.error('[GameService] ❌ Failed to fetch game:', error);
       throw new Error('Game not found or no longer available.');
@@ -80,14 +75,11 @@ class GameService {
   async joinGame(gameId: string): Promise<GameStateOutput> {
     try {
       console.log('[GameService] Joining game:', gameId);
-      
-      const response = await httpClient.post<JoinGameResponse>(
-        `${this.basePath}/${gameId}/join`,
-        {}
-      );
+
+      const response = await httpClient.post<GameStateOutput>(`${this.basePath}/${gameId}/join`, {});
 
       console.log('[GameService] ✅ Joined game successfully');
-      return response.data.game;
+      return response.data;
     } catch (error) {
       console.error('[GameService] ❌ Failed to join game:', error);
       throw new Error('Failed to join game. It may be full or already started.');
@@ -101,11 +93,8 @@ class GameService {
   async leaveGame(gameId: string): Promise<void> {
     try {
       console.log('[GameService] Leaving game:', gameId);
-      
-      await httpClient.post<LeaveGameResponse>(
-        `${this.basePath}/${gameId}/leave`,
-        {}
-      );
+
+      await httpClient.post<LeaveGameResponse>(`${this.basePath}/${gameId}/leave`, {});
 
       console.log('[GameService] ✅ Left game successfully');
     } catch (error) {
@@ -119,17 +108,13 @@ class GameService {
    * Mark player as ready
    * POST /api/games/:gameId/ready
    */
-  async setReady(gameId: string): Promise<GameStateOutput> {
+  async setReady(gameId: string): Promise<void> {
     try {
       console.log('[GameService] Setting ready for game:', gameId);
-      
-      const response = await httpClient.post<SetReadyResponse>(
-        `${this.basePath}/${gameId}/ready`,
-        {}
-      );
+
+      await httpClient.post<SetReadyResponse>(`${this.basePath}/${gameId}/ready`, {});
 
       console.log('[GameService] ✅ Player marked as ready');
-      return response.data.game;
     } catch (error) {
       console.error('[GameService] ❌ Failed to set ready:', error);
       throw new Error('Failed to mark as ready. Please try again.');
@@ -143,12 +128,10 @@ class GameService {
   async listGames(): Promise<GameStateOutput[]> {
     try {
       console.log('[GameService] Fetching available games');
-      
-      const response = await httpClient.get<{ games: GameStateOutput[] }>(
-        this.basePath
-      );
 
-      console.log('[GameService] ✅ Fetched', response.data.games.length, 'games');
+      const response = await httpClient.get<{ games: GameStateOutput[]; total: number }>(this.basePath);
+
+      console.log('[GameService] ✅ Fetched', (response.data as any)?.games?.length ?? 0, 'games');
       return response.data.games;
     } catch (error) {
       console.error('[GameService] ❌ Failed to list games:', error);

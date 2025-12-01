@@ -17,15 +17,15 @@ export interface CreateGameRequest {
 
 export interface CreateGameResponse {
   id: string;
-  mode: 'CLASSIC' | 'TOURNAMENT';
-  player1: string;
-  player2: string | null;
+  mode?: 'CLASSIC' | 'TOURNAMENT';
+  player1?: string | null;
+  player2?: string | null;
   status: 'WAITING' | 'PLAYING' | 'FINISHED' | 'CANCELLED';
   score: {
     player1: number;
     player2: number;
   };
-  settings: GameSettings;
+  settings?: GameSettings;
   createdAt: string;
 }
 
@@ -45,14 +45,14 @@ export interface PlayerInfo {
 
 export interface GameStateOutput {
   id: string;
-  players: PlayerInfo[];
-  status: 'WAITING' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+  players?: PlayerInfo[];
+  status: 'WAITING' | 'IN_PROGRESS' | 'PLAYING' | 'FINISHED' | 'CANCELLED';
   score: {
     player1: number;
     player2: number;
   };
-  createdAt: Date;
-  finishedAt?: Date;
+  createdAt: string | Date;
+  finishedAt?: string | Date;
 }
 
 // ===== Gameplay Canvas Types =====

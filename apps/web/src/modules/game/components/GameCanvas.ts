@@ -1,6 +1,6 @@
 import Component from '../../../core/Component';
 import { GameRenderer } from '../utils/GameRenderer';
-import type { Ball, Paddle } from '../types/game.types';
+import type { Ball, Paddle, GameStateUpdateEvent } from '../types/game.types';
 import { gameWS } from '@/modules/shared/services/WebSocketClient';
 import { isOnlineMode } from '../utils/featureFlags';
 
@@ -10,7 +10,7 @@ interface GameCanvasProps {
 
 interface GameCanvasState {
   isGameRunning: boolean;
-  connectionStatus?: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+  connectionStatus?: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'failed';
 }
 
 export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
@@ -19,7 +19,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private animationId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private isOnline: boolean = false;
-  private lastPaddleY: number = -1;
+  private wsUnsubscribes: Array<() => void> = [];
   
   private readonly BASE_WIDTH = 800;
   private readonly BASE_HEIGHT = 600;
@@ -32,7 +32,6 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private player1!: Paddle;
   private player2!: Paddle;
   private isRunning: boolean = false;
-  private wsUnsubscribers: Array<() => void> = [];
 
   // Configurable controls (can be changed later)
   private readonly player2Controls = {
@@ -273,8 +272,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       
       // In online mode, emit paddle movement to server
       if (this.isOnline && this.props.gameId) {
-        const paddleY = this.player1.y; // Assuming current player is player1
-        this.emitPaddleMove(paddleY);
+        this.emitPaddleMove();
       }
     };
     document.addEventListener('keydown', this.keyDownHandler);
@@ -293,14 +291,13 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     const updateStatus = (status: GameCanvasState['connectionStatus']) =>
       this.setState({ connectionStatus: status });
 
-    this.wsUnsubscribers.push(
+    this.wsUnsubscribes.push(
       gameWS.on('connect', () => {
         updateStatus('connected');
         gameWS.send('join_game', { gameId: this.props.gameId });
       }),
       gameWS.on('disconnect', () => updateStatus('disconnected')),
-      gameWS.on('reconnect_attempt', () => updateStatus('reconnecting')),
-      gameWS.on('reconnect_failed', () => updateStatus('failed')),
+      gameWS.on('connect_error', () => updateStatus('error')),
       gameWS.on('game_start', (data: any) => {
         if (data?.gameId === this.props.gameId) {
           this.isRunning = true;
@@ -309,23 +306,47 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
         }
       }),
       gameWS.on('game_state', (data: any) => {
-        if (data?.gameId === this.props.gameId) {
-          this.ball.x = data.ball?.x ?? this.ball.x;
-          this.ball.y = data.ball?.y ?? this.ball.y;
-          this.ball.velocityX = data.ball?.velocityX ?? this.ball.velocityX;
-          this.ball.velocityY = data.ball?.velocityY ?? this.ball.velocityY;
+        const payloadGameId = data?.gameId ?? data?.id;
+        if (payloadGameId !== this.props.gameId) {
+          return;
+        }
 
-          this.player1.y = data.paddles?.left?.y ?? this.player1.y;
-          this.player2.y = data.paddles?.right?.y ?? this.player2.y;
+        const ballPosition = data?.ball?.position ?? data?.ball;
+        const ballVelocity = data?.ball?.velocity ?? data?.ball;
 
-          if (data.score) {
-            this.player1.score = data.score.left ?? this.player1.score;
-            this.player2.score = data.score.right ?? this.player2.score;
-          }
+        if (ballPosition) {
+          this.ball.x = ballPosition.x ?? this.ball.x;
+          this.ball.y = ballPosition.y ?? this.ball.y;
+        }
 
-          if (!this.isRunning) {
-            this.renderer.render(this.ball, this.player1, this.player2);
-          }
+        if (ballVelocity) {
+          this.ball.velocityX = ballVelocity.velocityX ?? ballVelocity.dx ?? this.ball.velocityX;
+          this.ball.velocityY = ballVelocity.velocityY ?? ballVelocity.dy ?? this.ball.velocityY;
+        }
+
+        const paddles = data?.paddles;
+        const players = Array.isArray(data?.players) ? data.players : undefined;
+
+        if (paddles?.left?.y !== undefined) {
+          this.player1.y = paddles.left.y;
+        } else if (players?.[0]?.paddle?.position?.y !== undefined) {
+          this.player1.y = players[0].paddle.position.y;
+        }
+
+        if (paddles?.right?.y !== undefined) {
+          this.player2.y = paddles.right.y;
+        } else if (players?.[1]?.paddle?.position?.y !== undefined) {
+          this.player2.y = players[1].paddle.position.y;
+        }
+
+        const score = data?.score;
+        if (score) {
+          this.player1.score = score.left ?? score.player1 ?? this.player1.score;
+          this.player2.score = score.right ?? score.player2 ?? this.player2.score;
+        }
+
+        if (!this.isRunning) {
+          this.renderer.render(this.ball, this.player1, this.player2);
         }
       }),
       gameWS.on('game_end', (data: any) => {
@@ -358,19 +379,25 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     await gameWS.connect();
   }
 
-  private emitPaddleMove(paddleY: number): void {
-    const delta = paddleY - this.lastPaddleY;
+  private emitPaddleMove(): void {
+    if (!this.props.gameId) return;
 
-    if (Math.abs(delta) > 2) {
-      const direction: 'up' | 'down' = delta >= 0 ? 'down' : 'up';
-      gameWS.send('paddle_move', {
-        gameId: this.props.gameId!,
-        direction,
-        y: paddleY,
-        deltaTime: 0.016,
-      });
-      this.lastPaddleY = paddleY;
+    const direction = this.resolveDirection();
+    if (!direction) {
+      return;
     }
+
+    gameWS.send('paddle_move', {
+      gameId: this.props.gameId,
+      direction,
+      deltaTime: 0.016,
+    });
+  }
+
+  private resolveDirection(): 'up' | 'down' | undefined {
+    if (this.keys['ArrowUp']) return 'up';
+    if (this.keys['ArrowDown']) return 'down';
+    return undefined;
   }
 
   private resizeCanvas(): void {
@@ -457,16 +484,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     
     // In online mode, server handles physics - we only update our paddle
     if (this.isOnline) {
-      const { player1 } = this;
-      
-      // Update our paddle position from mouse/touch input
-      player1.y = this.mouseY - player1.height / 2;
-      player1.y = Math.max(30, Math.min(this.BASE_HEIGHT - player1.height - 30, player1.y));
-      
-      // Emit paddle position to server
-      this.emitPaddleMove(player1.y);
-      
-      // Server will send game:state_update events with ball and opponent paddle
+      // Forward input to the server; authoritative state is streamed via game_state
+      this.emitPaddleMove();
       return;
     }
     
@@ -529,8 +548,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     // Disconnect WebSocket in online mode
     if (this.isOnline) {
       console.log('[GameCanvas] Disconnecting WebSocket...');
-      this.wsUnsubscribers.forEach((unsubscribe) => unsubscribe());
-      this.wsUnsubscribers = [];
+      this.wsUnsubscribes.forEach((unsubscribe) => unsubscribe());
+      this.wsUnsubscribes = [];
       gameWS.disconnect();
     }
 
