@@ -73,13 +73,19 @@ export class GameService {
   }
 
   /**
-   * Get list of available games to join
+   * Get list of available games to join (WAITING status)
    */
   async getAvailableGames(page = 1, limit = 20): Promise<GameDTOs.GameListResponse> {
     const response = await httpClient.get<GameDTOs.GameListResponse>(
-      `/games/available?page=${page}&limit=${limit}`
+      `/games?status=WAITING&page=${page}&limit=${limit}`
     );
-    return response.data!;
+    
+    // Return empty game list if no data
+    if (!response.data) {
+      return { games: [], totalCount: 0 };
+    }
+    
+    return response.data;
   }
 
   /**
