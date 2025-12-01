@@ -1,11 +1,22 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Science+Gothic:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Science+Gothic:wght@100..900&display=swap");  
+/* Extra small devices (phones, portrait) */
+$breakpoint-xs: 320px;
+
+$breakpoint-sm: 480px;
+
+$breakpoint-md: 768px;
+
+$breakpoint-lg: 992px;
+
+$breakpoint-xl: 1200px;
+
+$breakpoint-xxl: 1600px;
 
 body {
   background-color: #0b0d1c;
   min-height: 100vh;
   margin: 0;
-  overflow: hidden;
 
   #root {
     height: 100%;
@@ -605,4 +616,48 @@ width: 145px;
       }
     }
   }
+}
+  
+
+
+@media (max-width: $breakpoint-xxl) {   
+
+}
+
+@media (max-width: $breakpoint-xl) { 
+}
+
+@media (max-width: $breakpoint-lg) { 
+}
+
+@media (max-width: $breakpoint-md) {   
+
+}
+
+@media (max-width: $breakpoint-sm) {   
+        #left{  
+           display: none !important  ;   
+
+  } 
+  #navBar{ 
+    display: none !important;
+  }   
+  .profile-card 
+  {
+      width:100% !important; 
+  }
+  .profile-sections { 
+    flex-direction: unset !important;  
+      .profile-sections-right  
+      {  
+        flex-direction: column !important;  
+        align-items: center; 
+          .profile-sections-item { 
+            width:100% !important; 
+          }
+      }
+  }
+}
+
+@media (max-width: $breakpoint-xs) { 
 }

@@ -42,11 +42,11 @@ export default class ProfilePage extends Component<Record<string, never>, State>
    
     return `   
         <div class='profileContainer flex'>      
-        <div   id='left'>  
-       </div>    
+            <div   id='left'>  
+          </div>    
        <div id='right' >    
-        <div id='navBar' >  
-        </div>   
+          <div id='navBar' >  
+          </div>   
       <div>
         </div> 
     `;
