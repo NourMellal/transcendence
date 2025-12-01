@@ -15,7 +15,7 @@ interface GameLobbyState {
   isLoading: boolean;
   error: string | null;
   timeRemaining: number; // seconds until timeout
-  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed' | 'error';
 }
 
 /**
@@ -34,7 +34,7 @@ interface GameLobbyState {
 export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   private unsubscribeGame?: () => void;
   private timeoutInterval?: number;
-  private wsUnsubscribers: Array<() => void> = [];
+  private wsUnsubscribes: Array<() => void> = [];
 
   constructor(props: GameLobbyProps) {
     super(props);
@@ -130,8 +130,9 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       return this.renderError('You must be logged in to join a game lobby.');
     }
 
-    const currentPlayer = game.players.find((p) => p.id === currentUserId);
-    const opponent = game.players.find((p) => p.id !== currentUserId);
+    const players = game.players ?? [];
+    const currentPlayer = players.find((p) => p.id === currentUserId);
+    const opponent = players.find((p) => p.id !== currentUserId);
     const hasOpponent = opponent !== undefined;
 
     // Connection status indicator
@@ -245,6 +246,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       connecting: { icon: '🟡', text: 'Connecting...', color: 'var(--color-warning)' },
       reconnecting: { icon: '🟠', text: 'Reconnecting...', color: 'var(--color-warning)' },
       failed: { icon: '🔴', text: 'Connection Failed', color: 'var(--color-error)' },
+      error: { icon: '🔴', text: 'Connection Error', color: 'var(--color-error)' },
       disconnected: { icon: '⚪', text: 'Disconnected', color: 'var(--color-text-secondary)' },
     };
 
@@ -319,18 +321,12 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       console.log('[GameLobby] Marking player as ready...');
       await gameWS.connect();
       gameWS.send('ready', { gameId: this.props.gameId });
-      const updatedGame = await gameService.setReady(this.props.gameId);
-      
+      // Fallback to HTTP ready endpoint for compatibility with gateway
+      await gameService.setReady(this.props.gameId);
+
       this.state.isReady = true;
-      this.state.game = updatedGame;
-      
-      // Update global state
-      appState.game.set({
-        current: updatedGame,
-        isLoading: false,
-        error: null,
-      });
-      
+      this.refreshGameState();
+
       this.update({});
       console.log('[GameLobby] ✅ Player marked as ready');
     } catch (error) {
@@ -381,7 +377,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       this.update({});
     };
 
-    this.wsUnsubscribers.push(
+    this.wsUnsubscribes.push(
       gameWS.on('connect', () => {
         console.log('[GameLobby] ✅ Connected to game socket');
         updateConnectionStatus('connected');
@@ -391,35 +387,17 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         console.warn('[GameLobby] 🔌 Disconnected from game socket', reason);
         updateConnectionStatus('disconnected');
       }),
-      gameWS.on('reconnect_attempt', () => updateConnectionStatus('reconnecting')),
-      gameWS.on('reconnect_failed', () => updateConnectionStatus('failed')),
-      gameWS.on('player_joined', (data: any) => {
-        console.log('[GameLobby] Player joined:', data);
-        if (this.state.game && data.gameId === this.state.game.id) {
-          gameService
-            .getGame(data.gameId)
-            .then((game) => {
-              this.state.game = game;
-              this.update({});
-            })
-            .catch((error) => {
-              console.error('[GameLobby] Failed to refresh game after player joined:', error);
-            });
-        }
+      gameWS.on('connect_error', (error) => {
+        console.error('[GameLobby] ❌ Connection error:', error);
+        updateConnectionStatus('error');
       }),
-      gameWS.on('player_left', (data: any) => {
-        console.log('[GameLobby] Player left:', data);
-        if (this.state.game && data.gameId === this.state.game.id) {
-          gameService
-            .getGame(data.gameId)
-            .then((game) => {
-              this.state.game = game;
-              this.update({});
-            })
-            .catch((error) => {
-              console.error('[GameLobby] Failed to refresh game after player left:', error);
-            });
-        }
+      gameWS.on('player_joined', () => {
+        console.log('[GameLobby] Player joined');
+        this.refreshGameState();
+      }),
+      gameWS.on('player_left', () => {
+        console.log('[GameLobby] Player left');
+        this.refreshGameState();
       }),
       gameWS.on('game_start', (data: any) => {
         console.log('[GameLobby] Game started:', data);
@@ -439,12 +417,24 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       })
     );
 
-    const currentState = gameWS.getState();
-    if (currentState !== this.state.connectionStatus) {
-      updateConnectionStatus(currentState as GameLobbyState['connectionStatus']);
-    }
+    updateConnectionStatus('connecting');
 
-    await gameWS.connect();
+    await gameWS.connect().catch((error) => {
+      console.error('[GameLobby] Failed to connect socket:', error);
+      updateConnectionStatus('failed');
+    });
+  }
+
+  private refreshGameState(): void {
+    gameService
+      .getGame(this.props.gameId)
+      .then((game) => {
+        this.state.game = game;
+        this.update({});
+      })
+      .catch((error) => {
+        console.error('[GameLobby] Failed to refresh game state:', error);
+      });
   }
 
   private formatTime(seconds: number): string {
@@ -464,8 +454,8 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       clearInterval(this.timeoutInterval);
     }
 
-    this.wsUnsubscribers.forEach((unsubscribe) => unsubscribe());
-    this.wsUnsubscribers = [];
+    this.wsUnsubscribes.forEach((unsubscribe) => unsubscribe());
+    this.wsUnsubscribes = [];
 
     // Disconnect WebSocket
     console.log('[GameLobby] Disconnecting WebSocket...');
