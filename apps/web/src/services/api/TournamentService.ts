@@ -6,7 +6,7 @@ import {
   TournamentLeaderboard
 } from '../../models';
 
-const API_PREFIX = '/api';
+const API_PREFIX = '';
 
 /**
  * Tournament Service

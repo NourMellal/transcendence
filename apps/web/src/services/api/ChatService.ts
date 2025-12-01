@@ -5,7 +5,7 @@ import {
   PaginatedResponse
 } from '../../models';
 
-const API_PREFIX = '/api';
+const API_PREFIX = '';
 
 /**
  * Chat Service

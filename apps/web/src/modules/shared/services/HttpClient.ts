@@ -79,7 +79,7 @@ export class HttpClient {
 
     // Response interceptor: handle 401 (token expired or 2FA required)
     this.addResponseInterceptor(async (response) => {
-      if (response.status === 401) {
+        if (response.status === 401) {
         return this.handleUnauthorized(response);
       }
       return response;
@@ -594,8 +594,10 @@ export class HttpClient {
   }
 }
 
-export default   new HttpClient(
-   'http://localhost:3000/api'
-);
+const defaultApiBaseUrl =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '/api';
+
+export const httpClient = new HttpClient(defaultApiBaseUrl);
+export default httpClient;
 
 export type { ApiResponse, RequestConfig } from '../types/http.types';

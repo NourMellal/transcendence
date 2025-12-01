@@ -9,7 +9,7 @@ export class UserServiceClient implements IUserServiceClient {
 
     async getUserSummary(userId: string): Promise<UserSummary | null> {
         try {
-            const response = await fetch(`${this.baseUrl}/internal/users/${userId}`, {
+            const response = await fetch(`${this.baseUrl}/users/${userId}`, {
                 headers: this.buildHeaders()
             });
 
@@ -21,8 +21,20 @@ export class UserServiceClient implements IUserServiceClient {
                 throw new Error(`User service responded with status ${response.status}`);
             }
 
-            const body = (await response.json()) as { data: UserSummary };
-            return body.data;
+            const body = await response.json();
+            const data = (body as any)?.data ?? body;
+
+            if (!data || typeof data.id !== 'string') {
+                console.warn('[UserServiceClient] Unexpected user payload shape', body);
+                return null;
+            }
+
+            return {
+                id: data.id,
+                username: data.username ?? data.displayName ?? data.email ?? 'unknown',
+                displayName: data.displayName ?? data.username,
+                avatar: data.avatar
+            };
         } catch (error) {
             console.error('[UserServiceClient] Failed to fetch user summary', error);
             throw new Error('User service unavailable');
