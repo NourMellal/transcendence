@@ -12,7 +12,7 @@ export interface CreateGameRequest {
   gameMode: 'CLASSIC' | 'TOURNAMENT';
   isPrivate?: boolean;
   opponentId?: string | null;
-  settings?: GameSettings;
+  config?: GameSettings;
 }
 
 export interface CreateGameResponse {
@@ -20,12 +20,14 @@ export interface CreateGameResponse {
   mode?: 'CLASSIC' | 'TOURNAMENT';
   player1?: string | null;
   player2?: string | null;
+  players?: PlayerInfo[];
   status: 'WAITING' | 'PLAYING' | 'FINISHED' | 'CANCELLED';
   score: {
     player1: number;
     player2: number;
   };
-  settings?: GameSettings;
+  config?: GameSettings;
+  settings?: GameSettings; // deprecated; kept for backward compatibility
   createdAt: string;
 }
 
@@ -38,9 +40,10 @@ export interface JoinGameResponse {
 // ===== Game Lobby Types =====
 export interface PlayerInfo {
   id: string;
-  username: string;
+  username?: string;
   avatar?: string;
   ready?: boolean;
+  isConnected?: boolean;
 }
 
 export interface GameStateOutput {
@@ -51,6 +54,7 @@ export interface GameStateOutput {
     player1: number;
     player2: number;
   };
+  config?: GameSettings;
   createdAt: string | Date;
   finishedAt?: string | Date;
 }

@@ -129,7 +129,8 @@ export async function registerUserRoutes(
             return reply.code(403).send({
                 statusCode: 403,
                 error: 'Forbidden',
-                message: 'You can only access your own profile',
+                message: '' +
+                  'You can only access your own profile',
             });
         }
 

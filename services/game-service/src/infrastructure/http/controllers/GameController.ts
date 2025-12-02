@@ -134,6 +134,12 @@ function resolveWinner(game: GameStateOutput): string | null {
 }
 
 function toApiGame(game: GameStateOutput) {
+  const players = game.players.map((player) => ({
+    id: player.id,
+    ready: player.ready,
+    isConnected: player.isConnected
+  }));
+
   return {
     id: game.id,
     player1: game.players[0]?.id ?? null,
@@ -143,6 +149,8 @@ function toApiGame(game: GameStateOutput) {
       player1: game.score.player1,
       player2: game.score.player2
     },
+    players,
+    config: game.config,
     winner: resolveWinner(game),
     createdAt: game.createdAt.toISOString(),
     finishedAt: game.finishedAt?.toISOString() ?? null

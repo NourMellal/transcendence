@@ -7,12 +7,19 @@ export function createGameValidator(payload: unknown, playerId?: string): Create
     }
 
   const parsed = createGameSchema.parse(payload);
+  const config = parsed.config ?? {};
 
     return {
         playerId,
       mode: parsed.gameMode as CreateGameInput['mode'],
       isPrivate: parsed.isPrivate,
-      config: {},
+      config: {
+        arenaWidth: config.arenaWidth,
+        arenaHeight: config.arenaHeight,
+        scoreLimit: config.scoreLimit,
+        paddleSpeed: config.paddleSpeed,
+        ballSpeed: config.ballSpeed
+      },
       tournamentId: undefined
     };
 }

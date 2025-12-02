@@ -319,7 +319,7 @@ export default class CreateGamePage extends Component<{}, CreateGameState> {
       const request: CreateGameRequest = {
         gameMode: this.state.gameMode,
         isPrivate: this.state.isPrivate,
-        settings: {
+        config: {
           scoreLimit: this.state.scoreLimit,
           ballSpeed: this.state.ballSpeed,
           paddleSpeed: this.state.paddleSpeed,

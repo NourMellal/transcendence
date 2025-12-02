@@ -271,7 +271,8 @@ export const createUserServiceVault = () =>
 export const createGameServiceVault = () =>
     createVaultHelper('game-service', {
         database: 'secret/database/game-service',
-        jwt: 'secret/jwt/game',
+        // Share auth JWT secret so game-service validates the same tokens issued by user-service/gateway
+        jwt: 'secret/jwt/auth',
         config: 'secret/game/config',
         internalApiKey: 'secret/shared/internal-api-key',
     });

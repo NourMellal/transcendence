@@ -3,6 +3,7 @@ import { appState } from '@/state';
 import type { GameStateOutput, PlayerInfo } from '../types/game.types';
 import { gameService } from '../services/GameService';
 import { gameWS } from '@/modules/shared/services/WebSocketClient';
+import { userService } from '@/services/api/UserService';
 
 interface GameLobbyProps {
   gameId: string;
@@ -32,6 +33,10 @@ interface GameLobbyState {
  * - 2-minute timeout for opponent wait
  */
 export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
+  // Inline avatar to avoid repeated 404s when backend does not provide one
+  private static readonly defaultAvatar =
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" fill="none"><rect width="96" height="96" rx="16" fill="%23232a31"/><circle cx="48" cy="38" r="18" fill="%23404a54"/><path d="M20 82c0-15.464 12.536-28 28-28h0c15.464 0 28 12.536 28 28" stroke="%23404a54" stroke-width="6" stroke-linecap="round"/></svg>';
+  private playerCache = new Map<string, PlayerInfo>();
   private unsubscribeGame?: () => void;
   private timeoutInterval?: number;
   private wsUnsubscribes: Array<() => void> = [];
@@ -59,7 +64,22 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       this.state.currentUserId = (auth?.user as any)?.id ?? null;
 
       // Fetch initial lobby state via GameService
-      const game = await gameService.getGame(this.props.gameId);
+      let game = await gameService.getGame(this.props.gameId);
+      game = await this.enrichPlayers(game);
+
+      const isParticipant = !!this.state.currentUserId && game.players?.some((p) => p.id === this.state.currentUserId);
+      if (!isParticipant && this.state.currentUserId) {
+        try {
+          game = await gameService.joinGame(this.props.gameId);
+          game = await this.enrichPlayers(game);
+        } catch (error) {
+          console.error('[GameLobby] Failed to auto-join game:', error);
+          this.state.error = 'Unable to join this lobby.';
+          this.state.isLoading = false;
+          this.update({});
+          return;
+        }
+      }
 
       this.state.game = game;
       this.state.isLoading = false;
@@ -70,11 +90,6 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         isLoading: false,
         error: null,
       });
-
-      // If we still don't know current user, infer from lobby (single-player case)
-      if (!this.state.currentUserId && game.players?.length === 1) {
-        this.state.currentUserId = game.players[0]?.id ?? null;
-      }
 
       // Connect WebSocket for real-time updates
       await this.setupWebSocket();
@@ -133,6 +148,10 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     const currentPlayer = players.find((p) => p.id === currentUserId);
     const opponent = players.find((p) => p.id !== currentUserId);
     const hasOpponent = opponent !== undefined;
+    const config = game.config || game.settings || {};
+    const scoreLimit = config.scoreLimit ?? 11;
+    const ballSpeed = config.ballSpeed ?? 5;
+    const paddleSpeed = config.paddleSpeed ?? 8;
 
     // Connection status indicator
     const connectionIndicator = this.renderConnectionStatus(connectionStatus);
@@ -171,11 +190,15 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span style="color: var(--color-text-secondary);">Score Limit:</span>
-                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">11</span>
+                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${scoreLimit}</span>
               </div>
               <div>
                 <span style="color: var(--color-text-secondary);">Ball Speed:</span>
-                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">Normal</span>
+                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${ballSpeed}</span>
+              </div>
+              <div>
+                <span style="color: var(--color-text-secondary);">Paddle Speed:</span>
+                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${paddleSpeed}</span>
               </div>
             </div>
           </div>
@@ -212,18 +235,28 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   private renderPlayerCard(player: PlayerInfo, label: string, ready: boolean): string {
+    const auth = appState.auth.get();
+    const displayName =
+      label === 'You'
+        ? player.username || (auth?.user as any)?.username || 'You'
+        : player.username || 'Opponent';
+    const avatar =
+      label === 'You'
+        ? player.avatar || (auth?.user as any)?.avatar || GameLobby.defaultAvatar
+        : player.avatar || GameLobby.defaultAvatar;
+
     return `
       <div class="p-4 rounded-lg transition-all duration-300" style="background: var(--color-input-bg); border: 1px solid var(--color-panel-border);">
         <div class="flex items-center gap-3">
           <img
-            src="${player.avatar || '/default-avatar.png'}"
-            alt="${player.username}"
+            src="${avatar}"
+            alt="${displayName}"
             class="w-12 h-12 rounded-full"
             style="border: 2px solid var(--color-primary);"
           >
           <div class="flex-1">
             <div class="font-medium" style="color: var(--color-text-primary);">
-              ${player.username}
+              ${displayName}
             </div>
             <div class="text-xs" style="color: var(--color-text-secondary);">
               ${label}
@@ -318,9 +351,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   private async handleReady(): Promise<void> {
     try {
       console.log('[GameLobby] Marking player as ready...');
-      await gameWS.connect();
+      if (gameWS.getState() === 'disconnected') {
+        await gameWS.connect();
+      }
       gameWS.send('ready', { gameId: this.props.gameId });
-      // Fallback to HTTP ready endpoint for compatibility with gateway
+      // Also hit HTTP ready endpoint so DB state is updated via gateway
       await gameService.setReady(this.props.gameId);
 
       this.state.isReady = true;
@@ -340,10 +375,12 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       console.log('[GameLobby] Leaving game...');
       await gameService.leaveGame(this.props.gameId);
       console.log('[GameLobby] ✅ Successfully left game');
+      gameWS.disconnect();
       this.navigateTo('/profile');
     } catch (error) {
       console.error('[GameLobby] ❌ Failed to leave game:', error);
       // Still navigate away even if leave fails
+      gameWS.disconnect();
       this.navigateTo('/profile');
     }
   }
@@ -426,8 +463,15 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     gameService
       .getGame(this.props.gameId)
       .then((game) => {
-        this.state.game = game;
+        this.enrichPlayers(game).then((enriched) => {
+          this.state.game = enriched;
+        appState.game.set({
+            current: enriched,
+          isLoading: false,
+          error: null,
+        });
         this.update({});
+        }).catch(() => {});
       })
       .catch((error) => {
         console.error('[GameLobby] Failed to refresh game state:', error);
@@ -438,6 +482,32 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  private async enrichPlayers(game: GameStateOutput): Promise<GameStateOutput> {
+    if (!game.players || game.players.length === 0) return game;
+
+    const updated = await Promise.all(
+      game.players.map(async (player) => {
+        if ((player.username && player.avatar) || this.playerCache.has(player.id)) {
+          return this.playerCache.get(player.id) ?? player;
+        }
+        try {
+          const profile = await userService.getProfile(player.id);
+          const enriched: PlayerInfo = {
+            ...player,
+            username: profile.username ?? player.username,
+            avatar: (profile as any).avatar ?? player.avatar
+          };
+          this.playerCache.set(player.id, enriched);
+          return enriched;
+        } catch {
+          return player;
+        }
+      })
+    );
+
+    return { ...game, players: updated };
   }
 
   private navigateTo(path: string): void {

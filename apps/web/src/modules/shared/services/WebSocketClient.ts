@@ -251,10 +251,14 @@ export class WebSocketClient {
   }
 }
 
-const defaultWsHost =
-  import.meta.env.VITE_WS_GAME_URL ||
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
-    ? import.meta.env.VITE_API_BASE_URL.replace(/\/?api$/, '')
+const wsUrlFromEnv =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_GAME_URL?.trim()) || '';
+const apiBaseFromEnv =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL?.trim()) || '';
+
+const defaultWsHost = wsUrlFromEnv ||
+  (/^https?:\/\//i.test(apiBaseFromEnv)
+    ? apiBaseFromEnv.replace(/\/?api$/, '')
     : typeof window !== 'undefined'
       ? window.location.origin
       : 'http://localhost:3002');
