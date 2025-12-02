@@ -42,67 +42,76 @@ render(): string {
 
   return `
     <section class="profile-sections">
-      
-      <!-- LEFT SECTION: Player Info -->
-      <aside class="profile-sections-left">
-        <header id="left-section-header">
-          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" height="20px" width="20px" viewBox="0 0 64 64">
-            <circle fill="#1c71d8" cx="32" cy="32" r="32"/>
-          </svg>
-          <span>About Player</span>
-        </header>
+        <div class="friends-block" >   
+          <div id='friends-header' >  
+            <h2> Friends : 4  </h2>    
+            <button id='add-friend-btn' >  + </button>  
+          </div> 
+         <div id="friends-list" class="friend-list">
+              <div class="friend-item online">
+                <div class="friend-avatar" style="background-image: url('https://i.pravatar.cc/40?img=1');"></div>
+                <span class="friend-username">Alice</span>
+                <span class="status-dot"></span>
+              </div>
 
-        <div class="player-avatar" style="background-image: url('${user.avatar}');"></div>
+              <div class="friend-item offline">
+                <div class="friend-avatar" style="background-image: url('https://i.pravatar.cc/40?img=2');"></div>
+                <span class="friend-username">Bob</span>
+                <span class="status-dot"></span>
+              </div>
 
-        <div class="player-info">
-          <h2 class="player-username">${user.username}</h2>
-
-          <ul class="player-stats">
-            <li class="stat">
-              <span class="label">Tournament Wins</span>
-              <span class="value">${user.tournamentWins}</span>
-            </li>
-            <li class="stat">
-              <span class="label">Match Wins</span>
-              <span class="value">${user.matchWins}</span>
-            </li>
-            <li class="stat">
-              <span class="label">Top Score</span>
-              <span class="value">${user.topScore}</span>
-            </li>
-          </ul>
+              <div class="friend-item online">
+                <div class="friend-avatar" style="background-image: url('https://i.pravatar.cc/40?img=3');"></div>
+                <span class="friend-username">Charlie</span>
+                <span class="status-dot"></span>
+              </div>
+            </div>
+        </div>    
+        <div id="stats-block">  
+              <div id='states-header' >   
+                <h2> Stats </h2> 
+              </div>   
+<div id="stats-element">
+        <div class="player-element">
+            <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
+            <span class="player-username">PlayerOne</span>
         </div>
-      </aside>
-      
-      <!-- RIGHT SECTION: Cards -->
-      <section class="profile-sections-right">
-        <article class="profile-sections-item">
-          <h3>Recent Matches</h3>
-          <ul class="matches-list">
-            <li>Won vs PlayerA (21-18)</li>
-            <li>Lost vs PlayerB (15-21)</li>
-            <li>Won vs PlayerC (21-10)</li>
-          </ul>
-        </article>
-
-        <article class="profile-sections-item">
-          <h3>Leaderboard</h3>
-          <ol class="leaderboard-list">
-            <li>PlayerX - 2500 pts</li>
-            <li>PlayerY - 2400 pts</li>
-            <li>${user.username} - ${user.topScore} pts</li>
-          </ol>
-        </article>
-
-        <article class="profile-sections-item">
-          <h3>Achievements</h3>
-          <ul class="achievements-list">
-            <li>First Tournament Win</li>
-            <li>Highest Score in Match</li>
-            <li>Top 10 Global Ranking</li>
-          </ul>
-        </article>
-      </section>
+        <div id="vs-element">
+            <span>VS</span>
+        </div>
+        <div class="player-element">
+            <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
+            <span class="player-username">PlayerTwo</span>
+        </div>
+    </div> 
+    <div id="stats-element">
+        <div class="player-element">
+            <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
+            <span class="player-username">PlayerOne</span>
+        </div>
+        <div id="vs-element">
+            <span>VS</span>
+        </div>
+        <div class="player-element">
+            <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
+            <span class="player-username">PlayerTwo</span>
+        </div>
+    </div>
+    <div id="stats-element">
+        <div class="player-element">
+            <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
+            <span class="player-username">PlayerOne</span>
+        </div>
+        <div id="vs-element">
+            <span>VS</span>
+        </div>
+        <div class="player-element">
+            <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
+            <span class="player-username">PlayerTwo</span>
+        </div>
+    </div>
+        </div>  
+       
 
     </section>
   `;
