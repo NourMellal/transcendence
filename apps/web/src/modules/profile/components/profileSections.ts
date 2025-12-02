@@ -72,44 +72,62 @@ render(): string {
                 <h2> Stats </h2> 
               </div>   
 <div id="stats-element">
-        <div class="player-element">
-            <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
-            <span class="player-username">PlayerOne</span>
-        </div>
-        <div id="vs-element">
-            <span>VS</span>
-        </div>
-        <div class="player-element">
-            <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
-            <span class="player-username">PlayerTwo</span>
-        </div>
-    </div> 
-    <div id="stats-element">
-        <div class="player-element">
-            <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
-            <span class="player-username">PlayerOne</span>
-        </div>
-        <div id="vs-element">
-            <span>VS</span>
-        </div>
-        <div class="player-element">
-            <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
-            <span class="player-username">PlayerTwo</span>
-        </div>
+    <!-- Player 1 -->
+    <div class="player-element winner">
+        <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
+        <span class="player-username">PlayerOne</span>
+        <div class="winner-badge">🏆 Winner</div>
     </div>
-    <div id="stats-element">
-        <div class="player-element">
-            <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
-            <span class="player-username">PlayerOne</span>
-        </div>
-        <div id="vs-element">
-            <span>VS</span>
-        </div>
-        <div class="player-element">
-            <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
-            <span class="player-username">PlayerTwo</span>
-        </div>
+
+    <!-- VS -->
+    <div id="vs-element">
+        <span>VS</span>
     </div>
+
+    <!-- Player 2 -->
+    <div class="player-element">
+        <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
+        <span class="player-username">PlayerTwo</span>
+    </div>
+</div>
+ <div id="stats-element">
+    <!-- Player 1 -->
+    <div class="player-element winner">
+        <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
+        <span class="player-username">PlayerOne</span>
+        <div class="winner-badge">🏆 Winner</div>
+    </div>
+
+    <!-- VS -->
+    <div id="vs-element">
+        <span>VS</span>
+    </div>
+
+    <!-- Player 2 -->
+    <div class="player-element">
+        <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
+        <span class="player-username">PlayerTwo</span>
+    </div>
+</div>
+<div id="stats-element">
+    <!-- Player 1 -->
+    <div class="player-element winner">
+        <div class="player-avatar" style="background-image: url('/path/to/player1-avatar.png');"></div>
+        <span class="player-username">PlayerOne</span>
+        <div class="winner-badge">🏆 Winner</div>
+    </div>
+
+    <!-- VS -->
+    <div id="vs-element">
+        <span>VS</span>
+    </div>
+
+    <!-- Player 2 -->
+    <div class="player-element">
+        <div class="player-avatar" style="background-image: url('/path/to/player2-avatar.png');"></div>
+        <span class="player-username">PlayerTwo</span>
+    </div>
+</div>
         </div>  
        
 
