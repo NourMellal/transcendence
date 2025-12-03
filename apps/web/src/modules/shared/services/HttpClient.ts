@@ -504,7 +504,7 @@ export class HttpClient {
     this.refreshPromise = null;
 
     // Redirect to login
-    navigate('/login');
+    navigate('/auth/login');
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {

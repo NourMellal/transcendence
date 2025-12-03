@@ -34,20 +34,9 @@ export class UserService {
    * Update current user profile
    */
   async updateProfile(request: UserDTOs.UpdateProfileRequest): Promise<UserDTOs.UpdateProfileResponse> {
-    let body: any;
-    
-    // Handle file upload for avatar
-    if (request.avatar) {
-      const formData = new FormData();
-      if (request.username) {
-        formData.append('username', request.username);
-      }
-      formData.append('avatar', request.avatar);
-      body = formData;
-    } else {
-      body = { username: request.username };
-    }
-
+    const body = Object.fromEntries(
+      Object.entries(request).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
     const response = await httpClient.patch<UserDTOs.UpdateProfileResponse>('/users/me', body);
     return response.data!;
   }

@@ -9,7 +9,9 @@ export interface User {
   username: string;
   email: string;
   avatar?: string;
+  displayName?: string;
   isTwoFAEnabled: boolean;
+  oauthProvider?: 'local' | '42';
   status?: 'ONLINE' | 'OFFLINE' | 'INGAME';
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
@@ -78,11 +80,22 @@ export namespace UserDTOs {
 
   export interface UpdateProfileRequest {
     username?: string;
-    avatar?: File;
+    displayName?: string;
+    email?: string;
+    avatar?: string;
+    password?: string;
   }
 
   export interface UpdateProfileResponse {
-    user: User;
+    id: string;
+    email: string;
+    username: string;
+    displayName?: string;
+    avatar?: string;
+    is2FAEnabled: boolean;
+    oauthProvider?: 'local' | '42';
+    updatedAt: string;
+    message: string;
   }
 
   export interface Generate2FAResponse {

@@ -141,52 +141,65 @@ export const handlers = [
     }
 
     try {
-      const contentType = request.headers.get('content-type');
+      const body = (await request.json()) as Partial<{
+        username: string;
+        displayName: string;
+        email: string;
+        avatar: string;
+      }>;
 
-      let updates: Partial<User> = {};
+      const updates: Partial<User> = {};
 
-      if (contentType?.includes('application/json')) {
-        // Handle JSON updates
-        const body = (await request.json()) as Partial<Pick<User, 'username'>>;
-        if (body.username) {
-          if (!validateUsername(body.username)) {
-            return HttpResponse.json(
-              { error: 'Username must be at least 3 characters long' },
-              { status: 400 }
-            );
-          }
-          updates.username = body.username;
+      if (body.username) {
+        if (!validateUsername(body.username)) {
+          return HttpResponse.json(
+            { error: 'Username must be at least 3 characters long' },
+            { status: 400 }
+          );
         }
-      } else if (contentType?.includes('multipart/form-data')) {
-        // Handle form data (for avatar upload)
-        const formData = await request.formData();
-        const username = formData.get('username');
-        const avatar = formData.get('avatar');
-
-        if (username && typeof username === 'string') {
-          if (!validateUsername(username)) {
-            return HttpResponse.json(
-              { error: 'Username must be at least 3 characters long' },
-              { status: 400 }
-            );
-          }
-          updates.username = username;
-        }
-        if (avatar) {
-          // Mock avatar URL
-          updates.avatar = 'https://example.com/avatars/updated-avatar.png';
-        }
+        updates.username = body.username;
       }
 
-      // Update current user
-      const updatedUser = {
+      if (body.displayName) {
+        updates.displayName = body.displayName;
+      }
+
+      if (body.email) {
+        if (!validateEmail(body.email)) {
+          return HttpResponse.json(
+            { error: 'Invalid email format' },
+            { status: 400 }
+          );
+        }
+        updates.email = body.email;
+      }
+
+      if (body.avatar) {
+        updates.avatar = body.avatar;
+      }
+
+      const updatedUser: User = {
         ...getCurrentUser()!,
         ...updates,
+        updatedAt: new Date().toISOString(),
       };
 
       setCurrentUser(updatedUser);
 
-      return HttpResponse.json(updatedUser, { status: 200 });
+      return HttpResponse.json(
+        {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          username: updatedUser.username,
+          displayName: updatedUser.displayName,
+          avatar: updatedUser.avatar,
+          is2FAEnabled: updatedUser.isTwoFAEnabled,
+          oauthProvider: updatedUser.oauthProvider ?? 'local',
+          updatedAt: updatedUser.updatedAt,
+          message: 'Profile updated successfully',
+        },
+        { status: 200 }
+      );
     } catch (error) {
       return HttpResponse.json(
         { error: 'Invalid request data' },
