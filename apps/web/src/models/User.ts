@@ -45,8 +45,13 @@ export interface UserStats {
 export interface Friend {
   id: string;
   username: string;
+  displayName?: string;
   avatar?: string;
-  status: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  status: 'ONLINE' | 'OFFLINE';
+  isOnline: boolean;
+  friendshipStatus: 'pending' | 'accepted' | 'rejected' | 'blocked';
+  friendshipId: string;
+  isRequester: boolean;
   addedAt: string; // ISO date string
 }
 
@@ -78,7 +83,9 @@ export namespace UserDTOs {
 
   export interface UpdateProfileRequest {
     username?: string;
-    avatar?: File;
+    displayName?: string;
+    email?: string;
+    avatar?: string;
   }
 
   export interface UpdateProfileResponse {

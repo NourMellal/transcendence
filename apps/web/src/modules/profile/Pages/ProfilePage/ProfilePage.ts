@@ -91,6 +91,15 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     };
   }
 
+  private async fileToDataUrl(file: File): Promise<string> {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to process file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   private async loadProfile(): Promise<void> {
     this.setState({ isLoading: true, error: undefined, success: undefined });
 
@@ -171,7 +180,7 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       payload.email = trimmed.email;
     }
     if (this.avatarFile) {
-      payload.avatarFile = this.avatarFile;
+      payload.avatar = await this.fileToDataUrl(this.avatarFile);
     }
 
     if (Object.keys(payload).length === 0) {
