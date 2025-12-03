@@ -13,7 +13,7 @@ export interface WSMessage<T = unknown> {
 export type WSEventHandler<T = unknown> = (payload: T) => void;
 
 export interface GameStateUpdatePayload {
-  gameId: string;
+  gameId?: string;
   ball: {
     x: number;
     y: number;
@@ -24,8 +24,8 @@ export interface GameStateUpdatePayload {
     left: { y: number };
     right: { y: number };
   };
-  score: { left: number; right: number };
-  timestamp: number;
+  score: { player1: number; player2: number };
+  status?: string;
 }
 
 export interface PaddleMovePayload {

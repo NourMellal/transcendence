@@ -159,10 +159,10 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     const currentPlayer = players.find((p) => p.id === currentUserId);
     const opponent = players.find((p) => p.id !== currentUserId);
     const hasOpponent = opponent !== undefined;
-    const config = game.config || {};
-    const scoreLimit = config.scoreLimit ?? 11;
-    const ballSpeed = config.ballSpeed ?? 5;
-    const paddleSpeed = config.paddleSpeed ?? 8;
+    const config = game.config;
+    const scoreLimit = config?.scoreLimit;
+    const ballSpeed = config?.ballSpeed;
+    const paddleSpeed = config?.paddleSpeed;
 
     // Connection status indicator
     const connectionIndicator = this.renderConnectionStatus(connectionStatus);
@@ -202,15 +202,15 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span style="color: var(--color-text-secondary);">Score Limit:</span>
-                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${scoreLimit}</span>
+                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${this.formatSetting(scoreLimit)}</span>
               </div>
               <div>
                 <span style="color: var(--color-text-secondary);">Ball Speed:</span>
-                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${ballSpeed}</span>
+                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${this.formatSetting(ballSpeed)}</span>
               </div>
               <div>
                 <span style="color: var(--color-text-secondary);">Paddle Speed:</span>
-                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${paddleSpeed}</span>
+                <span class="ml-2 font-medium" style="color: var(--color-text-primary);">${this.formatSetting(paddleSpeed)}</span>
               </div>
             </div>
           </div>
@@ -521,6 +521,10 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  private formatSetting(value?: number): string {
+    return typeof value === 'number' ? String(value) : '—';
   }
 
   private async enrichPlayers(game: GameStateOutput): Promise<GameStateOutput> {

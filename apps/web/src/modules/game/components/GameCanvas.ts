@@ -305,49 +305,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
           this.gameLoop();
         }
       }),
-      gameWS.on('game_state', (data: any) => {
-        const payloadGameId = data?.gameId ?? data?.id;
-        if (payloadGameId !== this.props.gameId) {
-          return;
-        }
-
-        const ballPosition = data?.ball?.position ?? data?.ball;
-        const ballVelocity = data?.ball?.velocity ?? data?.ball;
-
-        if (ballPosition) {
-          this.ball.x = ballPosition.x ?? this.ball.x;
-          this.ball.y = ballPosition.y ?? this.ball.y;
-        }
-
-        if (ballVelocity) {
-          this.ball.velocityX = ballVelocity.velocityX ?? ballVelocity.dx ?? this.ball.velocityX;
-          this.ball.velocityY = ballVelocity.velocityY ?? ballVelocity.dy ?? this.ball.velocityY;
-        }
-
-        const paddles = data?.paddles;
-        const players = Array.isArray(data?.players) ? data.players : undefined;
-
-        if (paddles?.left?.y !== undefined) {
-          this.player1.y = paddles.left.y;
-        } else if (players?.[0]?.paddle?.position?.y !== undefined) {
-          this.player1.y = players[0].paddle.position.y;
-        }
-
-        if (paddles?.right?.y !== undefined) {
-          this.player2.y = paddles.right.y;
-        } else if (players?.[1]?.paddle?.position?.y !== undefined) {
-          this.player2.y = players[1].paddle.position.y;
-        }
-
-        const score = data?.score;
-        if (score) {
-          this.player1.score = score.left ?? score.player1 ?? this.player1.score;
-          this.player2.score = score.right ?? score.player2 ?? this.player2.score;
-        }
-
-        if (!this.isRunning) {
-          this.renderer.render(this.ball, this.player1, this.player2);
-        }
+      gameWS.on('game_state', (data: GameStateUpdateEvent) => {
+        this.applyGameStateUpdate(data);
       }),
       gameWS.on('game_end', (data: any) => {
         if (data?.gameId === this.props.gameId) {
@@ -398,6 +357,27 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     if (this.keys['ArrowUp']) return 'up';
     if (this.keys['ArrowDown']) return 'down';
     return undefined;
+  }
+
+  private applyGameStateUpdate(payload: GameStateUpdateEvent): void {
+    if (payload.gameId && payload.gameId !== this.props.gameId) {
+      return;
+    }
+
+    this.ball.x = payload.ball.x;
+    this.ball.y = payload.ball.y;
+    this.ball.velocityX = payload.ball.vx;
+    this.ball.velocityY = payload.ball.vy;
+
+    this.player1.y = payload.paddles.left.y;
+    this.player2.y = payload.paddles.right.y;
+
+    this.player1.score = payload.score.player1;
+    this.player2.score = payload.score.player2;
+
+    if (!this.isRunning) {
+      this.renderer.render(this.ball, this.player1, this.player2);
+    }
   }
 
   private resizeCanvas(): void {
@@ -581,16 +561,6 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     if (this.keyUpHandler) {
       document.removeEventListener('keyup', this.keyUpHandler);
       this.keyUpHandler = undefined;
-    }
-
-    if (this.startStopBtn && this.startStopHandler) {
-      this.startStopBtn.removeEventListener('click', this.startStopHandler);
-      this.startStopHandler = undefined;
-    }
-
-    if (this.restartBtn && this.restartHandler) {
-      this.restartBtn.removeEventListener('click', this.restartHandler);
-      this.restartHandler = undefined;
     }
 
     this.startStopBtn = null;

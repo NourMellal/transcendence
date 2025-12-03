@@ -125,24 +125,22 @@ export interface TypingEvent {
 
 // Server to Client Events
 export interface GameStateUpdateEvent {
-  gameId: string;
+  gameId?: string;
   ball: {
     x: number;
     y: number;
-    velocityX: number;
-    velocityY: number;
+    vx: number;
+    vy: number;
   };
   paddles: {
     left: { y: number };
     right: { y: number };
   };
   score: {
-    left: number;
-    right: number;
+    player1: number;
+    player2: number;
   };
-  // Alternative flatter structure for compatibility
-  player1?: { y: number; score: number };
-  player2?: { y: number; score: number };
+  status?: GameStateOutput['status'];
 }
 
 export interface GameStartEvent {

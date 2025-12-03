@@ -4,6 +4,7 @@ import { GameStatus } from '../../../domain/value-objects';
 import { GameNotFoundError } from '../../../domain/errors';
 import { IGameEventPublisher } from '../../ports/messaging/IGameEventPublisher';
 import { IGameStateBroadcaster } from '../../ports/broadcasting/IGameStateBroadcaster';
+import type { GameSnapshot } from '../../../domain/entities/Game';
 
 interface UpdateGameStateResult {
     status: GameStatus;
@@ -30,7 +31,7 @@ export class UpdateGameStateUseCase {
         const statusBeforeTick = game.status;
         if (statusBeforeTick !== GameStatus.IN_PROGRESS) {
             const snapshot = game.toSnapshot();
-            this.gameStateBroadcaster?.broadcastGameState(gameId, snapshot);
+            this.gameStateBroadcaster?.broadcastGameState(gameId, toWireGameState(snapshot));
             return { status: statusBeforeTick };
         }
 
@@ -42,8 +43,42 @@ export class UpdateGameStateUseCase {
         }
 
         const snapshot = game.toSnapshot();
-        this.gameStateBroadcaster?.broadcastGameState(gameId, snapshot);
+        this.gameStateBroadcaster?.broadcastGameState(gameId, toWireGameState(snapshot));
 
         return { status: game.status };
     }
+}
+
+/**
+ * Normalize domain snapshot into the documented websocket payload:
+ * {
+ *   gameId,
+ *   ball: { x, y, vx, vy },
+ *   paddles: { left: { y }, right: { y } },
+ *   score: { player1, player2 },
+ *   status
+ * }
+ */
+function toWireGameState(snapshot: GameSnapshot): Record<string, unknown> {
+    const left = snapshot.players[0];
+    const right = snapshot.players[1];
+
+    return {
+        gameId: snapshot.id,
+        status: snapshot.status,
+        ball: {
+            x: snapshot.ball.position.x,
+            y: snapshot.ball.position.y,
+            vx: snapshot.ball.velocity.dx,
+            vy: snapshot.ball.velocity.dy
+        },
+        paddles: {
+            left: { y: left?.paddle.position.y ?? 0 },
+            right: { y: right?.paddle.position.y ?? 0 }
+        },
+        score: {
+            player1: snapshot.score.player1,
+            player2: snapshot.score.player2
+        }
+    };
 }
