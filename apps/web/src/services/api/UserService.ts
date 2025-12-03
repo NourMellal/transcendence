@@ -36,10 +36,29 @@ export class UserService {
    * Update current user profile
    */
   async updateProfile(request: UserDTOs.UpdateProfileRequest): Promise<UserDTOs.UpdateProfileResponse> {
+    if (request.avatarFile) {
+      const formData = new FormData();
+      if (request.username) formData.append('username', request.username);
+      if (request.displayName) formData.append('displayName', request.displayName);
+      if (request.email) formData.append('email', request.email);
+      formData.append('avatar', request.avatarFile);
+
+      const response = await httpClient.patch<UserDTOs.UpdateProfileResponse>(
+        `${API_PREFIX}/users/me`,
+        formData
+      );
+      return response.data!;
+    }
+
     const body = Object.fromEntries(
-      Object.entries(request).filter(([, value]) => value !== undefined && value !== null && value !== '')
+      Object.entries(request)
+        .filter(([key]) => key !== 'avatarFile')
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
     );
-    const response = await httpClient.patch<UserDTOs.UpdateProfileResponse>(`${API_PREFIX}/users/me`, body);
+    const response = await httpClient.patch<UserDTOs.UpdateProfileResponse>(
+      `${API_PREFIX}/users/me`,
+      body
+    );
     return response.data!;
   }
 

@@ -83,6 +83,7 @@ export namespace UserDTOs {
     displayName?: string;
     email?: string;
     avatar?: string;
+    avatarFile?: File;
     password?: string;
   }
 

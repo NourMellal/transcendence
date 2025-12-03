@@ -141,41 +141,77 @@ export const handlers = [
     }
 
     try {
-      const body = (await request.json()) as Partial<{
-        username: string;
-        displayName: string;
-        email: string;
-        avatar: string;
-      }>;
-
+      const contentType = request.headers.get('content-type') || '';
       const updates: Partial<User> = {};
 
-      if (body.username) {
-        if (!validateUsername(body.username)) {
-          return HttpResponse.json(
-            { error: 'Username must be at least 3 characters long' },
-            { status: 400 }
-          );
+      if (contentType.includes('multipart/form-data')) {
+        const formData = await request.formData();
+        const username = formData.get('username');
+        const displayName = formData.get('displayName');
+        const email = formData.get('email');
+
+        if (typeof username === 'string') {
+          if (!validateUsername(username)) {
+            return HttpResponse.json(
+              { error: 'Username must be at least 3 characters long' },
+              { status: 400 }
+            );
+          }
+          updates.username = username;
         }
-        updates.username = body.username;
-      }
 
-      if (body.displayName) {
-        updates.displayName = body.displayName;
-      }
-
-      if (body.email) {
-        if (!validateEmail(body.email)) {
-          return HttpResponse.json(
-            { error: 'Invalid email format' },
-            { status: 400 }
-          );
+        if (typeof displayName === 'string' && displayName.length > 0) {
+          updates.displayName = displayName;
         }
-        updates.email = body.email;
-      }
 
-      if (body.avatar) {
-        updates.avatar = body.avatar;
+        if (typeof email === 'string' && email.length > 0) {
+          if (!validateEmail(email)) {
+            return HttpResponse.json(
+              { error: 'Invalid email format' },
+              { status: 400 }
+            );
+          }
+          updates.email = email;
+        }
+
+        if (formData.get('avatar')) {
+          updates.avatar = 'https://example.com/avatars/uploaded-avatar.png';
+        }
+      } else {
+        const body = (await request.json()) as Partial<{
+          username: string;
+          displayName: string;
+          email: string;
+          avatar: string;
+        }>;
+
+        if (body.username) {
+          if (!validateUsername(body.username)) {
+            return HttpResponse.json(
+              { error: 'Username must be at least 3 characters long' },
+              { status: 400 }
+            );
+          }
+          updates.username = body.username;
+        }
+
+        if (body.displayName) {
+          updates.displayName = body.displayName;
+        }
+
+        if (body.email) {
+          if (!validateEmail(body.email)) {
+            return HttpResponse.json(
+              { error: 'Invalid email format' },
+              { status: 400 }
+            );
+          }
+          updates.email = body.email;
+        }
+
+        if (body.avatar) {
+          updates.avatar = body.avatar;
+        }
       }
 
       const updatedUser: User = {

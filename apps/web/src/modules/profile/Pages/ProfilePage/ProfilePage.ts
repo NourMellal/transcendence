@@ -8,13 +8,13 @@ type ProfileFormValues = {
   username: string;
   displayName: string;
   email: string;
-  avatar: string;
 };
 
 type State = {
   user: User | null;
   isLoading: boolean;
   isSaving: boolean;
+  avatarPreview: string;
   error?: string;
   success?: string;
 };
@@ -22,6 +22,8 @@ type State = {
 export default class ProfilePage extends Component<Record<string, never>, State> {
   private unsubscribe?: () => void;
   private formValues: ProfileFormValues;
+  private avatarFile?: File;
+  private avatarPreviewUrl?: string;
 
   private readonly handleFormSubmit = (event: Event) => {
     event.preventDefault();
@@ -43,6 +45,18 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     void this.loadProfile();
   };
 
+  private readonly handleAvatarInputChange = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    this.avatarFile = file;
+    this.replaceAvatarPreview(URL.createObjectURL(file));
+  };
+
   constructor(props: Record<string, never> = {}) {
     super(props);
     this.formValues = this.buildFormValues(this.state.user);
@@ -54,6 +68,7 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       user: auth.user ?? null,
       isLoading: !auth.user,
       isSaving: false,
+      avatarPreview: auth.user?.avatar || '/assets/images/ape.png',
       error: undefined,
       success: undefined,
     };
@@ -81,12 +96,12 @@ export default class ProfilePage extends Component<Record<string, never>, State>
 
       const shouldSyncForm =
         next.user &&
-        (!this.state.user ||
-          next.user.updatedAt !== this.state.user.updatedAt);
+        (!this.state.user || next.user.updatedAt !== this.state.user.updatedAt);
 
       this.setState({
         user: next.user ?? null,
         isLoading: false,
+        avatarPreview: next.user?.avatar || this.state.avatarPreview,
       });
 
       if (shouldSyncForm && next.user) {
@@ -97,6 +112,7 @@ export default class ProfilePage extends Component<Record<string, never>, State>
 
   onUnmount(): void {
     this.unsubscribe?.();
+    this.clearAvatarPreviewUrl();
   }
 
   private buildFormValues(user: User | null | undefined): ProfileFormValues {
@@ -104,7 +120,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       username: user?.username ?? '',
       displayName: user?.displayName ?? '',
       email: user?.email ?? '',
-      avatar: user?.avatar ?? '',
     };
   }
 
@@ -123,6 +138,7 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       this.setState({
         user: profile,
         isLoading: false,
+        avatarPreview: profile.avatar || this.state.avatarPreview,
       });
     } catch (error) {
       this.setState({
@@ -141,7 +157,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       username: this.formValues.username.trim(),
       displayName: this.formValues.displayName.trim(),
       email: this.formValues.email.trim(),
-      avatar: this.formValues.avatar.trim(),
     };
 
     if (trimmed.username && trimmed.username !== user.username) {
@@ -157,8 +172,8 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     ) {
       payload.email = trimmed.email;
     }
-    if (trimmed.avatar && trimmed.avatar !== (user.avatar ?? '')) {
-      payload.avatar = trimmed.avatar;
+    if (this.avatarFile) {
+      payload.avatarFile = this.avatarFile;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -187,9 +202,12 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       });
 
       this.formValues = this.buildFormValues(updatedUser);
+      this.avatarFile = undefined;
+      this.clearAvatarPreviewUrl();
       this.setState({
         user: updatedUser,
         isSaving: false,
+        avatarPreview: updatedUser.avatar || this.state.avatarPreview,
         success: response.message || 'Profile updated successfully.',
       });
     } catch (error) {
@@ -276,9 +294,9 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       `;
     }
 
-    const avatarPreview =
-      this.formValues.avatar || user.avatar || '/assets/images/ape.png';
     const isOAuthUser = user.oauthProvider === '42';
+    const status = user.status ?? 'OFFLINE';
+    const avatarPreview = this.state.avatarPreview || '/assets/images/ape.png';
 
     return `
       <section class="profile-page">
@@ -293,59 +311,33 @@ export default class ProfilePage extends Component<Record<string, never>, State>
           </div>
         </header>
 
-        <div class="profile-page__grid">
-          <article class="profile-summary glass-panel">
-            <div class="profile-summary__header">
-              <img
-                src="${avatarPreview}"
-                alt="${this.escape(user.displayName || user.username)}"
-                class="profile-summary__avatar"
-                onerror="this.src='/assets/images/ape.png';"
-              />
-              <div>
-                <p class="profile-summary__title">${this.escape(
-                  user.displayName || user.username
-                )}</p>
-                <p class="profile-summary__username">@${this.escape(user.username)}</p>
-                <span class="profile-summary__provider">
-                  ${isOAuthUser ? '42 OAuth' : 'Local account'}
-                </span>
-              </div>
+        <div class="profile-layout">
+          <article class="profile-card glass-panel">
+            <div class="profile-card__avatar">
+              <img src="${this.escape(avatarPreview)}" alt="${this.escape(user.displayName || user.username)} avatar" onerror="this.src='/assets/images/ape.png';" />
+              <label class="avatar-upload">
+                <input type="file" accept="image/*" data-action="avatar-input" />
+                <span>Upload new</span>
+              </label>
+              <p class="avatar-upload__hint">JPEG or PNG, up to 5MB.</p>
             </div>
-
-            <dl class="profile-summary__details">
-              <div>
-                <dt>Email</dt>
-                <dd>${this.escape(user.email)}</dd>
+            <div class="profile-card__meta">
+              <p class="profile-card__name">${this.escape(user.displayName || user.username)}</p>
+              <p class="profile-card__email">${this.escape(user.email)}</p>
+              <div class="profile-card__badges">
+                <span class="status-pill status-pill--${status.toLowerCase()}">${status}</span>
+                <span class="profile-card__since">Member since ${this.formatDate(user.createdAt)}</span>
               </div>
-              <div>
-                <dt>Status</dt>
-                <dd class="status-pill status-pill--${(user.status ?? 'offline').toLowerCase()}">
-                  ${user.status ?? 'OFFLINE'}
-                </dd>
-              </div>
-              <div>
-                <dt>Member since</dt>
-                <dd>${this.formatDate(user.createdAt)}</dd>
-              </div>
-              <div>
-                <dt>Last update</dt>
-                <dd>${this.formatDate(user.updatedAt)}</dd>
-              </div>
-            </dl>
-
-            <p class="profile-summary__note">
-              Edits are validated twice: schema validation in the API Gateway
-              and business rules in the User Service.
-            </p>
+              <p class="profile-card__provider">${isOAuthUser ? 'Signed in via 42 OAuth' : 'Local account'}</p>
+            </div>
           </article>
 
           <article class="profile-form glass-panel">
             ${this.renderAlerts()}
 
-            <form id="profile-form" class="profile-form__fields">
-              <div class="form-field">
-                <label for="displayName">Display name</label>
+            <form id="profile-form" class="profile-form__grid">
+              <label class="form-field">
+                <span>Display name</span>
                 <input
                   id="displayName"
                   name="displayName"
@@ -354,10 +346,10 @@ export default class ProfilePage extends Component<Record<string, never>, State>
                   value="${this.escape(this.formValues.displayName)}"
                   data-profile-field="displayName"
                 />
-              </div>
+              </label>
 
-              <div class="form-field">
-                <label for="username">Username</label>
+              <label class="form-field">
+                <span>Username</span>
                 <input
                   id="username"
                   name="username"
@@ -366,10 +358,10 @@ export default class ProfilePage extends Component<Record<string, never>, State>
                   data-profile-field="username"
                   required
                 />
-              </div>
+              </label>
 
-              <div class="form-field">
-                <label for="email">Email</label>
+              <label class="form-field${isOAuthUser ? ' is-disabled' : ''}">
+                <span>Email</span>
                 <input
                   id="email"
                   name="email"
@@ -378,29 +370,14 @@ export default class ProfilePage extends Component<Record<string, never>, State>
                   data-profile-field="email"
                   ${isOAuthUser ? 'disabled' : ''}
                 />
-                <p class="profile-form__help">
+                <small class="form-field__hint">
                   ${
                     isOAuthUser
-                      ? '42 controls your primary email. Contact campus support if it needs to change.'
-                      : 'Email changes flow through the gateway validation before reaching the user store.'
+                      ? 'Email is managed by 42 OAuth.'
+                      : 'Updates are validated in the gateway before persisting.'
                   }
-                </p>
-              </div>
-
-              <div class="form-field">
-                <label for="avatar">Avatar URL</label>
-                <input
-                  id="avatar"
-                  name="avatar"
-                  type="url"
-                  placeholder="https://example.com/avatar.png"
-                  value="${this.escape(this.formValues.avatar)}"
-                  data-profile-field="avatar"
-                />
-                <p class="profile-form__help">
-                  Provide a reachable image URL; uploads are not yet supported for the MVP.
-                </p>
-              </div>
+                </small>
+              </label>
 
               <div class="profile-form__actions">
                 <button
@@ -465,6 +442,27 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       this.subscriptions.push(() =>
         reloadBtn.removeEventListener('click', this.handleReloadRequest)
       );
+    }
+
+    const avatarInput = this.element.querySelector<HTMLInputElement>('input[data-action="avatar-input"]');
+    if (avatarInput) {
+      avatarInput.addEventListener('change', this.handleAvatarInputChange);
+      this.subscriptions.push(() =>
+        avatarInput.removeEventListener('change', this.handleAvatarInputChange)
+      );
+    }
+  }
+
+  private replaceAvatarPreview(nextPreview: string) {
+    this.clearAvatarPreviewUrl();
+    this.avatarPreviewUrl = nextPreview;
+    this.setState({ avatarPreview: nextPreview });
+  }
+
+  private clearAvatarPreviewUrl() {
+    if (this.avatarPreviewUrl) {
+      URL.revokeObjectURL(this.avatarPreviewUrl);
+      this.avatarPreviewUrl = undefined;
     }
   }
 }
