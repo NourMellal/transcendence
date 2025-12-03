@@ -8,7 +8,8 @@
         "build": "tsc",
         "start": "node dist/server.js",
         "test": "vitest",
-        "lint": "eslint src/**/*.ts"
+        "lint": "eslint src/**/*.ts",
+        "seed": "tsx src/infrastructure/database/seeds/seed-users.ts"
     },
     "dependencies": {
         "@fastify/cookie": "^9.3.1",

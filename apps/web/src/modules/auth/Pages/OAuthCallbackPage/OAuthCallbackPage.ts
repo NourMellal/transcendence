@@ -43,7 +43,7 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
         isLoading: false,
       });
       this.setState({ status: 'success' });
-      navigate('/profile');
+      navigate('/dashboard');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'OAuth callback failed.';
       this.setState({ status: 'error', message });
@@ -98,7 +98,7 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
         isLoading: false,
       });
       this.setState({ status: 'success' });
-      navigate('/profile');
+      navigate('/dashboard');
     } catch (error) {
       httpClient.clearAuthToken();
       const message = error instanceof Error ? error.message : 'Failed to finalize OAuth login.';

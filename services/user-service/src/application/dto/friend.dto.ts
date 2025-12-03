@@ -59,6 +59,8 @@ export interface FriendDTO {
     readonly avatar?: string;
     readonly isOnline: boolean;
     readonly friendshipStatus: FriendshipStatusDTO;
+    readonly friendshipId: string;
+    readonly isRequester: boolean;
 }
 
 export interface FriendListResponseDTO {

@@ -19,6 +19,13 @@ export default class SignupPage extends Component<Props, State> {
     super(props);
   }
 
+  onMount(): void {
+    const auth = appState.auth.get();
+    if (auth.isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }
+
   getInitialState(): State {
     return {
       username: '',
@@ -315,7 +322,7 @@ export default class SignupPage extends Component<Props, State> {
       error: null,
     });
 
-    navigate('/profile');
+      navigate('/dashboard');
 
   } catch (error: any) {
     console.error('Signup error:', error);

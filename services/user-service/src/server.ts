@@ -127,7 +127,11 @@ async function main() {
     );
     const sendFriendRequestUseCase = new SendFriendRequestUseCase(friendshipRepository, userRepository);
     const respondFriendRequestUseCase = new RespondFriendRequestUseCase(friendshipRepository);
-    const listFriendsUseCase = new ListFriendsUseCase(friendshipRepository, userRepository);
+    const listFriendsUseCase = new ListFriendsUseCase(
+        friendshipRepository,
+        userRepository,
+        presenceRepository
+    );
     const blockUserUseCase = new BlockUserUseCase(friendshipRepository, userRepository);
     const removeFriendUseCase = new RemoveFriendUseCase(friendshipRepository);
     const unblockUserUseCase = new UnblockUserUseCase(friendshipRepository);

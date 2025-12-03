@@ -18,6 +18,13 @@ export default class LoginPage extends Component<Props, State> {
     super(props);
   }
 
+  onMount(): void {
+    const auth = appState.auth.get();
+    if (auth.isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }
+
   getInitialState(): State {
     return {
       email: '',
@@ -251,7 +258,7 @@ export default class LoginPage extends Component<Props, State> {
         isAuthenticated: Boolean(response.user),
         isLoading: false,
       });
-      navigate('/profile');
+      navigate('/dashboard');
     } catch (error) {
       this.setState({
         isLoading: false,
