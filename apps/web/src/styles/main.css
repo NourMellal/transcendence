@@ -540,8 +540,328 @@
     animation: pong-paddle-right 8s linear infinite;
   }
 
-  .animate-pong-ball {
+.animate-pong-ball {
     animation: pong-ball 8s linear infinite;
+  }
+}
+
+/* Game Page */
+.game-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.game-hero {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.5rem;
+  padding: 1.75rem;
+  box-shadow: var(--shadow-glass);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.game-hero h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.game-hero__stats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.game-hero__stats div {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  min-width: 120px;
+}
+
+.game-stage {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(640px, 1fr) minmax(180px, 220px);
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.game-stage__side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.game-stage__center {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.game-stage__canvas {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(13, 17, 23, 0.8), rgba(9, 12, 18, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  box-shadow: var(--shadow-glow-secondary);
+}
+
+.game-stage__canvas canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.game-scoreboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.game-scoreboard strong {
+  font-size: 2.25rem;
+}
+
+.game-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .game-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .game-stage__canvas {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* Profile Shell Styles */
+.profile-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.profile-shell__placeholder {
+  padding: 2rem;
+  text-align: center;
+}
+
+.profile-shell__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.profile-shell__header-text p:first-child {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.profile-shell__header-text h1 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  margin-top: 0.35rem;
+}
+
+.profile-shell__tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.profile-shell__tab {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  color: white;
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  font-weight: 500;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.profile-shell__tab:hover {
+  border-color: rgba(0, 217, 255, 0.5);
+  background: rgba(0, 217, 255, 0.08);
+}
+
+.profile-shell__grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) 1fr;
+  gap: 1.5rem;
+}
+
+.profile-shell__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.profile-aside__identity {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.profile-aside__identity img {
+  width: 68px;
+  height: 68px;
+  border-radius: 1rem;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.profile-aside__name {
+  font-weight: 600;
+}
+
+.profile-aside__email {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.profile-aside__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.profile-aside__meta span {
+  display: block;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+}
+
+.profile-aside__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profile-shell__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-section {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.profile-section__header p {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.profile-section__header h2 {
+  margin-top: 0.3rem;
+  font-size: 1.4rem;
+}
+
+.profile-account__avatar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-account__avatar img {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-security__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.profile-security__card {
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profile-security__ghost {
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 0.85rem;
+  padding: 0.65rem 1rem;
+  color: white;
+  background: transparent;
+}
+
+.profile-preferences {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.preference-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  gap: 1rem;
+}
+
+.preference-toggle input {
+  width: 44px;
+  height: 24px;
+}
+
+.preference-note {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+@media (max-width: 1024px) {
+  .profile-shell__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-shell__header {
+    flex-direction: column;
+  }
+
+  .profile-account__avatar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -779,4 +1099,3 @@
   input[type="checkbox"].toggle-switch:checked::after {
     left: 23px;
   }
-
