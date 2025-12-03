@@ -21,32 +21,24 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private isOnline: boolean = false;
   private wsUnsubscribes: Array<() => void> = [];
   
-  private readonly BASE_WIDTH = 800;
-  private readonly BASE_HEIGHT = 600;
+  private readonly BASE_WIDTH = 1024;
+  private readonly BASE_HEIGHT = 576;
   
-  private mouseY: number = this.BASE_HEIGHT / 2;
-  private touchY: number = this.BASE_HEIGHT / 2;
-  private keys: { [key: string]: boolean } = {};
+  private keys: Record<string, boolean> = {};
 
   private ball!: Ball;
   private player1!: Paddle;
   private player2!: Paddle;
   private isRunning: boolean = false;
 
-  // Configurable controls (can be changed later)
-  private readonly player2Controls = {
-    up: 'ArrowUp',
-    down: 'ArrowDown',
-  };
-
-  private mouseMoveHandler?: (e: MouseEvent) => void;
-  private touchMoveHandler?: (e: TouchEvent) => void;
-  private touchStartHandler?: (e: TouchEvent) => void;
-  private pointerMoveHandler?: (e: PointerEvent) => void;
   private keyDownHandler?: (e: KeyboardEvent) => void;
   private keyUpHandler?: (e: KeyboardEvent) => void;
   private startStopBtn?: HTMLButtonElement | null;
   private restartBtn?: HTMLButtonElement | null;
+  private readonly P1_UP = 'w';
+  private readonly P1_DOWN = 's';
+  private readonly P2_UP = 'ArrowUp';
+  private readonly P2_DOWN = 'ArrowDown';
   private handleButtonClick = (e: Event): void => {
     const target = e.target as HTMLElement;
     const button = target.closest('[data-action]') as HTMLElement;
@@ -104,58 +96,29 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   render(): string {
     return `
-      <div class="game-canvas-wrapper space-y-4 sm:space-y-6">
-        <!-- Canvas Container -->
-        <div class="glass-panel-mobile sm:glass-panel relative rounded-xl sm:rounded-2xl overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1);">
-          <div class="game-area aspect-video rounded-lg sm:rounded-xl overflow-hidden" style="background: var(--color-bg-dark);">
-            <canvas 
-              id="game-canvas" 
-              class="w-full h-full"
-              style="display: block; image-rendering: crisp-edges;"
-            ></canvas>
-          </div>
-        </div>
+      <div class="game-controls">
+        <button 
+          id="start-stop-btn"
+          data-action="start-game"
+          class="game-controls__button"
+        >
+          ▶️ Start Game
+        </button>
 
-        <!-- Control Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center px-4 sm:px-0">
-          <button 
-            id="start-stop-btn"
-            data-action="start-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
-            style="background: white; color: var(--color-bg-dark);"
-            onmouseover="this.style.background='var(--color-brand-secondary)'; this.style.color='white';"
-            onmouseout="this.style.background='white'; this.style.color='var(--color-bg-dark)';"
-          >
-            ▶️ Start Game
-          </button>
-            
-          <button 
-            id="restart-btn"
-            data-action="restart-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
-            style="border: 2px solid rgba(255, 255, 255, 0.2); color: white; background: rgba(255, 255, 255, 0.05);"
-          >
-            🔄 Restart
-          </button>
-        </div>
+        <button 
+          id="restart-btn"
+          data-action="restart-game"
+          class="game-controls__button game-controls__button--ghost"
+        >
+          🔄 Restart
+        </button>
+      </div>
 
-        <!-- Score Display -->
-        <div class="glass-panel-mobile sm:glass-panel px-4 sm:px-8 py-4 sm:py-6 rounded-xl sm:rounded-2xl" style="border: 1px solid rgba(255, 255, 255, 0.1);">
-          <div class="grid grid-cols-2 gap-4 sm:gap-8 text-center">
-            <div class="space-y-2">
-              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 1</div>
-              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-primary);">
-                <span id="player1-score">0</span>
-              </div>
-            </div>
-            <div class="space-y-2">
-              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 2</div>
-              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-secondary);">
-                <span id="player2-score">0</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="game-surface">
+        <canvas 
+          id="game-canvas" 
+          class="game-surface__canvas"
+        ></canvas>
       </div>
     `;
   }
@@ -227,48 +190,13 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.element.removeEventListener('click', this.handleButtonClick);
     this.element.addEventListener('click', this.handleButtonClick);
 
-    // Setup mouse/touch handlers for paddle control
-    this.mouseMoveHandler = (e: MouseEvent) => {
-      const rect = this.canvas.getBoundingClientRect();
-      const scaleY = this.BASE_HEIGHT / rect.height;
-      this.mouseY = (e.clientY - rect.top) * scaleY;
-    };
-    this.canvas.addEventListener('mousemove', this.mouseMoveHandler);
-
-    this.touchMoveHandler = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length > 0) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleY = this.BASE_HEIGHT / rect.height;
-        this.touchY = (e.touches[0].clientY - rect.top) * scaleY;
-        this.mouseY = this.touchY;
-      }
-    };
-    this.canvas.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
-
-    this.touchStartHandler = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length > 0) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleY = this.BASE_HEIGHT / rect.height;
-        this.touchY = (e.touches[0].clientY - rect.top) * scaleY;
-        this.mouseY = this.touchY;
-      }
-    };
-    this.canvas.addEventListener('touchstart', this.touchStartHandler, { passive: false });
-
-    this.pointerMoveHandler = (e: PointerEvent) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleY = this.BASE_HEIGHT / rect.height;
-        this.mouseY = (e.clientY - rect.top) * scaleY;
-      }
-    };
-    this.canvas.addEventListener('pointermove', this.pointerMoveHandler);
-
     // Setup keyboard handlers
     this.keyDownHandler = (e: KeyboardEvent) => {
-      this.keys[e.key] = true;
+      const key = this.normalizeKey(e.key);
+      if (this.isMovementKey(key)) {
+        e.preventDefault();
+      }
+      this.keys[key] = true;
       
       // In online mode, emit paddle movement to server
       if (this.isOnline && this.props.gameId) {
@@ -278,7 +206,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     document.addEventListener('keydown', this.keyDownHandler);
 
     this.keyUpHandler = (e: KeyboardEvent) => {
-      this.keys[e.key] = false;
+      const key = this.normalizeKey(e.key);
+      this.keys[key] = false;
     };
     document.addEventListener('keyup', this.keyUpHandler);
   }
@@ -354,9 +283,17 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   }
 
   private resolveDirection(): 'up' | 'down' | undefined {
-    if (this.keys['ArrowUp']) return 'up';
-    if (this.keys['ArrowDown']) return 'down';
+    if (this.keys[this.P1_UP] || this.keys[this.P2_UP]) return 'up';
+    if (this.keys[this.P1_DOWN] || this.keys[this.P2_DOWN]) return 'down';
     return undefined;
+  }
+
+  private normalizeKey(key: string): string {
+    return key.length === 1 ? key.toLowerCase() : key;
+  }
+
+  private isMovementKey(key: string): boolean {
+    return key === this.P1_UP || key === this.P1_DOWN || key === this.P2_UP || key === this.P2_DOWN;
   }
 
   private applyGameStateUpdate(payload: GameStateUpdateEvent): void {
@@ -386,16 +323,9 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     
     const dpr = window.devicePixelRatio || 1;
     const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
     const aspectRatio = this.BASE_WIDTH / this.BASE_HEIGHT;
-    
-    let displayWidth = containerWidth;
-    let displayHeight = containerWidth / aspectRatio;
-    
-    if (displayHeight > containerHeight) {
-      displayHeight = containerHeight;
-      displayWidth = containerHeight * aspectRatio;
-    }
+    const displayWidth = containerWidth;
+    const displayHeight = containerWidth / aspectRatio;
     
     this.canvas.style.width = `${displayWidth}px`;
     this.canvas.style.height = `${displayHeight}px`;
@@ -472,10 +402,11 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     // Local mode: run full client-side physics
     const { ball, player1, player2 } = this;
     
-    player1.y = this.mouseY - player1.height / 2;
-    
-    if (this.keys[this.player2Controls.up]) player2.y -= 8;
-    if (this.keys[this.player2Controls.down]) player2.y += 8;
+    const moveSpeed = 10;
+    if (this.keys[this.P1_UP]) player1.y -= moveSpeed;
+    if (this.keys[this.P1_DOWN]) player1.y += moveSpeed;
+    if (this.keys[this.P2_UP]) player2.y -= moveSpeed;
+    if (this.keys[this.P2_DOWN]) player2.y += moveSpeed;
     
     player1.y = Math.max(30, Math.min(this.BASE_HEIGHT - player1.height - 30, player1.y));
     player2.y = Math.max(30, Math.min(this.BASE_HEIGHT - player2.height - 30, player2.y));
@@ -531,26 +462,6 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       this.wsUnsubscribes.forEach((unsubscribe) => unsubscribe());
       this.wsUnsubscribes = [];
       gameWS.disconnect();
-    }
-
-    if (this.mouseMoveHandler) {
-      this.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
-      this.mouseMoveHandler = undefined;
-    }
-
-    if (this.touchMoveHandler) {
-      this.canvas.removeEventListener('touchmove', this.touchMoveHandler);
-      this.touchMoveHandler = undefined;
-    }
-
-    if (this.touchStartHandler) {
-      this.canvas.removeEventListener('touchstart', this.touchStartHandler);
-      this.touchStartHandler = undefined;
-    }
-
-    if (this.pointerMoveHandler) {
-      this.canvas.removeEventListener('pointermove', this.pointerMoveHandler);
-      this.pointerMoveHandler = undefined;
     }
 
     if (this.keyDownHandler) {
