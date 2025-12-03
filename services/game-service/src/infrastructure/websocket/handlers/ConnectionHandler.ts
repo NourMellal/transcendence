@@ -48,6 +48,7 @@ export class ConnectionHandler {
 
             try {
                 const { started } = await this.readyUpUseCase.execute(gameId, playerId);
+                this.roomManager.emitToGame(gameId, 'player_ready', { playerId });
                 if (started) {
                     this.gameLoop.start(gameId);
                     socket.nsp.to(gameId).emit('game_start', { gameId });

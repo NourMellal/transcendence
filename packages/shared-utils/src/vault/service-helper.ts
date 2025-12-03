@@ -261,17 +261,16 @@ export function createVaultHelper(
 
 export const createUserServiceVault = () =>
     createVaultHelper('user-service', {
-        database: 'secret/database/user-service',
         jwt: 'secret/jwt/auth',
         api: 'secret/api/oauth',
-        config: 'secret/security/config',
         internalApiKey: 'secret/shared/internal-api-key',
     });
 
 export const createGameServiceVault = () =>
     createVaultHelper('game-service', {
         database: 'secret/database/game-service',
-        jwt: 'secret/jwt/game',
+        // Share auth JWT secret so game-service validates the same tokens issued by user-service/gateway
+        jwt: 'secret/jwt/auth',
         config: 'secret/game/config',
         internalApiKey: 'secret/shared/internal-api-key',
     });
@@ -296,6 +295,5 @@ export const createAPIGatewayVault = () =>
     createVaultHelper('api-gateway', {
         jwt: 'secret/jwt/auth',
         api: 'secret/api/oauth',
-        config: 'secret/gateway/config',
         internalApiKey: 'secret/shared/internal-api-key',
     });

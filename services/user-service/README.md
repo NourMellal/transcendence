@@ -26,6 +26,14 @@ Repository -> SQLite / External Service
 - **Integration tests** (`test/integration/infrastructure/repositories/**`): Use the shared `test/helpers/test-database.ts` helper to run SQLite repositories against an in-memory database.
 - Vitest currently cannot spawn workers in this sandbox; run `pnpm --filter @transcendence/user-service test -- run` locally/CI to execute the full suite.
 
+## Messaging & Integration Events
+- The service publishes user-centric integration events through RabbitMQ (topic exchange).
+- Configure messaging via environment variables:
+  - `RABBITMQ_URL` (or `RABBITMQ_URI`): AMQP connection string, defaults to `amqp://guest:guest@rabbitmq:5672`.
+  - `RABBITMQ_EXCHANGE`: topic exchange name, defaults to `transcendence.events`.
+  - `RABBITMQ_QUEUE_PREFIX`: optional prefix for service-specific queues (defaults to `user-service`).
+- `DeleteUserUseCase` now emits the `user.deleted` event after a successful transaction so downstream services (e.g., Game Service) can react by cleaning up active matches or cached state.
+
 ## Adding a New Use Case
 1. **Define DTOs** in `src/application/dto` (input and output) with readonly fields.
 2. **Add an inbound port** under `src/domain/ports/inbound` describing the contract.

@@ -179,6 +179,7 @@ User Registration Flow:
 - `UserRegisteredIntegrationEvent`
 - `UserProfileUpdatedIntegrationEvent`
 - `UserDeletedIntegrationEvent`
+- 📄 See `docs/events/user-deleted.md` for the full contract (schema, guarantees, retries).
 
 **Game Events:**
 - `GameStartedIntegrationEvent`

@@ -135,7 +135,7 @@ async function loadConfig() {
 bash infrastructure/vault/setup-policies-optional.sh
 ```
 
-This creates a policy so API Gateway can ONLY read `jwt/auth` and `gateway/config`, not other services' secrets.
+This creates a policy so API Gateway can ONLY read `jwt/auth`, the OAuth credentials, and the shared internal API key—not other services' secrets.
 
 **For PFE:** Not necessary! Evaluators care that you use Vault, not that you implemented ACLs.
 

@@ -201,7 +201,7 @@ curl -sSf -X PUT \
   "${VAULT_ADDR}/v1/sys/policies/acl/api-gateway" \
   -d "$(cat <<'EOF'
 {
-  "policy": "# Allow API Gateway to read JWT\npath \"secret/data/jwt/auth\" {\n  capabilities = [\"read\"]\n}\n\n# Allow API Gateway to read OAuth 42 credentials\npath \"secret/data/api/oauth\" {\n  capabilities = [\"read\"]\n}\n\n# Allow API Gateway to read shared internal key\npath \"secret/data/shared/internal-api-key\" {\n  capabilities = [\"read\"]\n}\n\n# Allow API Gateway to read its own config\npath \"secret/data/gateway/config\" {\n  capabilities = [\"read\"]\n}\n"
+  "policy": "# Allow API Gateway to read JWT\npath \"secret/data/jwt/auth\" {\n  capabilities = [\"read\"]\n}\n\n# Allow API Gateway to read OAuth 42 credentials\npath \"secret/data/api/oauth\" {\n  capabilities = [\"read\"]\n}\n\n# Allow API Gateway to read shared internal key\npath \"secret/data/shared/internal-api-key\" {\n  capabilities = [\"read\"]\n}\n"
 }
 EOF
 )" >/dev/null

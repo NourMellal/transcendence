@@ -35,12 +35,12 @@ export class AuthController {
     private readonly successRedirect =
         process.env.OAUTH_42_SUCCESS_REDIRECT ||
         process.env.USER_SERVICE_SUCCESS_REDIRECT ||
-        'http://localhost:3003/oauth/callback';
+        'http://localhost:5173/oauth/callback';
 
     private readonly failureRedirect =
         process.env.OAUTH_42_FAILURE_REDIRECT ||
         process.env.USER_SERVICE_FAILURE_REDIRECT ||
-        'http://localhost:3003/oauth/error';
+        'http://localhost:5173/oauth/error';
 
     constructor(
         private readonly signupUseCase: ISignupUseCase,

@@ -17,7 +17,13 @@ export class GameRoomManager {
         players.add(playerId);
         this.roomPlayers.set(gameId, players);
         socket.join(gameId);
-        this.io?.to(gameId).emit('player_joined', { playerId });
+        this.io?.to(gameId).emit('player_joined', {
+            playerId,
+            players: Array.from(players).map((id) => ({
+                id,
+                isConnected: true
+            }))
+        });
     }
 
     leave(gameId: string, playerId: string): void {
@@ -31,6 +37,16 @@ export class GameRoomManager {
             this.roomPlayers.delete(gameId);
         }
 
-        this.io?.to(gameId).emit('player_left', { playerId });
+        this.io?.to(gameId).emit('player_left', {
+            playerId,
+            players: Array.from(players).map((id) => ({
+                id,
+                isConnected: true
+            }))
+        });
+    }
+
+    emitToGame(gameId: string, event: string, payload: unknown): void {
+        this.io?.to(gameId).emit(event, payload);
     }
 }

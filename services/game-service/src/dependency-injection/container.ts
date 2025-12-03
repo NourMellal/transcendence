@@ -1,6 +1,6 @@
 import { GameServiceConfig } from '../infrastructure/config';
 import { createDatabaseConnection, runMigrations, SQLiteGameRepository } from '../infrastructure/database';
-import { RabbitMQConnection, EventSerializer, RabbitMQGameEventPublisher } from '../infrastructure/messaging';
+import { RabbitMQConnection, EventSerializer, RabbitMQGameEventPublisher, UserEventHandler } from '../infrastructure/messaging';
 import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
 import {
     CreateGameUseCase,
@@ -46,6 +46,10 @@ export interface GameServiceContainer {
         readonly disconnectPlayer: DisconnectPlayerUseCase;
         readonly readyUp: ReadyUpUseCase;
     };
+    readonly messaging: {
+        readonly connection: RabbitMQConnection;
+        readonly userEventsHandler: UserEventHandler;
+    };
 }
 
 export async function createContainer(config: GameServiceConfig): Promise<GameServiceContainer> {
@@ -82,6 +86,9 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove);
     const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager, gameLoop);
 
+    const userEventsChannel = await messagingConnection.getChannel();
+    const userEventsHandler = new UserEventHandler(userEventsChannel, serializer, repository, roomManager);
+
     const gameController = new GameController({
         createGameUseCase: createGame,
         listGamesUseCase: listGames,
@@ -90,6 +97,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         leaveGameUseCase: leaveGame,
         readyUpUseCase: readyUp,
         gameLoop,
+        roomManager,
     });
     const healthController = new HealthController();
 
@@ -118,6 +126,10 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         updateGameState,
         disconnectPlayer,
         readyUp,
-    },
-  };
+        },
+        messaging: {
+            connection: messagingConnection,
+            userEventsHandler,
+        },
+    };
 }

@@ -14,7 +14,7 @@ Connect to the game Socket.IO gateway at `/api/games/ws/socket.io` with the quer
 
 | Event | Payload | Description |
 | --- | --- | --- |
-| `game_state` | `{ "ball": { "x": number, "y": number, "vx": number, "vy": number }, "paddles": { "left": { "y": number }, "right": { "y": number } }, "score": { "player1": number, "player2": number } }` | Streaming game state updates for the active room. |
+| `game_state` | `{ "gameId": "<uuid>", "ball": { "x": number, "y": number, "vx": number, "vy": number }, "paddles": { "left": { "y": number }, "right": { "y": number } }, "score": { "player1": number, "player2": number }, "status"?: "WAITING"\|"IN_PROGRESS"\|"FINISHED"\|"CANCELLED" }` | Streaming game state updates for the active room. |
 | `game_start` | `{ "gameId": "<uuid>" }` | All required players are ready and the match has begun. |
 | `player_joined` | `{ "playerId": "<uuid>" }` | A new player joined the room. |
 | `player_left` | `{ "playerId": "<uuid>" }` | A player disconnected or left the room. |

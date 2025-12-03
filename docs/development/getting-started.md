@@ -43,7 +43,7 @@ pnpm dev:game
 # Terminal 3 - Web client
 pnpm dev:web
 ```
-Navigate to `http://localhost:4173` (Vite dev server) and log in/register via the gateway at `http://localhost:3000`.
+Navigate to `http://localhost:5173` (Vite dev server) and log in/register via the gateway at `http://localhost:3000`.
 
 ## 6) Connect to WebSockets
 The SPA uses Socket.IO to reach the game loop. The defaults already point at the gateway proxy (`VITE_WS_GAME_URL=http://localhost:3000`, `VITE_WS_GAME_PATH=/api/games/ws/socket.io`). If you need to override them, follow the [WebSocket Setup Guide](./websocket-setup.md).
