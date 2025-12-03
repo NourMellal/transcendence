@@ -27,6 +27,13 @@ export class UpdateProfileUseCase implements IUpdateProfileUseCase {
         // Update display name
         if (payload.displayName !== undefined) {
             const displayName = new DisplayName(payload.displayName);
+            const nextDisplayName = displayName.toString();
+            if (nextDisplayName !== user.displayName.toString()) {
+                const existingDisplayName = await this.userRepository.findByDisplayName(nextDisplayName);
+                if (existingDisplayName && existingDisplayName.id.toString() !== userId) {
+                    throw new Error('Display name already exists');
+                }
+            }
             updates.displayName = displayName;
         }
 
