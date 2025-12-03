@@ -98,6 +98,7 @@ export async function registerAuthRoutes(
                 'x-internal-api-key': internalApiKey,
                 'x-request-id': request.id,
             },
+            redirect: 'manual',
         });
 
         // Handle redirects
@@ -125,6 +126,7 @@ export async function registerAuthRoutes(
                 'x-internal-api-key': internalApiKey,
                 'x-request-id': request.id,
             },
+            redirect: 'manual',
         });
 
         // Handle redirects

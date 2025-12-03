@@ -99,7 +99,14 @@ export const createGameSchema = z.object({
   gameMode: z.enum(['CLASSIC', 'TOURNAMENT'], {
     errorMap: () => ({message: 'Game mode must be CLASSIC or TOURNAMENT'})
     }),
-  isPrivate: z.boolean().optional()
+  isPrivate: z.boolean().optional(),
+  config: z.object({
+    arenaWidth: z.number().int().positive().max(4000).optional(),
+    arenaHeight: z.number().int().positive().max(4000).optional(),
+    scoreLimit: z.number().int().min(1).max(50).optional(),
+    paddleSpeed: z.number().int().min(1).max(50).optional(),
+    ballSpeed: z.number().int().min(1).max(50).optional(),
+  }).optional()
 });
 
 // Chat validation schemas (placeholder for future use)

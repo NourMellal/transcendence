@@ -19,6 +19,7 @@ export class GetGameUseCase {
             score: { player1: game.score.player1, player2: game.score.player2 },
             createdAt: game.createdAt,
           updatedAt: game.updatedAt,
+          config: game.config,
           startedAt: game.startedAt,
           finishedAt: game.finishedAt
         };

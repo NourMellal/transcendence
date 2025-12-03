@@ -1,10 +1,12 @@
 import { httpClient } from './client';
-import { 
-  Tournament, 
-  TournamentDTOs, 
+import {
+  Tournament,
+  TournamentDTOs,
   TournamentMatch,
-  TournamentLeaderboard 
+  TournamentLeaderboard
 } from '../../models';
+
+const API_PREFIX = '';
 
 /**
  * Tournament Service
@@ -15,7 +17,7 @@ export class TournamentService {
    * Create a new tournament
    */
   async createTournament(request: TournamentDTOs.CreateTournamentRequest): Promise<TournamentDTOs.CreateTournamentResponse> {
-    const response = await httpClient.post<TournamentDTOs.CreateTournamentResponse>('/tournaments', request);
+    const response = await httpClient.post<TournamentDTOs.CreateTournamentResponse>(`${API_PREFIX}/tournaments`, request);
     return response.data!;
   }
 
@@ -23,7 +25,7 @@ export class TournamentService {
    * Get tournament details
    */
   async getTournament(tournamentId: string): Promise<Tournament> {
-    const response = await httpClient.get<Tournament>(`/tournaments/${tournamentId}`);
+    const response = await httpClient.get<Tournament>(`${API_PREFIX}/tournaments/${tournamentId}`);
     return response.data!;
   }
 
@@ -35,7 +37,7 @@ export class TournamentService {
     page = 1, 
     limit = 20
   ): Promise<TournamentDTOs.TournamentListResponse> {
-    let endpoint = `/tournaments?page=${page}&limit=${limit}`;
+    let endpoint = `${API_PREFIX}/tournaments?page=${page}&limit=${limit}`;
     if (status) {
       endpoint += `&status=${status}`;
     }
@@ -52,7 +54,7 @@ export class TournamentService {
     request: TournamentDTOs.RegisterForTournamentRequest
   ): Promise<TournamentDTOs.RegisterForTournamentResponse> {
     const response = await httpClient.post<TournamentDTOs.RegisterForTournamentResponse>(
-      `/tournaments/${tournamentId}/register`, 
+      `${API_PREFIX}/tournaments/${tournamentId}/register`,
       request
     );
     return response.data!;
@@ -62,7 +64,7 @@ export class TournamentService {
    * Unregister from a tournament (before it starts)
    */
   async unregisterFromTournament(tournamentId: string): Promise<void> {
-    await httpClient.delete(`/tournaments/${tournamentId}/register`);
+    await httpClient.delete(`${API_PREFIX}/tournaments/${tournamentId}/register`);
   }
 
   /**
@@ -70,7 +72,7 @@ export class TournamentService {
    */
   async startTournament(tournamentId: string): Promise<TournamentDTOs.StartTournamentResponse> {
     const response = await httpClient.post<TournamentDTOs.StartTournamentResponse>(
-      `/tournaments/${tournamentId}/start`
+      `${API_PREFIX}/tournaments/${tournamentId}/start`
     );
     return response.data!;
   }
@@ -79,14 +81,14 @@ export class TournamentService {
    * Cancel a tournament (for tournament creator or admin)
    */
   async cancelTournament(tournamentId: string): Promise<void> {
-    await httpClient.post(`/tournaments/${tournamentId}/cancel`);
+    await httpClient.post(`${API_PREFIX}/tournaments/${tournamentId}/cancel`);
   }
 
   /**
    * Get tournament matches
    */
   async getTournamentMatches(tournamentId: string, round?: number): Promise<TournamentMatch[]> {
-    let endpoint = `/tournaments/${tournamentId}/matches`;
+    let endpoint = `${API_PREFIX}/tournaments/${tournamentId}/matches`;
     if (round !== undefined) {
       endpoint += `?round=${round}`;
     }
@@ -99,7 +101,7 @@ export class TournamentService {
    * Get tournament bracket
    */
   async getTournamentBracket(tournamentId: string): Promise<Tournament['bracket']> {
-    const response = await httpClient.get<Tournament['bracket']>(`/tournaments/${tournamentId}/bracket`);
+    const response = await httpClient.get<Tournament['bracket']>(`${API_PREFIX}/tournaments/${tournamentId}/bracket`);
     return response.data!;
   }
 
@@ -108,7 +110,7 @@ export class TournamentService {
    */
   async getTournamentLeaderboard(tournamentId: string): Promise<TournamentDTOs.TournamentLeaderboardResponse> {
     const response = await httpClient.get<TournamentDTOs.TournamentLeaderboardResponse>(
-      `/tournaments/${tournamentId}/leaderboard`
+      `${API_PREFIX}/tournaments/${tournamentId}/leaderboard`
     );
     return response.data!;
   }
@@ -122,7 +124,7 @@ export class TournamentService {
     limit = 20
   ): Promise<TournamentDTOs.TournamentListResponse> {
     const response = await httpClient.get<TournamentDTOs.TournamentListResponse>(
-      `/tournaments/me?type=${type}&page=${page}&limit=${limit}`
+      `${API_PREFIX}/tournaments/me?type=${type}&page=${page}&limit=${limit}`
     );
     return response.data!;
   }
@@ -132,7 +134,7 @@ export class TournamentService {
    */
   async getMyNextMatch(tournamentId: string): Promise<TournamentMatch | null> {
     try {
-      const response = await httpClient.get<TournamentMatch>(`/tournaments/${tournamentId}/my-next-match`);
+      const response = await httpClient.get<TournamentMatch>(`${API_PREFIX}/tournaments/${tournamentId}/my-next-match`);
       return response.data!;
     } catch (error) {
       // No next match available
@@ -160,7 +162,7 @@ export class TournamentService {
       totalRounds: number;
       startedAt?: string;
       estimatedEndTime?: string;
-    }>(`/tournaments/${tournamentId}/stats`);
+    }>(`${API_PREFIX}/tournaments/${tournamentId}/stats`);
     return response.data!;
   }
 
@@ -168,10 +170,10 @@ export class TournamentService {
    * Update tournament settings (for tournament creator)
    */
   async updateTournament(
-    tournamentId: string, 
+    tournamentId: string,
     updates: Partial<TournamentDTOs.CreateTournamentRequest>
   ): Promise<Tournament> {
-    const response = await httpClient.patch<Tournament>(`/tournaments/${tournamentId}`, updates);
+    const response = await httpClient.patch<Tournament>(`${API_PREFIX}/tournaments/${tournamentId}`, updates);
     return response.data!;
   }
 
@@ -179,7 +181,7 @@ export class TournamentService {
    * Delete tournament (for tournament creator or admin)
    */
   async deleteTournament(tournamentId: string): Promise<void> {
-    await httpClient.delete(`/tournaments/${tournamentId}`);
+    await httpClient.delete(`${API_PREFIX}/tournaments/${tournamentId}`);
   }
 }
 

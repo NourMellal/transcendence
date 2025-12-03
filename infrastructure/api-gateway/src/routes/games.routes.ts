@@ -140,6 +140,7 @@ export async function registerGameRoutes(
                 'x-user-id': user?.userId || user?.sub || '',
                 'Authorization': request.headers.authorization || '',
             },
+          body: JSON.stringify({})
         });
 
         const data = await response.json();
@@ -168,6 +169,7 @@ export async function registerGameRoutes(
                 'x-user-id': user?.userId || user?.sub || '',
                 'Authorization': request.headers.authorization || '',
             },
+          body: JSON.stringify({})
         });
 
         if (response.status === 204) {
@@ -200,6 +202,7 @@ export async function registerGameRoutes(
                 'x-user-id': user?.userId || user?.sub || '',
                 'Authorization': request.headers.authorization || '',
             },
+          body: JSON.stringify({})
         });
 
         if (response.status === 204) {

@@ -78,7 +78,7 @@ async function setupServiceEnvironments() {
     { name: 'game-service' },
     { name: 'chat-service' },
     { name: 'tournament-service' },
-    { name: 'api-gateway' }
+    { name: 'api-gateway' } // <-- ensures .env is created at infrastructure/api-gateway
   ];
 
   for (const service of services) {
@@ -101,7 +101,7 @@ async function setupServiceEnvironments() {
       try {
         await execAsync(`sed -i 's/\\r$//' "${envPath}"`);
       } catch {
-        // sed may not be available; ignore CRLF fix in that case
+        // ignore CRLF fix on systems without sed
       }
       console.log(`  ✅ Created .env for ${service.name}`);
     }

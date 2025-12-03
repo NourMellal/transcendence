@@ -23,6 +23,10 @@ export interface GameServiceConfig {
     readonly messaging: MessagingConfig;
 }
 
+function resolveDatabaseFilePath(): string {
+    return process.env.GAME_SERVICE_DB_PATH || process.env.GAME_DB_PATH || join(process.cwd(), 'var', 'game-service.db');
+}
+
 function buildEnvFallback(): GameServiceConfig {
     return {
         port: getEnvVarAsNumber('GAME_SERVICE_PORT', 3002),
@@ -36,7 +40,7 @@ function buildEnvFallback(): GameServiceConfig {
             port: getEnvVarAsNumber('REDIS_PORT', 6379),
             password: process.env.REDIS_PASSWORD
         },
-        databaseFile: process.env.GAME_DB_PATH || join(process.cwd(), 'var', 'game-service.db'),
+        databaseFile: resolveDatabaseFilePath(),
         internalApiKey: process.env.INTERNAL_API_KEY,
         userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
         messaging: createMessagingConfig()
@@ -47,8 +51,15 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
     try {
         const vault = createGameServiceVault();
         await vault.initialize();
-        const gameConfig = await vault.getServiceConfig();
-        const redisConfig = await vault.getDatabaseConfig();
+        const [gameConfig, redisConfig, internalApiKey] = await Promise.all([
+            vault.getServiceConfig(),
+            vault.getDatabaseConfig(),
+            vault.getInternalApiKey()
+        ]);
+
+        if (!internalApiKey) {
+            console.warn('[game-service] INTERNAL_API_KEY not found in Vault or environment.');
+        }
 
         return {
             port: getEnvVarAsNumber('GAME_SERVICE_PORT', 3002),
@@ -62,8 +73,8 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
                 port: redisConfig.port ?? 6379,
                 password: redisConfig.password
             },
-            databaseFile: process.env.GAME_DB_PATH || join(process.cwd(), 'var', 'game-service.db'),
-            internalApiKey: process.env.INTERNAL_API_KEY,
+            databaseFile: resolveDatabaseFilePath(),
+            internalApiKey: internalApiKey ?? undefined,
             userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
             messaging: createMessagingConfig()
         };

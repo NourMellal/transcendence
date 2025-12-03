@@ -4,7 +4,7 @@
     "description": "Game management and real-time gameplay service",
     "main": "dist/index.js",
     "scripts": {
-        "dev": "tsx src/server.ts",
+        "dev": "tsc && node dist/index.js",
         "build": "tsc",
         "start": "node dist/index.js",
         "test": "vitest"

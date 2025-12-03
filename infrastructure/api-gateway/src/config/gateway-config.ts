@@ -7,7 +7,7 @@ const DEFAULT_SERVICE_URLS = {
     tournament: 'http://localhost:3005'
 } as const;
 
-const DEFAULT_CORS = ['http://localhost:3000'];``
+const DEFAULT_CORS = ['http://localhost:3000', 'http://localhost:3002'];
 const DEFAULT_RATE_LIMIT_MAX = 100;
 const DEFAULT_RATE_LIMIT_WINDOW = '1 minute';
 
@@ -61,7 +61,7 @@ export async function loadGatewayConfig(): Promise<GatewayConfig> {
         DEFAULT_CORS;
 
     return {
-        port: getEnvVarAsNumber('GATEWAY_PORT', 3000),
+        port: getEnvVarAsNumber('GATEWAY_PORT', 3002),
         userServiceUrl: getEnvVar('USER_SERVICE_URL', DEFAULT_SERVICE_URLS.user),
         gameServiceUrl: getEnvVar('GAME_SERVICE_URL', DEFAULT_SERVICE_URLS.game),
         chatServiceUrl: getEnvVar('CHAT_SERVICE_URL', DEFAULT_SERVICE_URLS.chat),

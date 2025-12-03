@@ -79,7 +79,7 @@ export class HttpClient {
 
     // Response interceptor: handle 401 (token expired or 2FA required)
     this.addResponseInterceptor(async (response) => {
-      if (response.status === 401) {
+        if (response.status === 401) {
         return this.handleUnauthorized(response);
       }
       return response;
@@ -224,21 +224,21 @@ export class HttpClient {
     config: RequestConfig
   ): Promise<RequestConfig> {
     let finalConfig = config;
-    
+
     for (const interceptor of this.requestInterceptors) {
       finalConfig = await interceptor(finalConfig);
     }
-    
+
     return finalConfig;
   }
 
   private async applyResponseInterceptors(response: Response): Promise<Response> {
     let finalResponse = response;
-    
+
     for (const interceptor of this.responseInterceptors) {
       finalResponse = await interceptor(finalResponse);
     }
-    
+
     return finalResponse;
   }
 
@@ -432,7 +432,7 @@ export class HttpClient {
 
   private async refreshToken(): Promise<string> {
     const refreshToken = localStorage.getItem('refreshToken');
-    
+
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
@@ -448,13 +448,13 @@ export class HttpClient {
     }
 
     const data = await response.json();
-    
+
     localStorage.setItem('refreshToken', data.refreshToken);
     // also persist access token so other parts of app can read it
     if (data.accessToken) {
       localStorage.setItem('token', data.accessToken);
     }
-    
+
     return data.accessToken;
   }
 
@@ -486,7 +486,10 @@ export class HttpClient {
 
     // Reset app auth state
     try {
-      appState.auth.set({ user: null, isLoading: false, token: '' });
+      appState.auth.set({
+        user: null, isLoading: false, token: '',
+        isAuthenticated: false
+      });
     } catch (e) {
       // if for some reason signal can't be set, still proceed to clear storage
       console.warn('[HttpClient] Unable to reset appState.auth', e);
@@ -591,8 +594,10 @@ export class HttpClient {
   }
 }
 
-export const httpClient = new HttpClient(
-   'http://localhost:3000/api'
-);
+const defaultApiBaseUrl =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '/api';
+
+export const httpClient = new HttpClient(defaultApiBaseUrl);
+export default httpClient;
 
 export type { ApiResponse, RequestConfig } from '../types/http.types';

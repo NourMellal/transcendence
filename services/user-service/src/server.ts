@@ -121,6 +121,7 @@ async function main() {
     const oauth42CallbackUseCase = new OAuth42CallbackUseCaseImpl(
         oauth42Service,
         userRepository,
+        sessionRepository,
         jwtService,
         oauthStateManager
     );

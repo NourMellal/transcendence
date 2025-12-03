@@ -26,6 +26,8 @@ export interface LoginRequest {
  * Login response DTO
  */
 export interface LoginResponse {
-  user: User;
-  message?: string;
+  user?: User;
+  message?: string ;  
+  accessToken?:  string;   
+  refreshToken? : string ;    
 }

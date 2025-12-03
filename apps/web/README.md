@@ -84,6 +84,20 @@ pnpm --filter web run dev
 
 Open `http://localhost:5173` (or the URL printed by the dev server).
 
+### Configure API base URL
+
+The SPA talks to the backend via the API Gateway. Copy `.env.example` to `.env` and set the target:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+```
+
+```env
+VITE_API_BASE_URL=http://localhost:3000/api
+```
+
+During development, Vite proxies `/api` requests to `http://localhost:3000`. Adjust `VITE_PROXY_TARGET` if your gateway runs elsewhere.
+
 ## Where to look
 
 - `apps/web/src/core` — framework primitives (`Component`, `signal`, `Router`, `utils`)

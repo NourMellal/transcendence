@@ -12,7 +12,10 @@ export class JoinGameUseCase {
       throw new GameNotFoundError(gameId);
     }
 
-    if (game.players.some((player) => player.id === playerId)) {
+    const existingPlayer = game.players.find((player) => player.id === playerId);
+    if (existingPlayer) {
+      game.reconnectPlayer(playerId);
+      await this.gameRepository.update(game);
       return;
     }
 

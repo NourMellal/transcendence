@@ -212,7 +212,7 @@ export class ServiceVaultHelper {
         return {
             secretKey: process.env.JWT_SECRET || 'fallback-jwt-secret-for-development',
             issuer: process.env.JWT_ISSUER || 'transcendence',
-            expirationHours: parseInt(process.env.JWT_EXPIRATION_HOURS || '24'),
+            expirationHours: parseFloat(process.env.JWT_EXPIRATION_HOURS || '0.25'),
         };
     }
 
@@ -271,7 +271,8 @@ export const createUserServiceVault = () =>
 export const createGameServiceVault = () =>
     createVaultHelper('game-service', {
         database: 'secret/database/game-service',
-        jwt: 'secret/jwt/game',
+        // Share auth JWT secret so game-service validates the same tokens issued by user-service/gateway
+        jwt: 'secret/jwt/auth',
         config: 'secret/game/config',
         internalApiKey: 'secret/shared/internal-api-key',
     });

@@ -34,11 +34,13 @@ type OAuthCallbackQuery = {
 export class AuthController {
     private readonly successRedirect =
         process.env.OAUTH_42_SUCCESS_REDIRECT ||
-        'http://localhost:5173/oauth/callback';
+        process.env.USER_SERVICE_SUCCESS_REDIRECT ||
+        'http://localhost:3000/oauth/callback';
 
     private readonly failureRedirect =
         process.env.OAUTH_42_FAILURE_REDIRECT ||
-        'http://localhost:5173/oauth/error';
+        process.env.USER_SERVICE_FAILURE_REDIRECT ||
+        'http://localhost:3000/oauth/error';
 
     constructor(
         private readonly signupUseCase: ISignupUseCase,
@@ -257,8 +259,8 @@ export class AuthController {
         }
 
         try {
-            const { sessionToken, userId } = await this.oauth42CallbackUseCase.execute({ code, state });
-            reply.redirect(this.buildSuccessRedirect(sessionToken, userId));
+            const { sessionToken, userId, refreshToken } = await this.oauth42CallbackUseCase.execute({ code, state });
+            reply.redirect(this.buildSuccessRedirect(sessionToken, userId, refreshToken));
         } catch (error: any) {
             request.log.error({ err: error }, 'OAuth 42 callback failed');
             reply.redirect(this.buildFailureRedirect('oauth_error'));
@@ -376,11 +378,14 @@ export class AuthController {
         }
     }
 
-    private buildSuccessRedirect(token: string, userId: string): string {
+    private buildSuccessRedirect(token: string, userId: string, refreshToken?: string): string {
         const url = new URL(this.successRedirect);
         url.searchParams.set('token', token);
         url.searchParams.set('userId', userId);
         url.searchParams.set('provider', '42');
+        if (refreshToken) {
+            url.searchParams.set('refreshToken', refreshToken);
+        }
         return url.toString();
     }
 

@@ -1,3 +1,5 @@
+import { authService } from '@/services/auth/AuthService';
+import { appState } from '@/state';
 import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
 
@@ -209,8 +211,7 @@ export default class SignupPage extends Component<Props, State> {
     const oauth42Btn = this.element.querySelector('[data-action="oauth42"]') as HTMLButtonElement | null;
     if (oauth42Btn) {
       const handler = () => {
-        // TODO: Implement OAuth flow
-        console.log('OAuth 42 signup - TODO: implement');
+        authService.start42Login();
       };
       oauth42Btn.addEventListener('click', handler);
       this.subscriptions.push(() => oauth42Btn.removeEventListener('click', handler));
@@ -244,55 +245,91 @@ export default class SignupPage extends Component<Props, State> {
     }
   }
 
-  private handleSignup(): void {
-    const usernameInput = this.element?.querySelector('#username') as HTMLInputElement;
-    const emailInput = this.element?.querySelector('#email') as HTMLInputElement;
-    const passwordInput = this.element?.querySelector('#password') as HTMLInputElement;
-    const confirmPasswordInput = this.element?.querySelector('#confirmPassword') as HTMLInputElement;
+ private async handleSignup(): Promise<void> {
+  const usernameInput = this.element?.querySelector('#username') as HTMLInputElement | null;
+  const emailInput = this.element?.querySelector('#email') as HTMLInputElement | null;
+  const passwordInput = this.element?.querySelector('#password') as HTMLInputElement | null;
+  const confirmPasswordInput = this.element?.querySelector('#confirmPassword') as HTMLInputElement | null;
 
-    if (!usernameInput || !emailInput || !passwordInput || !confirmPasswordInput) return;
+  if (!usernameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
+    this.setState({ error: 'Form elements not found. Please reload the page.' });
+    return;
+  }
 
-    const username = usernameInput.value.trim();
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
+  const username = usernameInput.value.trim();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
 
-    // Validation
-    if (!username || !email || !password || !confirmPassword) {
-      this.setState({ error: 'Please fill in all fields' });
-      return;
-    }
+  // Basic validation
+  if (!username || !email || !password || !confirmPassword) {
+    this.setState({ error: 'Please fill in all fields' });
+    return;
+  }
 
-    if (username.length < 3) {
-      this.setState({ error: 'Username must be at least 3 characters' });
-      return;
-    }
+  if (username.length < 3) {
+    this.setState({ error: 'Username must be at least 3 characters' });
+    return;
+  }
 
-    if (password.length < 8) {
-      this.setState({ error: 'Password must be at least 8 characters' });
-      return;
-    }
+  if (password.length < 8) {
+    this.setState({ error: 'Password must be at least 8 characters' });
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      this.setState({ error: 'Passwords do not match' });
-      return;
-    }
+  if (password !== confirmPassword) {
+    this.setState({ error: 'Passwords do not match' });
+    return;
+  }
 
-    // TODO: Implement actual signup logic
-    console.log('Signup attempt:', { username, email, password: '***' });
-    
-    this.setState({ 
-      isLoading: true,
-      error: null 
+  // Optional: simple email check (nothing fancy, just UX)
+  if (!email.includes('@') || !email.includes('.')) {
+    this.setState({ error: 'Please enter a valid email address' });
+    return;
+  }
+
+  // Start loading before the async call
+  this.setState({
+    isLoading: true,
+    error: null,
+    success: false,
+  });
+
+  try {
+    const response = await authService.register({
+      username,
+      email,
+      password,
     });
 
-    // Simulate API call
-    setTimeout(() => {
-      this.setState({ 
-        isLoading: false,
-        success: true,
-        error: null
-      });
-    }, 1500);
+    appState.auth.set({
+      ...appState.auth.get(),
+      user: response.user ?? null,
+      isAuthenticated: Boolean(response.user),
+      isLoading: false,
+    });
+
+    this.setState({
+      isLoading: false,
+      success: true,
+      error: null,
+    });
+
+    navigate('/profile');
+
+  } catch (error: any) {
+    console.error('Signup error:', error);
+
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      'Signup failed. Please try again.';
+
+    this.setState({
+      isLoading: false,
+      success: false,
+      error: message,
+    });
   }
 }
+} 

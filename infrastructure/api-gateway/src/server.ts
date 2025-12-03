@@ -9,7 +9,6 @@ import fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import proxy from '@fastify/http-proxy';
-import websocket from '@fastify/websocket';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { readFileSync } from 'fs';
@@ -97,13 +96,6 @@ async function createGateway() {
             'x-ratelimit-remaining': true,
             'x-ratelimit-reset': true,
             'retry-after': true
-        }
-    });
-
-    // Register WebSocket support for real-time features
-    await app.register(websocket, {
-        options: {
-            maxPayload: 1048576, // 1MB
         }
     });
 
@@ -324,7 +316,8 @@ async function start() {
         console.log('═══════════════════════════════════════════════════════');
         console.log(`📍 Gateway URL: http://localhost:${config.port}`);
         console.log(`📚 API Docs:    http://localhost:${config.port}/api/docs/`);
-        console.log(`💚 Health:      http://localhost:${config.port}/health`);
+        console.log(`💚 Health:      http://localhost:${config.port}/health`);  
+        console.log(`🌐 CORS Origins: ${config.corsOrigins.join(', ')}`);
         console.log('═══════════════════════════════════════════════════════');
         console.log('📡 Proxied Services:');
         console.log(`   • User Service:       ${config.userServiceUrl}`);

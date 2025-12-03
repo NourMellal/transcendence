@@ -31,7 +31,7 @@ export default class Signal<T> {
         return this.value;
     }
 
-    set(newValue: T) {
+    set(newValue: T )  {
         if (this.value !== newValue) {
             this.value = newValue;
             this.notify();

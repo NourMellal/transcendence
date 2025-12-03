@@ -7,6 +7,7 @@ export interface AuthState {
   isLoading: boolean;
   token?: string;
   refreshToken?: string;
+  isAuthenticated: boolean;
   // 2FA state
   requires2FA?: boolean;
   twoFAPromptVisible?: boolean;
@@ -29,17 +30,20 @@ export interface GameState {
   error: string | null;
 }
 
+const createInitialAuthState = (): AuthState => ({
+  user: null,
+  isLoading: false,
+  token: '',
+  isAuthenticated: false,
+  refreshToken: undefined,
+  requires2FA: false,
+  twoFAPromptVisible: false,
+  oauthProvider: null,
+  oauthInProgress: false,
+});
+
 export const appState = {
-  auth: new Signal<AuthState>({
-    user: null,
-    isLoading: false,
-    token: '',
-    refreshToken: undefined,
-    requires2FA: false,
-    twoFAPromptVisible: false,
-    oauthProvider: null,
-    oauthInProgress: false,
-  }),
+  auth: new Signal<AuthState>(createInitialAuthState()),
   ui: new Signal<UIState>({
     twoFAModalVisible: false,
     twoFAError: undefined,
@@ -61,6 +65,10 @@ export class AuthActions {
       requires2FA: false,
       twoFAPromptVisible: false,
     });
+  }
+
+  static resetAuth() {
+    appState.auth.set(createInitialAuthState());
   }
 
   static show2FAPrompt() {

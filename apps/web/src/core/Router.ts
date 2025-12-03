@@ -107,7 +107,8 @@ private handleNavigation(path: string): void {
       }
       if (typeof route.component === 'function') {
          const Ctor = route.component as ComponentConstructor;
-         compInstance = new Ctor(route.props);
+         const mergedProps = { ...(route.props || {}), ...(params as any) };
+         compInstance = new Ctor(mergedProps);
       } else {
          compInstance = route.component as Component<{}, {}>;
       }

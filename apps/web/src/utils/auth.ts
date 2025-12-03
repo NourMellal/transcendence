@@ -136,16 +136,8 @@ class AuthManager {
   /**
    * Start 42 OAuth login
    */
-  async start42Login(): Promise<void> {
-    try {
-      const { authorizationUrl } = await authService.start42Login();
-      window.location.href = authorizationUrl;
-    } catch (error) {
-      this.setState({
-        error: error instanceof Error ? error.message : '42 login failed'
-      });
-      throw error;
-    }
+  start42Login(): void {
+    authService.start42Login();
   }
 
   /**

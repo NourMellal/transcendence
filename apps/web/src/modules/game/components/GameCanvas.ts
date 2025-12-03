@@ -1,11 +1,16 @@
 import Component from '../../../core/Component';
 import { GameRenderer } from '../utils/GameRenderer';
-import type { Ball, Paddle } from '../types/game.types';
+import type { Ball, Paddle, GameStateUpdateEvent } from '../types/game.types';
+import { gameWS } from '@/modules/shared/services/WebSocketClient';
+import { isOnlineMode } from '../utils/featureFlags';
 
-interface GameCanvasProps {}
+interface GameCanvasProps {
+  gameId?: string; // Optional: for online mode
+}
 
 interface GameCanvasState {
   isGameRunning: boolean;
+  connectionStatus?: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'failed';
 }
 
 export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
@@ -13,6 +18,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private renderer!: GameRenderer;
   private animationId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private isOnline: boolean = false;
+  private wsUnsubscribes: Array<() => void> = [];
   
   private readonly BASE_WIDTH = 800;
   private readonly BASE_HEIGHT = 600;
@@ -38,14 +45,30 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private pointerMoveHandler?: (e: PointerEvent) => void;
   private keyDownHandler?: (e: KeyboardEvent) => void;
   private keyUpHandler?: (e: KeyboardEvent) => void;
-  private startStopHandler?: (e: Event) => void;
-  private restartHandler?: (e: Event) => void;
   private startStopBtn?: HTMLButtonElement | null;
   private restartBtn?: HTMLButtonElement | null;
+  private handleButtonClick = (e: Event): void => {
+    const target = e.target as HTMLElement;
+    const button = target.closest('[data-action]') as HTMLElement;
+    
+    if (!button) return;
+    
+    const action = button.dataset.action;
+    console.log('[GameCanvas] Button clicked with action:', action);
+    
+    if (action === 'start-game') {
+      console.log('[GameCanvas] Start game action triggered');
+      this.toggleGame(this.startStopBtn as HTMLButtonElement);
+    } else if (action === 'restart-game') {
+      console.log('[GameCanvas] Restart game action triggered');
+      this.resetGame();
+    }
+  };
 
   getInitialState(): GameCanvasState {
     return {
-      isGameRunning: false
+      isGameRunning: false,
+      connectionStatus: 'disconnected',
     };
   }
   
@@ -96,7 +119,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
         <!-- Control Buttons -->
         <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center px-4 sm:px-0">
           <button 
-            id="start-stop-btn" 
+            id="start-stop-btn"
+            data-action="start-game"
             class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
             style="background: white; color: var(--color-bg-dark);"
             onmouseover="this.style.background='var(--color-brand-secondary)'; this.style.color='white';"
@@ -106,7 +130,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
           </button>
             
           <button 
-            id="restart-btn" 
+            id="restart-btn"
+            data-action="restart-game"
             class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
             style="border: 2px solid rgba(255, 255, 255, 0.2); color: white; background: rgba(255, 255, 255, 0.05);"
           >
@@ -137,9 +162,19 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   onMount(): void {
     this.canvas = this.element!.querySelector('#game-canvas') as HTMLCanvasElement;
-    this.renderer = new GameRenderer(this.canvas);
+    this.renderer = new GameRenderer(this.canvas );
     
     this.initializeGameObjects();
+    
+    // Determine if we're in online mode
+    this.isOnline = isOnlineMode() && !!this.props.gameId;
+    
+    if (this.isOnline) {
+      console.log('[GameCanvas] Online mode - setting up WebSocket...');
+      void this.setupWebSocket();
+    } else {
+      console.log('[GameCanvas] Local mode - using client-side physics');
+    }
     
     this.resizeCanvas();
     
@@ -156,12 +191,43 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     }
     
     this.renderer.render(this.ball, this.player1, this.player2);
+    
+    // Attach event listeners after DOM is ready
+    this.attachEventListeners();
   }
 
   protected attachEventListeners(): void {
-    this.startStopBtn = this.element!.querySelector('#start-stop-btn') as HTMLButtonElement | null;
-    this.restartBtn = this.element!.querySelector('#restart-btn') as HTMLButtonElement | null;
+    console.log('[GameCanvas] Attaching event listeners...');
+    
+    if (!this.element) {
+      console.warn('[GameCanvas] Element not found, skipping event listeners');
+      return;
+    }
+    
+    // Re-query canvas after re-render
+    this.canvas = this.element.querySelector('#game-canvas') as HTMLCanvasElement;
+    if (!this.canvas) {
+      console.warn('[GameCanvas] Canvas not found, skipping event listeners');
+      return;
+    }
+    
+    // Recreate renderer with the new canvas
+    this.renderer = new GameRenderer(this.canvas);
+    this.resizeCanvas();
+    
+    // Query button references for updating text/disabled state
+    this.startStopBtn = this.element.querySelector('#start-stop-btn') as HTMLButtonElement | null;
+    this.restartBtn = this.element.querySelector('#restart-btn') as HTMLButtonElement | null;
 
+    console.log('[GameCanvas] Start button found:', !!this.startStopBtn);
+    console.log('[GameCanvas] Restart button found:', !!this.restartBtn);
+
+    // Use event delegation on the parent element - this survives re-renders
+    // Remove old listener first to prevent duplicates
+    this.element.removeEventListener('click', this.handleButtonClick);
+    this.element.addEventListener('click', this.handleButtonClick);
+
+    // Setup mouse/touch handlers for paddle control
     this.mouseMoveHandler = (e: MouseEvent) => {
       const rect = this.canvas.getBoundingClientRect();
       const scaleY = this.BASE_HEIGHT / rect.height;
@@ -200,8 +266,14 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     };
     this.canvas.addEventListener('pointermove', this.pointerMoveHandler);
 
+    // Setup keyboard handlers
     this.keyDownHandler = (e: KeyboardEvent) => {
       this.keys[e.key] = true;
+      
+      // In online mode, emit paddle movement to server
+      if (this.isOnline && this.props.gameId) {
+        this.emitPaddleMove();
+      }
     };
     document.addEventListener('keydown', this.keyDownHandler);
 
@@ -209,22 +281,102 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       this.keys[e.key] = false;
     };
     document.addEventListener('keyup', this.keyUpHandler);
+  }
 
-    if (this.startStopBtn) {
-      this.startStopHandler = (e: Event) => {
-        // allow preventing default if caller needs
-        e?.preventDefault?.();
-        this.toggleGame(this.startStopBtn as HTMLButtonElement);
-      };
-      this.startStopBtn.addEventListener('click', this.startStopHandler);
+  private async setupWebSocket(): Promise<void> {
+    if (!this.props.gameId) return;
+
+    console.log('[GameCanvas] Connecting WebSocket for game:', this.props.gameId);
+
+    const updateStatus = (status: GameCanvasState['connectionStatus']) =>
+      this.setState({ connectionStatus: status });
+
+    this.wsUnsubscribes.push(
+      gameWS.on('connect', () => {
+        updateStatus('connected');
+        gameWS.send('join_game', { gameId: this.props.gameId });
+      }),
+      gameWS.on('disconnect', () => updateStatus('disconnected')),
+      gameWS.on('connect_error', () => updateStatus('error')),
+      gameWS.on('game_start', (data: any) => {
+        if (data?.gameId === this.props.gameId) {
+          this.isRunning = true;
+          this.setState({ isGameRunning: true });
+          this.gameLoop();
+        }
+      }),
+      gameWS.on('game_state', (data: GameStateUpdateEvent) => {
+        this.applyGameStateUpdate(data);
+      }),
+      gameWS.on('game_end', (data: any) => {
+        if (data?.gameId === this.props.gameId) {
+          console.log('[GameCanvas] Game finished:', data);
+          this.isRunning = false;
+          this.setState({ isGameRunning: false });
+
+          if (data.finalScore) {
+            this.player1.score = data.finalScore.left ?? 0;
+            this.player2.score = data.finalScore.right ?? 0;
+          }
+
+          if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+          }
+        }
+      }),
+      gameWS.on('error', (data: any) => {
+        console.error('[GameCanvas] Game error:', data);
+      })
+    );
+
+    const state = gameWS.getState();
+    if (state && state !== this.state.connectionStatus) {
+      updateStatus(state as GameCanvasState['connectionStatus']);
     }
 
-    if (this.restartBtn) {
-      this.restartHandler = (e: Event) => {
-        e?.preventDefault?.();
-        this.resetGame();
-      };
-      this.restartBtn.addEventListener('click', this.restartHandler);
+    await gameWS.connect();
+  }
+
+  private emitPaddleMove(): void {
+    if (!this.props.gameId) return;
+
+    const direction = this.resolveDirection();
+    if (!direction) {
+      return;
+    }
+
+    gameWS.send('paddle_move', {
+      gameId: this.props.gameId,
+      direction,
+      deltaTime: 0.016,
+    });
+  }
+
+  private resolveDirection(): 'up' | 'down' | undefined {
+    if (this.keys['ArrowUp']) return 'up';
+    if (this.keys['ArrowDown']) return 'down';
+    return undefined;
+  }
+
+  private applyGameStateUpdate(payload: GameStateUpdateEvent): void {
+    if (payload.gameId && payload.gameId !== this.props.gameId) {
+      return;
+    }
+
+    this.ball.x = payload.ball.x;
+    this.ball.y = payload.ball.y;
+    this.ball.velocityX = payload.ball.vx;
+    this.ball.velocityY = payload.ball.vy;
+
+    this.player1.y = payload.paddles.left.y;
+    this.player2.y = payload.paddles.right.y;
+
+    this.player1.score = payload.score.player1;
+    this.player2.score = payload.score.player2;
+
+    if (!this.isRunning) {
+      this.renderer.render(this.ball, this.player1, this.player2);
     }
   }
 
@@ -259,18 +411,22 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   }
 
   private toggleGame(button: HTMLButtonElement): void {
+    console.log('[GameCanvas] toggleGame called, current isRunning:', this.isRunning);
     const nextRunning = !this.isRunning;
     
     this.isRunning = nextRunning;
+    console.log('[GameCanvas] Setting isRunning to:', nextRunning);
     
     this.setState({ isGameRunning: nextRunning });
     
     if (nextRunning) {
+      console.log('[GameCanvas] Starting game loop...');
       button.textContent = 'Stop Game';
       button.classList.remove('bg-green-600', 'hover:bg-green-700');
       button.classList.add('bg-red-600', 'hover:bg-red-700');
       this.gameLoop();
     } else {
+      console.log('[GameCanvas] Stopping game...');
       button.textContent = 'Start Game';
       button.classList.remove('bg-red-600', 'hover:bg-red-700');
       button.classList.add('bg-green-600', 'hover:bg-green-700');
@@ -306,6 +462,14 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private updateGame(): void {
     if (!this.isRunning) return;
     
+    // In online mode, server handles physics - we only update our paddle
+    if (this.isOnline) {
+      // Forward input to the server; authoritative state is streamed via game_state
+      this.emitPaddleMove();
+      return;
+    }
+    
+    // Local mode: run full client-side physics
     const { ball, player1, player2 } = this;
     
     player1.y = this.mouseY - player1.height / 2;
@@ -361,6 +525,14 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       this.resizeObserver.disconnect();
     }
 
+    // Disconnect WebSocket in online mode
+    if (this.isOnline) {
+      console.log('[GameCanvas] Disconnecting WebSocket...');
+      this.wsUnsubscribes.forEach((unsubscribe) => unsubscribe());
+      this.wsUnsubscribes = [];
+      gameWS.disconnect();
+    }
+
     if (this.mouseMoveHandler) {
       this.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
       this.mouseMoveHandler = undefined;
@@ -389,16 +561,6 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     if (this.keyUpHandler) {
       document.removeEventListener('keyup', this.keyUpHandler);
       this.keyUpHandler = undefined;
-    }
-
-    if (this.startStopBtn && this.startStopHandler) {
-      this.startStopBtn.removeEventListener('click', this.startStopHandler);
-      this.startStopHandler = undefined;
-    }
-
-    if (this.restartBtn && this.restartHandler) {
-      this.restartBtn.removeEventListener('click', this.restartHandler);
-      this.restartHandler = undefined;
     }
 
     this.startStopBtn = null;
