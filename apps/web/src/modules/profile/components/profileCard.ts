@@ -14,7 +14,8 @@ export default class profileCard extends Component<Record<string, never>, State>
 
 
 onMount(): void {
-  this.unsubscribe = appState.auth.subscribe((auth) => {
+  this.unsubscribe = appState.auth.subscribe((auth) => {   
+        this.setState({ user: auth.user }) ;
   });
 }
 

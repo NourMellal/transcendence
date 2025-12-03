@@ -178,7 +178,6 @@ render(): string {
 
   </div>
 </div>
-
     </section>s
   `;
 
