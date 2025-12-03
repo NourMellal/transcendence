@@ -94,6 +94,10 @@ pnpm dev:tournament    # Tournament Service
 pnpm dev:gateway       # API Gateway
 ```
 
+### ⚠️ Known Issues
+
+- **Avatar upload on `/profile`** – The new “Upload new” avatar action currently sends a multipart request to `PATCH /api/users/me`, but the upstream User Service rejects it with `415 Unsupported Media Type`. Until the backend accepts file uploads, the UI will show a failure toast and the avatar will not change.
+
 ---
 
 ## 📁 Project Structure
