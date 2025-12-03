@@ -10,8 +10,8 @@ path "secret/data/api/oauth" {
   capabilities = ["read"]
 }
 
-# Allow API Gateway to read its own config
-path "secret/data/gateway/config" {
+# Allow API Gateway to read shared internal key
+path "secret/data/shared/internal-api-key" {
   capabilities = ["read"]
 }
 
