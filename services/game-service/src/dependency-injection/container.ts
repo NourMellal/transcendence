@@ -97,6 +97,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         leaveGameUseCase: leaveGame,
         readyUpUseCase: readyUp,
         gameLoop,
+        roomManager,
     });
     const healthController = new HealthController();
 

@@ -125,14 +125,14 @@ export async function registerUserRoutes(
         const user = getUser(request);
         const { userId } = request.params;
 
-        if ((user?.userId || user?.sub) !== userId) {
-            return reply.code(403).send({
-                statusCode: 403,
-                error: 'Forbidden',
-                message: '' +
-                  'You can only access your own profile',
-            });
-        }
+        // if ((user?.userId || user?.sub) !== userId) {
+        //     return reply.code(403).send({
+        //         statusCode: 403,
+        //         error: 'Forbidden',
+        //         message: '' +
+        //           'You can only access your own profile',
+        //     });
+        // }
 
         const response = await fetch(`${userServiceUrl}/users/${userId}`, {
             method: 'GET',

@@ -11,6 +11,7 @@ import {GameStatus} from '../../../domain/value-objects';
 import {GameStateOutput} from '../../../application/dto';
 import { createGameValidator } from '../validators/createGameValidator';
 import { GameLoop } from '../../websocket';
+import { GameRoomManager } from '../../websocket';
 
 interface GameControllerDeps {
     readonly createGameUseCase: CreateGameUseCase;
@@ -20,6 +21,7 @@ interface GameControllerDeps {
   readonly leaveGameUseCase: LeaveGameUseCase;
   readonly readyUpUseCase: ReadyUpUseCase;
   readonly gameLoop: GameLoop;
+  readonly roomManager: GameRoomManager;
 }
 
 export class GameController {
@@ -76,6 +78,7 @@ export class GameController {
         const {gameId} = request.params as { gameId: string };
         const userId = getUserId(request.headers['x-user-id']);
         const { started } = await this.deps.readyUpUseCase.execute(gameId, userId);
+        this.deps.roomManager.emitToGame(gameId, 'player_ready', { playerId: userId });
         if (started) {
           this.deps.gameLoop.start(gameId);
         }
@@ -86,6 +89,8 @@ export class GameController {
         const {gameId} = request.params as { gameId: string };
         const userId = getUserId(request.headers['x-user-id']);
         await this.deps.leaveGameUseCase.execute(gameId, userId);
+        // Broadcast presence change to room listeners
+        this.deps.roomManager.leave(gameId, userId);
             return reply.code(204).send();
         });
 

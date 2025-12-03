@@ -24,6 +24,7 @@ export class WebSocketClient {
   private connectionState: WSConnectionState = 'disconnected';
   private reconnectTimeout: number | null = null;
   private connectDeferred: DeferredConnect | null = null;
+  private manualDisconnect = false;
 
   constructor(
     private url: string,
@@ -42,6 +43,9 @@ export class WebSocketClient {
       this.url = url;
     }
 
+    // Reset manual disconnect flag so reconnects are allowed on explicit connect()
+    this.manualDisconnect = false;
+
     if (!this.url) {
       throw new Error('[WS] No WebSocket URL provided');
     }
@@ -58,6 +62,8 @@ export class WebSocketClient {
     if (!this.socket) {
       this.socket = createGameSocket(this.url, this.token, this.wsPath);
       this.registerLifecycleEvents();
+      // Attach any handlers that were registered before the socket existed
+      this.handlers.forEach((_set, eventType) => this.attachSocketHandler(eventType));
     }
 
     this.connectionState = 'connecting';
@@ -101,6 +107,7 @@ export class WebSocketClient {
 
   disconnect(): void {
     console.log('[WS] Disconnecting...');
+    this.manualDisconnect = true;
     this.handlers.forEach((_value, key) => this.detachSocketHandler(key));
     this.handlers.clear();
     this.messageQueue = [];
@@ -192,6 +199,11 @@ export class WebSocketClient {
   }
 
   private attemptReconnect(): void {
+    if (this.manualDisconnect) {
+      this.reconnectAttempts = 0;
+      this.clearReconnectTimer();
+      return;
+    }
     if (this.reconnectTimeout || !this.url) {
       return;
     }

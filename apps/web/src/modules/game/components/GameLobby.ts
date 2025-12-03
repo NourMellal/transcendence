@@ -34,8 +34,7 @@ interface GameLobbyState {
  */
 export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   // Inline avatar to avoid repeated 404s when backend does not provide one
-  private static readonly defaultAvatar =
-    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" fill="none"><rect width="96" height="96" rx="16" fill="%23232a31"/><circle cx="48" cy="38" r="18" fill="%23404a54"/><path d="M20 82c0-15.464 12.536-28 28-28h0c15.464 0 28 12.536 28 28" stroke="%23404a54" stroke-width="6" stroke-linecap="round"/></svg>';
+  private static readonly defaultAvatar = '/assets/images/ape.png';
   private playerCache = new Map<string, PlayerInfo>();
   private unsubscribeGame?: () => void;
   private timeoutInterval?: number;
@@ -66,6 +65,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       // Fetch initial lobby state via GameService
       let game = await gameService.getGame(this.props.gameId);
       game = await this.enrichPlayers(game);
+      console.log('[GameLobby] Fetched game:', game);
 
       const isParticipant = !!this.state.currentUserId && game.players?.some((p) => p.id === this.state.currentUserId);
       if (!isParticipant && this.state.currentUserId) {
@@ -97,13 +97,19 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       this.update({});
 
       // Subscribe to global game state updates for real-time sync
-      this.unsubscribeGame = appState.game.subscribe((gameState) => {
+        this.unsubscribeGame = appState.game.subscribe((gameState) => {
         if (!gameState.current || gameState.current.id !== this.props.gameId) return;
 
         this.state.game = gameState.current;
+        this.stopTimeoutIfOpponentJoined(gameState.current);
+
+        // Restart timeout if opponent left
+        if (!gameState.current.players || gameState.current.players.length < 2) {
+          this.resetTimeout();
+        }
 
         // Auto-navigate when game starts
-        if (gameState.current.status === 'IN_PROGRESS') {
+        if (gameState.current.status === 'IN_PROGRESS' || gameState.current.status === 'PLAYING') {
           console.log('[GameLobby] Game started! Navigating to play screen...');
           this.navigateTo(`/game/play/${gameState.current.id}`);
         }
@@ -113,6 +119,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
       // Start timeout countdown
       this.startTimeout();
+
+      // If game already in progress, go to play screen
+      if (game.status === 'IN_PROGRESS' || game.status === 'PLAYING') {
+        this.navigateTo(`/game/play/${game.id}`);
+      }
 
     } catch (error) {
       console.error('[GameLobby] Failed to mount:', error);
@@ -148,7 +159,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     const currentPlayer = players.find((p) => p.id === currentUserId);
     const opponent = players.find((p) => p.id !== currentUserId);
     const hasOpponent = opponent !== undefined;
-    const config = game.config || game.settings || {};
+    const config = game.config || {};
     const scoreLimit = config.scoreLimit ?? 11;
     const ballSpeed = config.ballSpeed ?? 5;
     const paddleSpeed = config.paddleSpeed ?? 8;
@@ -174,6 +185,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
           <div class="p-6 sm:p-8 mb-6 rounded-xl" style="background: var(--color-panel-bg); border: 1px solid var(--color-panel-border); backdrop-filter: var(--backdrop-blur);">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Current Player -->
+
               ${currentPlayer ? this.renderPlayerCard(currentPlayer, 'You', isReady) : ''}
 
               <!-- Opponent Slot -->
@@ -242,7 +254,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         : player.username || 'Opponent';
     const avatar =
       label === 'You'
-        ? player.avatar || (auth?.user as any)?.avatar || GameLobby.defaultAvatar
+        ? player.avatar || GameLobby.defaultAvatar
         : player.avatar || GameLobby.defaultAvatar;
 
     return `
@@ -253,7 +265,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
             alt="${displayName}"
             class="w-12 h-12 rounded-full"
             style="border: 2px solid var(--color-primary);"
-          >
+          />
           <div class="flex-1">
             <div class="font-medium" style="color: var(--color-text-primary);">
               ${displayName}
@@ -386,7 +398,13 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   private startTimeout(): void {
+    this.stopTimeout();
     this.timeoutInterval = window.setInterval(() => {
+      if (this.state.game?.players && this.state.game.players.length >= 2) {
+        this.stopTimeout();
+        return;
+      }
+
       this.state.timeRemaining--;
 
       if (this.state.timeRemaining <= 0) {
@@ -397,10 +415,27 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     }, 1000);
   }
 
-  private handleTimeout(): void {
+  private stopTimeoutIfOpponentJoined(game?: GameStateOutput): void {
+    const g = game ?? this.state.game;
+    if (g?.players && g.players.length >= 2) {
+      this.stopTimeout();
+    }
+  }
+
+  private stopTimeout(): void {
     if (this.timeoutInterval) {
       clearInterval(this.timeoutInterval);
+      this.timeoutInterval = undefined;
     }
+  }
+
+  private resetTimeout(): void {
+    this.state.timeRemaining = 120;
+    this.startTimeout();
+  }
+
+  private handleTimeout(): void {
+    this.stopTimeout();
     this.state.error = '⏱️ Lobby timeout - no opponent found';
     this.update({});
   }
@@ -425,13 +460,17 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         console.error('[GameLobby] ❌ Connection error:', error);
         updateConnectionStatus('error');
       }),
-      gameWS.on('player_joined', () => {
-        console.log('[GameLobby] Player joined');
-        this.refreshGameState();
+      gameWS.on('player_joined', (data: any) => {
+        console.log('[GameLobby] Player joined', data);
+        this.handlePlayerEvent(data);
       }),
-      gameWS.on('player_left', () => {
-        console.log('[GameLobby] Player left');
-        this.refreshGameState();
+      gameWS.on('player_left', (data: any) => {
+        console.log('[GameLobby] Player left', data);
+        this.handlePlayerEvent(data);
+      }),
+      gameWS.on('player_ready', (data: any) => {
+        console.log('[GameLobby] Player ready', data);
+        this.handlePlayerReady(data);
       }),
       gameWS.on('game_start', (data: any) => {
         console.log('[GameLobby] Game started:', data);
@@ -510,16 +549,66 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     return { ...game, players: updated };
   }
 
+  private handlePlayerEvent(data?: { players?: PlayerInfo[]; playerId?: string }): void {
+    const current = this.state.game;
+
+    if (current) {
+      // Apply payload directly when available
+      if (data?.players && data.players.length > 0) {
+        const merged = data.players.map((p) => {
+          const cached = this.playerCache.get(p.id);
+          const existing = current.players?.find((pl) => pl.id === p.id);
+          return cached ?? existing ?? p;
+        });
+        this.state.game = { ...current, players: merged };
+      } else if (data?.playerId) {
+        // Remove/adjust based on playerId when roster not included
+        const filtered = (current.players ?? []).filter((p) => p.id !== data.playerId);
+        this.state.game = { ...current, players: filtered };
+      }
+
+      appState.game.set({
+        current: this.state.game,
+        isLoading: false,
+        error: null,
+      });
+      this.update({});
+
+      // If opponent left, restart the timeout countdown
+      if (!this.state.game?.players || this.state.game.players.length < 2) {
+        this.resetTimeout();
+      }
+    }
+
+    // Always refresh to pull full profile/ready state from backend
+    this.refreshGameState();
+  }
+
+  private handlePlayerReady(data?: { playerId?: string }): void {
+    if (!data?.playerId || !this.state.game) {
+      return;
+    }
+
+    const updatedPlayers = (this.state.game.players ?? []).map((p) =>
+      p.id === data.playerId ? { ...p, ready: true } : p
+    );
+
+    this.state.game = { ...this.state.game, players: updatedPlayers };
+    appState.game.set({
+      current: this.state.game,
+      isLoading: false,
+      error: null,
+    });
+    this.update({});
+  }
+
   private navigateTo(path: string): void {
     window.location.href = path;
   }
 
   onUnmount(): void {
     this.unsubscribeGame?.();
-
-    if (this.timeoutInterval) {
-      clearInterval(this.timeoutInterval);
-    }
+    this.stopTimeout();
 
     this.wsUnsubscribes.forEach((unsubscribe) => unsubscribe());
     this.wsUnsubscribes = [];

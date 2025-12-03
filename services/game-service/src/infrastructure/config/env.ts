@@ -51,8 +51,15 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
     try {
         const vault = createGameServiceVault();
         await vault.initialize();
-        const gameConfig = await vault.getServiceConfig();
-        const redisConfig = await vault.getDatabaseConfig();
+        const [gameConfig, redisConfig, internalApiKey] = await Promise.all([
+            vault.getServiceConfig(),
+            vault.getDatabaseConfig(),
+            vault.getInternalApiKey()
+        ]);
+
+        if (!internalApiKey) {
+            console.warn('[game-service] INTERNAL_API_KEY not found in Vault or environment.');
+        }
 
         return {
             port: getEnvVarAsNumber('GAME_SERVICE_PORT', 3002),
@@ -67,7 +74,7 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
                 password: redisConfig.password
             },
             databaseFile: resolveDatabaseFilePath(),
-            internalApiKey: process.env.INTERNAL_API_KEY,
+            internalApiKey: internalApiKey ?? undefined,
             userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
             messaging: createMessagingConfig()
         };
