@@ -8,12 +8,10 @@ This page lists the vault secrets each service consumes, how to load them in dev
 | --- | --- | --- | --- |
 | API Gateway | `secret/jwt/auth` | `secret_key`, `issuer`, `expiration_hours` | `secret_key: my-super-secret-jwt-key-for-signing-tokens` |
 | API Gateway | `secret/api/oauth` | `42_client_id`, `42_client_secret`, `42_callback_url` | `42_client_id: u-s4t2...` |
-| API Gateway | `secret/gateway/config` | `cors_origins`, `internalApiKey`, rate-limit fields | `internalApiKey: <shared internal API key>` |
 | API Gateway (shared) | `secret/shared/internal-api-key` | `key` (shared gateway↔services auth) | Random 64-hex key |
 | User Service | `secret/database/user-service` | `type`, `host` | `type: sqlite`, `host: ./user-service.db` |
 | User Service | `secret/jwt/auth` | `secret_key`, `issuer`, `expiration_hours` | `secret_key: ...jwt...` |
 | User Service | `secret/api/oauth` | OAuth client credentials | Matches gateway values |
-| User Service | `secret/security/config` | `internal_api_key` | Same shared key as above |
 | Game Service | `secret/database/game-service` | `host`, `port` (Redis) | `host: localhost`, `port: 6379` |
 | Game Service | `secret/jwt/game` | Game JWT signing config (seed manually) | `secret_key: game-websocket-secret-key` |
 | Game Service | `secret/game/config` | `websocket_secret`, `match_timeout_minutes` | `websocket_secret: game-websocket-secret-key` |

@@ -261,10 +261,8 @@ export function createVaultHelper(
 
 export const createUserServiceVault = () =>
     createVaultHelper('user-service', {
-        database: 'secret/database/user-service',
         jwt: 'secret/jwt/auth',
         api: 'secret/api/oauth',
-        config: 'secret/security/config',
         internalApiKey: 'secret/shared/internal-api-key',
     });
 
@@ -297,6 +295,5 @@ export const createAPIGatewayVault = () =>
     createVaultHelper('api-gateway', {
         jwt: 'secret/jwt/auth',
         api: 'secret/api/oauth',
-        config: 'secret/gateway/config',
         internalApiKey: 'secret/shared/internal-api-key',
     });
