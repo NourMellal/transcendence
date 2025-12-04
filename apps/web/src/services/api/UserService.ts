@@ -70,18 +70,23 @@ export class UserService {
   }
 
   /**
-   * Search users by username or email
+   * Search users by username
+   * Fetches a user by exact username match
    */
-  async searchUsers(query: string, limit = 10): Promise<User[]> {
-    const response = await httpClient.get<User[]>(`${API_PREFIX}/users/search`, {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-    
-    // Note: In a real implementation, search params would be in query string
-    // For now, we'll assume the endpoint handles the search internally
-    return response.data!;
+  async searchUserByUsername(username: string): Promise<User | null> {
+    try {
+      // Search for user by username - the API uses findByUsername internally
+      const response = await httpClient.get<User>(`${API_PREFIX}/users/by-username/${encodeURIComponent(username)}`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      return response.data ?? null;
+    } catch (error) {
+      // Return null if user not found (404) or other errors
+      console.warn('[UserService] User search failed', error);
+      return null;
+    }
   }
 
   /**

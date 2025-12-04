@@ -6,11 +6,12 @@ import {
   DashboardMatchSummary,
   DashboardProfile,
   Friend,
+  User,
 } from '@/models';
 import { userService } from '@/services/api/UserService';
 import { authManager } from '@/utils/auth';
 import { showSuccess, showError } from '@/utils/errors';
-import { SUGGESTED_FRIENDS } from '../../data/suggestions';
+import type { SuggestedFriend } from '../../data/suggestions';
 
 type InviteStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -32,6 +33,10 @@ type State = {
     type: 'success' | 'error';
     message: string;
   };
+  // User search state
+  userSearchQuery: string;
+  userSearchResult: SuggestedFriend | null;
+  userSearchStatus: 'idle' | 'loading' | 'error' | 'not-found';
 };
 
 export default class DashboardPage extends Component<Record<string, never>, State> {
@@ -56,6 +61,9 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       friendRequestStatus: {},
       friendRequestFeedback: undefined,
       error: undefined,
+      userSearchQuery: '',
+      userSearchResult: null,
+      userSearchStatus: 'idle',
     };
   }
 
@@ -389,12 +397,59 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     );
   }
 
-  private getAvailableSuggestions(): typeof SUGGESTED_FRIENDS {
-    const friendIds = new Set(this.state.friends.map((friend) => friend.id));
-    const currentUserId = appState.auth.get().user?.id;
-    return SUGGESTED_FRIENDS.filter(
-      (suggestion) => suggestion.id !== currentUserId && !friendIds.has(suggestion.id)
-    );
+  private async handleUserSearch(username: string): Promise<void> {
+    const trimmedUsername = username.trim();
+    
+    if (!trimmedUsername) {
+      this.setState({
+        userSearchQuery: '',
+        userSearchResult: null,
+        userSearchStatus: 'idle',
+      });
+      return;
+    }
+
+    this.setState({
+      userSearchQuery: trimmedUsername,
+      userSearchStatus: 'loading',
+      userSearchResult: null,
+    });
+
+    try {
+      const user = await userService.searchUserByUsername(trimmedUsername);
+      
+      if (!user) {
+        this.setState({ userSearchStatus: 'not-found' });
+        return;
+      }
+
+      // Check if user is already a friend or is the current user
+      const currentUserId = appState.auth.get().user?.id;
+      const friendIds = new Set(this.state.friends.map((f) => f.id));
+      
+      if (user.id === currentUserId) {
+        this.setState({ userSearchStatus: 'not-found' });
+        return;
+      }
+      
+      if (friendIds.has(user.id)) {
+        this.setState({ userSearchStatus: 'not-found' });
+        return;
+      }
+
+      this.setState({
+        userSearchResult: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName || user.username,
+          avatar: user.avatar,
+        },
+        userSearchStatus: 'idle',
+      });
+    } catch (error) {
+      console.error('[DashboardPage] User search failed:', error);
+      this.setState({ userSearchStatus: 'error' });
+    }
   }
 
   private renderSidebar(): string {
@@ -669,37 +724,91 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   }
 
   private renderSuggestedFriend(): string {
-    const [suggestion] = this.getAvailableSuggestions();
-    if (!suggestion) return '';
+    const { userSearchQuery, userSearchResult, userSearchStatus } = this.state;
+    const suggestion = userSearchResult;
 
-    const status = this.state.friendRequestStatus[suggestion.id] ?? 'idle';
-    const buttonLabel =
-      status === 'loading' ? 'Sending...' : status === 'success' ? 'Request Sent' : 'Send Friend Request';
+    let resultContent = '';
+    
+    if (userSearchStatus === 'loading') {
+      resultContent = `
+        <div class="text-sm text-white/50 py-4 text-center">
+          Searching...
+        </div>
+      `;
+    } else if (userSearchStatus === 'not-found' && userSearchQuery) {
+      resultContent = `
+        <div class="text-sm text-white/50 py-4 text-center">
+          No user found with username "${userSearchQuery}"
+        </div>
+      `;
+    } else if (userSearchStatus === 'error') {
+      resultContent = `
+        <div class="text-sm text-red-400 py-4 text-center">
+          Search failed. Please try again.
+        </div>
+      `;
+    } else if (suggestion) {
+      const status = this.state.friendRequestStatus[suggestion.id] ?? 'idle';
+      const buttonLabel =
+        status === 'loading' ? 'Sending...' : status === 'success' ? 'Request Sent' : 'Send Friend Request';
+      
+      resultContent = `
+        <div class="flex items-center justify-between mt-4 p-3 rounded-xl" style="background: rgba(255,255,255,0.05);">
+          <div class="flex items-center gap-3">
+            <img
+              src="${suggestion.avatar ?? '/assets/images/ape.png'}"
+              alt="${suggestion.displayName}"
+              class="h-12 w-12 rounded-xl object-cover border border-white/20"
+            />
+            <div>
+              <p class="font-semibold">${suggestion.displayName}</p>
+              <p class="text-xs text-white/50">@${suggestion.username}</p>
+            </div>
+          </div>
+          <button
+            data-action="send-friend-request"
+            data-suggested-id="${suggestion.id}"
+            class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
+            style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
+            ${status === 'loading' || status === 'success' ? 'disabled' : ''}
+          >
+            ${buttonLabel}
+          </button>
+        </div>
+      `;
+    } else {
+      resultContent = `
+        <div class="text-sm text-white/40 py-4 text-center">
+          Enter a username to find new friends
+        </div>
+      `;
+    }
 
     return `
       <section class="glass-panel p-6">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <p class="text-sm text-white/60">Suggested Friend</p>
-            <h3 class="text-xl font-semibold">${suggestion.displayName}</h3>
-            <p class="text-xs text-white/50">@${suggestion.username}</p>
-          </div>
-          <img
-            src="${suggestion.avatar ?? '/assets/images/ape.png'}"
-            alt="${suggestion.displayName}"
-            class="h-14 w-14 rounded-2xl object-cover border border-white/20"
-          />
+        <div class="mb-4">
+          <p class="text-sm text-white/60">Find Friends</p>
+          <h3 class="text-xl font-semibold">Search by Username</h3>
         </div>
-        <p class="text-sm text-white/60 mb-4">${suggestion.tagline}</p>
-        <button
-          data-action="send-friend-request"
-          data-suggested-id="${suggestion.id}"
-          class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-          style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
-          ${status === 'loading' || status === 'success' ? 'disabled' : ''}
-        >
-          ${buttonLabel}
-        </button>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="user-search-input"
+            placeholder="Enter username..."
+            value="${userSearchQuery}"
+            class="flex-1 px-4 py-2 rounded-xl text-sm"
+            style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: white;"
+          />
+          <button
+            data-action="search-user"
+            class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
+            style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
+            ${userSearchStatus === 'loading' ? 'disabled' : ''}
+          >
+            ${userSearchStatus === 'loading' ? 'Searching...' : 'Search'}
+          </button>
+        </div>
+        ${resultContent}
       </section>
     `;
   }
@@ -1043,6 +1152,30 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       button.addEventListener('click', handler);
       this.subscriptions.push(() => button.removeEventListener('click', handler));
     });
+
+    // User search functionality
+    const searchButton = this.element.querySelector<HTMLElement>('[data-action="search-user"]');
+    const searchInput = this.element.querySelector<HTMLInputElement>('#user-search-input');
+    
+    if (searchButton && searchInput) {
+      const searchHandler = (event: Event) => {
+        event.preventDefault();
+        const username = searchInput.value;
+        void this.handleUserSearch(username);
+      };
+      searchButton.addEventListener('click', searchHandler);
+      this.subscriptions.push(() => searchButton.removeEventListener('click', searchHandler));
+
+      // Also search on Enter key
+      const enterHandler = (event: KeyboardEvent) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          void this.handleUserSearch(searchInput.value);
+        }
+      };
+      searchInput.addEventListener('keydown', enterHandler);
+      this.subscriptions.push(() => searchInput.removeEventListener('keydown', enterHandler));
+    }
 
     bindClick('[data-action="accept-request"]', (el) => {
       const friendshipId = el.getAttribute('data-friendship-id');
