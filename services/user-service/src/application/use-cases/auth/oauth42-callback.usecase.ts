@@ -1,11 +1,13 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { createUser } from '../../../domain/entities/user.entity';
+import { PresenceStatus } from '../../../domain/entities/presence.entity';
 import type {
     IOAuth42CallbackUseCase,
     OAuthService,
     UserRepository,
-    SessionRepository
+    SessionRepository,
+    UserPresenceRepository
 } from '../../../domain/ports';
 import { OAuthStateManager } from '../../services/oauth-state.manager';
 import type { JWTConfig } from '@transcendence/shared-utils';
@@ -22,7 +24,8 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
         private readonly userRepository: UserRepository,
         private readonly sessionRepository: SessionRepository,
         private readonly jwtProvider: JWTProvider,
-        private readonly stateManager: OAuthStateManager
+        private readonly stateManager: OAuthStateManager,
+        private readonly presenceRepository?: UserPresenceRepository
     ) { }
 
     async execute(input: OAuthCallbackRequestDTO): Promise<OAuthCallbackResponseDTO> {
@@ -83,6 +86,9 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
         );
 
         const refreshToken = await this.createRefreshSession(user.id.toString());
+
+        // Set user presence to ONLINE after successful OAuth login
+        await this.presenceRepository?.upsert(user.id.toString(), PresenceStatus.ONLINE, new Date());
 
         return {
             sessionToken: accessToken,
