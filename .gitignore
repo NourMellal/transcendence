@@ -136,3 +136,4 @@ temp/
 *.old
 /AGENTS.md
 issue67.txt
+services/*/data/
