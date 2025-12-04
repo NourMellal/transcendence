@@ -63,7 +63,7 @@ export class SQLiteUserRepository implements UserRepository {
         if (!this.db) throw new Error('Database not initialized');
 
         const row = await this.db.get(
-            'SELECT * FROM users WHERE username = ?',
+            'SELECT * FROM users WHERE LOWER(username) = LOWER(?)',
             [username]
         );
 
