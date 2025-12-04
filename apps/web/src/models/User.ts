@@ -7,6 +7,7 @@ import { Match } from './Game';
 export interface User {
   id: string;
   username: string;
+  displayName?: string;
   email: string;
   avatar?: string;
   isTwoFAEnabled: boolean;

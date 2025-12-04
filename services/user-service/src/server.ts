@@ -18,6 +18,7 @@ import { LogoutUseCase } from './application/use-cases/auth/logout.usecase';
 import { RefreshTokenUseCase } from './application/use-cases/auth/refresh-token.usecase';
 import { UpdateProfileUseCase } from './application/use-cases/users/update-profile.usecase';
 import { GetUserUseCase } from './application/use-cases/users/get-user.usecase';
+import { GetUserByUsernameUseCase } from './application/use-cases/users/get-user-by-username.usecase';
 import { DeleteUserUseCase } from './application/use-cases/users/delete-user.usecase';
 import { Generate2FAUseCaseImpl } from './application/use-cases/two-fa/generate-2fa.usecase';
 import { Enable2FAUseCaseImpl } from './application/use-cases/two-fa/enable-2fa.usecase';
@@ -105,7 +106,8 @@ async function main() {
     const logoutUseCase = new LogoutUseCase(userRepository, sessionRepository, presenceRepository);
     const refreshTokenUseCase = new RefreshTokenUseCase(sessionRepository, userRepository, jwtService);
     const updateProfileUseCase = new UpdateProfileUseCase(userRepository, passwordHasher);
-    const getUserUseCase = new GetUserUseCase(userRepository);
+    const getUserUseCase = new GetUserUseCase(userRepository, presenceRepository);
+    const getUserByUsernameUseCase = new GetUserByUsernameUseCase(userRepository, presenceRepository);
     const deleteUserUseCase = new DeleteUserUseCase(
         userRepository,
         sessionRepository,
@@ -123,7 +125,8 @@ async function main() {
         userRepository,
         sessionRepository,
         jwtService,
-        oauthStateManager
+        oauthStateManager,
+        presenceRepository
     );
     const sendFriendRequestUseCase = new SendFriendRequestUseCase(friendshipRepository, userRepository);
     const respondFriendRequestUseCase = new RespondFriendRequestUseCase(friendshipRepository);
@@ -152,7 +155,7 @@ async function main() {
         enable2FAUseCase,
         disable2FAUseCase
     );
-    const userController = new UserController(updateProfileUseCase, getUserUseCase, deleteUserUseCase);
+    const userController = new UserController(updateProfileUseCase, getUserUseCase, deleteUserUseCase, getUserByUsernameUseCase);
     const friendController = new FriendController(
         sendFriendRequestUseCase,
         respondFriendRequestUseCase,
