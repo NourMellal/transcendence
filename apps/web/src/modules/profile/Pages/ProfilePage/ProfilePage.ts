@@ -293,7 +293,7 @@ export default class ProfilePage extends Component<Record<string, never>, State>
           <div class="glass-panel profile-shell__placeholder">
             <h1>Profile unavailable</h1>
             <p>We were unable to fetch your profile from the User Service.</p>
-            <button type="button" class="btn-primary" data-action="reload-profile">
+            <button type="button" class="btn-secondary" data-action="reload-profile">
               Retry
             </button>
           </div>
@@ -304,41 +304,16 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     const isOAuthUser = user.oauthProvider === '42';
     const status = user.status ?? 'OFFLINE';
     const avatarPreview = this.state.avatarPreview || '/assets/images/ape.png';
-    const sections = [
-      { id: 'account-section', label: 'Account' },
-      { id: 'security-section', label: 'Security' },
-      { id: 'preferences-section', label: 'Preferences' },
-    ];
+
+    const alerts = this.renderAlerts();
 
     return `
-      <section class="profile-shell">
-        <header class="profile-shell__header glass-panel">
-          <div class="profile-shell__header-text">
-            <p>Account center</p>
-            <h1>Profile & Settings</h1>
-            <p>Everything you change here flows through the API Gateway into the User Service.</p>
-          </div>
-          <div class="profile-shell__tabs">
-            ${sections
-              .map(
-                (section) => `
-                  <button class="profile-shell__tab" data-section-target="${section.id}">
-                    ${section.label}
-                  </button>
-                `
-              )
-              .join('')}
-          </div>
-        </header>
-
-        <div class="profile-shell__grid">
-          ${this.renderSidebarCard(user, status, avatarPreview)}
-          <div class="profile-shell__content">
-            ${this.renderAlerts()}
-            ${this.renderAccountCard(user, isOAuthUser, avatarPreview)}
-            ${this.renderSecurityCard(isOAuthUser)}
-            ${this.renderPreferencesCard()}
-          </div>
+      <section class="profile-shell profile-shell--simple">
+        <div class="profile-simple-grid">
+          ${this.renderHeroCard(user, status, avatarPreview)}
+          ${alerts ? `<div class="glass-panel profile-simple__card profile-simple__card--alerts">${alerts}</div>` : ''}
+          ${this.renderFormCard(isOAuthUser, avatarPreview)}
+          ${this.renderSecurityCard(isOAuthUser)}
         </div>
       </section>
     `;
@@ -363,56 +338,55 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     return alerts.join('');
   }
 
-  private renderSidebarCard(user: User, status: string, avatar: string): string {
+  private renderHeroCard(user: User, status: string, avatar: string): string {
     return `
-      <aside class="profile-shell__aside glass-panel">
-        <div class="profile-aside__identity">
+      <header class="glass-panel profile-simple__card profile-simple__card--hero">
+        <div class="profile-simple__identity">
           <img src="${this.escape(avatar)}" alt="${this.escape(user.displayName || user.username)}" onerror="this.src='/assets/images/ape.png';" />
           <div>
-            <p class="profile-aside__name">${this.escape(user.displayName || user.username)}</p>
-            <p class="profile-aside__email">${this.escape(user.email)}</p>
+            <p class="profile-simple__eyebrow">Your account</p>
+            <h1>${this.escape(user.displayName || user.username)}</h1>
+            <p>${this.escape(user.email)}</p>
+            <span class="status-pill status-pill--${status.toLowerCase()}">${status}</span>
           </div>
         </div>
-        <div class="profile-aside__meta">
+        <dl class="profile-simple__meta">
           <div>
-            <span>Status</span>
-            <strong class="status-pill status-pill--${status.toLowerCase()}">${status}</strong>
+            <dt>Member since</dt>
+            <dd>${this.formatDate(user.createdAt)}</dd>
           </div>
           <div>
-            <span>Member since</span>
-            <strong>${this.formatDate(user.createdAt)}</strong>
+            <dt>Last update</dt>
+            <dd>${this.formatDate(user.updatedAt)}</dd>
           </div>
-          <div>
-            <span>Last updated</span>
-            <strong>${this.formatDate(user.updatedAt)}</strong>
-          </div>
+        </dl>
+        <div class="profile-simple__actions">
+          <button class="btn-primary" data-profile-action="nav-dashboard">Go to dashboard</button>
+          <button class="btn-secondary" data-action="reload-profile">Refresh</button>
         </div>
-        <div class="profile-aside__actions">
-          <button class="btn-primary profile-aside__action" data-profile-action="nav-dashboard">Go to dashboard</button>
-          <button class="btn-secondary profile-aside__action" data-action="reload-profile">Refresh data</button>
-        </div>
-      </aside>
+      </header>
     `;
   }
 
-  private renderAccountCard(user: User, isOAuthUser: boolean, avatar: string): string {
+  private renderFormCard(isOAuthUser: boolean, avatar: string): string {
     return `
-      <section id="account-section" class="profile-section glass-panel">
+      <section class="glass-panel profile-simple__card profile-simple__card--form">
         <div class="profile-section__header">
           <div>
-            <p>Account</p>
-            <h2>Profile details</h2>
+            <p>Profile</p>
+            <h2>Edit details</h2>
           </div>
+          <p class="profile-simple__hint">Keep it short and hit save when you're ready.</p>
         </div>
         <div class="profile-account__avatar">
-          <img src="${this.escape(avatar)}" alt="${this.escape(user.displayName || user.username)}" onerror="this.src='/assets/images/ape.png';" />
+          <img src="${this.escape(avatar)}" alt="${this.escape(this.state.user?.displayName || this.state.user?.username || 'Avatar')}" onerror="this.src='/assets/images/ape.png';" />
           <label class="avatar-upload">
             <input type="file" accept="image/*" data-action="avatar-input" />
             <span>Upload new avatar</span>
           </label>
-          <p>Supported: PNG/JPG, up to 5MB.</p>
+          <p>PNG or JPG, max 5MB.</p>
         </div>
-        <form id="profile-form" class="profile-form__grid">
+        <form id="profile-form" class="profile-form__grid profile-simple__form">
           <label class="form-field">
             <span>Display name</span>
             <input
@@ -448,18 +422,14 @@ export default class ProfilePage extends Component<Record<string, never>, State>
               ${isOAuthUser ? 'disabled' : ''}
             />
             <small class="form-field__hint">
-              ${
-                isOAuthUser
-                  ? 'Email is managed by 42 OAuth.'
-                  : 'Updates are validated in the gateway before persisting.'
-              }
+              ${isOAuthUser ? 'Email comes from 42 OAuth.' : 'Validated by the gateway before saving.'}
             </small>
           </label>
 
           <div class="profile-form__actions">
             <button
               type="submit"
-              class="btn-primary"
+              class="btn-secondary"
               ${this.state.isSaving ? 'disabled' : ''}
             >
               ${this.state.isSaving ? 'Saving…' : 'Save changes'}
@@ -471,71 +441,27 @@ export default class ProfilePage extends Component<Record<string, never>, State>
   }
 
   private renderSecurityCard(isOAuthUser: boolean): string {
+    const buttonLabel = this.state.user?.isTwoFAEnabled ? 'Manage 2FA' : 'Enable 2FA';
+    const description = isOAuthUser
+      ? '2FA is handled by your OAuth provider.'
+      : 'Add a rotating code on top of your password.';
     return `
-      <section id="security-section" class="profile-section glass-panel">
+      <section class="glass-panel profile-simple__card profile-simple__card--security">
         <div class="profile-section__header">
           <div>
             <p>Security</p>
-            <h2>Authentication</h2>
+            <h2>Two-factor authentication</h2>
           </div>
         </div>
-        <div class="profile-security__grid">
-          <article class="profile-security__card">
-            <h3>Two-factor authentication</h3>
-            <p>Protect your account with a rotating code. ${
-              isOAuthUser
-                ? 'Managed by your OAuth provider.'
-                : 'Recommended for local accounts.'
-            }</p>
-            <button class="btn-secondary" data-profile-action="manage-2fa">
-              ${this.state.user?.isTwoFAEnabled ? 'Manage 2FA' : 'Enable 2FA'}
-            </button>
-          </article>
-          <article class="profile-security__card">
-            <h3>Session control</h3>
-            <p>Sign out of other sessions or revoke refresh tokens.</p>
-            <button class="profile-security__ghost" data-profile-action="logout-others">
-              Log out of other devices
-            </button>
-          </article>
-        </div>
-      </section>
-    `;
-  }
-
-  private renderPreferencesCard(): string {
-    return `
-      <section id="preferences-section" class="profile-section glass-panel">
-        <div class="profile-section__header">
+        <div class="profile-simple__security">
           <div>
-            <p>Preferences</p>
-            <h2>Notifications & appearance</h2>
+            <strong>${this.state.user?.isTwoFAEnabled ? 'Currently enabled' : 'Currently disabled'}</strong>
+            <p>${description}</p>
           </div>
+          <button class="btn-secondary" data-profile-action="manage-2fa" ${isOAuthUser ? 'disabled' : ''}>
+            ${buttonLabel}
+          </button>
         </div>
-        <div class="profile-preferences">
-          <label class="preference-toggle">
-            <div>
-              <strong>Email match summaries</strong>
-              <p>Receive a recap whenever a match finishes.</p>
-            </div>
-            <input type="checkbox" checked disabled />
-          </label>
-          <label class="preference-toggle">
-            <div>
-              <strong>Friend invite notifications</strong>
-              <p>Show desktop toasts when a friend challenges you.</p>
-            </div>
-            <input type="checkbox" checked disabled />
-          </label>
-          <label class="preference-toggle">
-            <div>
-              <strong>Compact theme</strong>
-              <p>Use tighter spacing on high-density displays.</p>
-            </div>
-            <input type="checkbox" disabled />
-          </label>
-        </div>
-        <p class="preference-note">More preferences are coming soon. Everything saved here stays inside the User Service.</p>
       </section>
     `;
   }
@@ -578,19 +504,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       );
     }
 
-    const sectionButtons = this.element.querySelectorAll<HTMLElement>('[data-section-target]');
-    sectionButtons.forEach((button) => {
-      const handler = (event: Event) => {
-        event.preventDefault();
-        const target = button.getAttribute('data-section-target');
-        if (target) {
-          this.scrollToSection(target);
-        }
-      };
-      button.addEventListener('click', handler);
-      this.subscriptions.push(() => button.removeEventListener('click', handler));
-    });
-
     const dashboardBtn = this.element.querySelector<HTMLElement>('[data-profile-action="nav-dashboard"]');
     if (dashboardBtn) {
       const handler = (event: Event) => {
@@ -609,23 +522,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       };
       manage2fa.addEventListener('click', handler);
       this.subscriptions.push(() => manage2fa.removeEventListener('click', handler));
-    }
-
-    const logoutOthers = this.element.querySelector<HTMLElement>('[data-profile-action="logout-others"]');
-    if (logoutOthers) {
-      const handler = (event: Event) => {
-        event.preventDefault();
-        console.info('[ProfilePage] Session revocation coming soon.');
-      };
-      logoutOthers.addEventListener('click', handler);
-      this.subscriptions.push(() => logoutOthers.removeEventListener('click', handler));
-    }
-  }
-
-  private scrollToSection(sectionId: string): void {
-    const element = this.element?.querySelector<HTMLElement>(`#${sectionId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 

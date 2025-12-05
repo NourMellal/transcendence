@@ -183,22 +183,97 @@
     box-shadow: var(--shadow-glow-primary);
   }
 
-  .btn-secondary {
-    background: linear-gradient(135deg, var(--color-brand-secondary), var(--color-brand-neon));
-    color: var(--color-text-primary);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.75rem;
-    font-weight: 600;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0 0 20px rgba(255, 0, 110, 0.3);
-  }
+.btn-secondary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.025em;
+}
 
-  .btn-secondary:hover {
-    background: linear-gradient(135deg, #ff1a85, #00ff99);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-glow-secondary);
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-secondary:hover::before {
+  left: 100%;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+/* Clean text with icon */
+.btn-secondary[data-action="reload-profile"] {
+  font-weight: 600;
+  text-transform: none;
+}
+
+.btn-secondary[data-action="reload-profile"]::after {
+  content: '↻';
+  font-size: 16px;
+  font-weight: 700;
+  margin-left: 6px;
+  transition: transform 0.3s ease;
+}
+
+.btn-secondary:hover[data-action="reload-profile"]::after {
+  transform: rotate(180deg);
+}
+
+/* Ensure perfect text rendering */
+.btn-secondary,
+.btn-secondary * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .btn-secondary {
+    padding: 12px 24px;
+    font-size: 14px;
+    min-height: 44px;
   }
+}
+
 
   /* 🌟 Utility Classes for Quick Theming */
   .text-brand-gradient {
@@ -766,6 +841,137 @@
   gap: 1.5rem;
 }
 
+.profile-shell--simple {
+  padding-bottom: 2rem;
+}
+
+.profile-simple-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.profile-simple__card {
+  padding: clamp(1.25rem, 2vw, 1.75rem);
+  border-radius: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 10, 18, 0.75);
+  box-shadow: var(--shadow-glow-secondary, 0 20px 45px rgba(0, 0, 0, 0.35));
+}
+
+.profile-simple__card--hero {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(65, 88, 208, 0.22), rgba(200, 80, 192, 0.18), rgba(255, 204, 112, 0.15));
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.profile-simple__card--alerts {
+  grid-column: 1 / -1;
+  gap: 0.75rem;
+}
+
+.profile-simple__identity {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.profile-simple__identity img {
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.profile-simple__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 0.25rem;
+}
+
+.profile-simple__identity h1 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  margin-bottom: 0.25rem;
+}
+
+.profile-simple__identity p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.profile-simple__meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.profile-simple__meta dt {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.profile-simple__meta dd {
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+}
+
+.profile-simple__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.profile-simple__hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+}
+
+.profile-simple__form {
+  margin-top: 1rem;
+  display: inline-grid;
+  gap: 3% 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.profile-simple__security {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.profile-alert {
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.profile-alert--error {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: rgb(255, 169, 169);
+}
+
+.profile-alert--success {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(134, 239, 172, 0.35);
+  color: rgb(187, 247, 208);
+}
+
 .profile-section {
   padding: 1.5rem;
   display: flex;
@@ -863,6 +1069,11 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .profile-simple__security {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* 📱 RESPONSIVE BREAKPOINTS */
@@ -932,7 +1143,7 @@
 
   /* Touch device optimizations (any device with touch capability) */
   @media (hover: none) and (pointer: coarse) {
-    .touch-device .btn-primary,
+    .touch-device .btn-secondary,
     .touch-device .btn-secondary {
       min-height: 48px;
       padding: 0.875rem 1.5rem;
