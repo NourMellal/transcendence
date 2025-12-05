@@ -54,7 +54,7 @@ export interface ChatMessagePayload {
 export interface PresenceUpdatePayload {
   userId: string;
   username: string;
-  status: 'online' | 'offline' | 'ingame';
+  status: 'ONLINE' | 'OFFLINE' | 'INGAME';
   gameId?: string;
   updatedAt: number;
 }
