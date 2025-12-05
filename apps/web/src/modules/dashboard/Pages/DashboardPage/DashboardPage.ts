@@ -43,6 +43,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   private leaderboardInterval?: number;
   private authUnsubscribe?: () => void;
   private feedbackTimeout?: number;
+  private friendRequestFeedbackTimeout?: number;
 
   constructor(props: Record<string, never> = {}) {
     super(props);
@@ -93,6 +94,10 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     if (this.feedbackTimeout) {
       clearTimeout(this.feedbackTimeout);
       this.feedbackTimeout = undefined;
+    }
+    if (this.friendRequestFeedbackTimeout) {
+      clearTimeout(this.friendRequestFeedbackTimeout);
+      this.friendRequestFeedbackTimeout = undefined;
     }
   }
 
@@ -217,6 +222,16 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     }, 4000);
   }
 
+  private scheduleFriendRequestFeedbackReset(): void {
+    if (this.friendRequestFeedbackTimeout) {
+      clearTimeout(this.friendRequestFeedbackTimeout);
+    }
+    this.friendRequestFeedbackTimeout = window.setTimeout(() => {
+      this.setState({ friendRequestFeedback: undefined });
+      this.friendRequestFeedbackTimeout = undefined;
+    }, 4000);
+  }
+
   private async handleFriendRequest(friendId: string): Promise<void> {
     if (this.state.friendRequestStatus[friendId] === 'loading') return;
 
@@ -234,6 +249,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
           message: 'Friend request sent successfully.',
         },
       });
+      this.scheduleFriendRequestFeedbackReset();
       showSuccess('Friend request sent');
       await this.loadDashboardData({ silent: true });
     } catch (error) {
@@ -245,6 +261,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
           message,
         },
       });
+      this.scheduleFriendRequestFeedbackReset();
     } finally {
       window.setTimeout(() => {
         const nextStatus = { ...this.state.friendRequestStatus, [friendId]: 'idle' };
@@ -276,6 +293,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       this.setState({
         friendRequestFeedback: { type: 'error', message },
       });
+      this.scheduleFriendRequestFeedbackReset();
     } finally {
       this.setState({
         friendRequestStatus: { ...this.state.friendRequestStatus, [key]: 'idle' },
@@ -454,7 +472,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
   private renderSidebar(): string {
     const acceptedFriends = this.getAcceptedFriends();
-    const onlineFriends = acceptedFriends.filter((friend) => friend.status === 'ONLINE').length;
+    const onlineFriends = acceptedFriends.filter((friend) => friend.status === 'ONLINE' || friend.status === 'INGAME').length;
     const pendingCount = this.getIncomingRequests().length;
     const navItems = [
       { label: 'Dashboard', icon: '🏠', path: '/dashboard' },
@@ -821,7 +839,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
         <div class="flex items-center justify-between mb-4">
           <div>
             <p class="text-sm text-white/60">Friends</p>
-            <h3 class="text-xl font-semibold">Online (${friends.filter((f) => f.status === 'ONLINE').length})</h3>
+            <h3 class="text-xl font-semibold">Online (${friends.filter((f) => f.status === 'ONLINE' || f.status === 'INGAME').length})</h3>
           </div>
           <button
             data-nav="/friends/manage"
@@ -847,7 +865,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   }
 
   private renderFriendRow(friend: Friend): string {
-    const isOnline = friend.isOnline;
+    const presenceStatus = friend.status ?? 'OFFLINE';
     const isAccepted = friend.friendshipStatus === 'accepted';
     const inviteState = this.state.inviteStatus[friend.id] ?? 'idle';
     const inviteLabel =
@@ -859,15 +877,22 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
             ? 'Retry'
             : 'Invite';
 
-    const statusColor = isOnline ? 'var(--color-brand-neon)' : 'rgba(255,255,255,0.3)';
+    const statusColor = presenceStatus === 'ONLINE'
+      ? 'var(--color-brand-neon)'
+      : presenceStatus === 'INGAME'
+        ? 'rgba(250, 204, 21, 0.9)'
+        : 'rgba(255,255,255,0.3)';
+
     const statusText = isAccepted
-      ? isOnline
+      ? presenceStatus === 'ONLINE'
         ? 'Ready to play'
-        : 'Offline'
+        : presenceStatus === 'INGAME'
+          ? 'In a match'
+          : 'Offline'
       : `Status: ${friend.friendshipStatus}`;
 
     const actions = isAccepted
-      ? isOnline
+      ? presenceStatus === 'ONLINE'
         ? `
             <div class="flex gap-2">
               <button
@@ -889,7 +914,9 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
               </button>
             </div>
           `
-        : `<span class="text-xs text-white/40">Offline</span>`
+        : presenceStatus === 'INGAME'
+          ? `<span class="text-xs text-white/50">In a match</span>`
+          : `<span class="text-xs text-white/40">Offline</span>`
       : `<span class="text-xs text-white/60">${friend.friendshipStatus === 'pending' ? 'Awaiting response' : 'Not available'}</span>`;
 
     return `
