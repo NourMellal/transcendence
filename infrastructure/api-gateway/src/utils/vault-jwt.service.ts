@@ -23,7 +23,7 @@ export class VaultJWTService {
     private vault = createAPIGatewayVault();
     private jwtConfig: JWTConfig | null = null;
     private lastFetch: number = 0;
-    private readonly CACHE_TTL = 300000; // 5 minutes
+    private readonly CACHE_TTL = parseInt(process.env.JWT_CACHE_TTL_MS || '300000'); // 5 minutes default
     private initialized = false;
 
     /**
@@ -38,8 +38,14 @@ export class VaultJWTService {
             console.log('✅ Vault JWT Service initialized with Vault secrets');
         } catch (error) {
             console.warn('⚠️ Vault JWT Service using environment fallback:', (error as Error).message);
+            
+            const jwtSecret = process.env.JWT_SECRET;
+            if (!jwtSecret && process.env.NODE_ENV === 'production') {
+                throw new Error('JWT_SECRET must be configured in production environment');
+            }
+            
             this.jwtConfig = {
-                secretKey: process.env.JWT_SECRET || 'fallback-jwt-secret-for-development',
+                secretKey: jwtSecret || 'fallback-jwt-secret-for-development',
                 issuer: process.env.JWT_ISSUER || 'transcendence',
                 expirationHours: parseFloat(process.env.JWT_EXPIRATION_HOURS || '0.25'),
             };
