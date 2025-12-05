@@ -56,8 +56,8 @@ PresenceUpdateRequest:
   properties:
     status:
       type: string
-      enum: [online, offline]
-      example: "online"
+      enum: [ONLINE, OFFLINE, INGAME]
+      example: "ONLINE"
 
 UserPresence:
   type: object
@@ -67,7 +67,7 @@ UserPresence:
       format: uuid
     status:
       type: string
-      enum: [online, offline]
+      enum: [ONLINE, OFFLINE, INGAME]
     lastSeenAt:
       type: string
       format: date-time
