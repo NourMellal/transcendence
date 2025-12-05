@@ -98,7 +98,7 @@ export class LoginForm extends Component {
             <!-- Submit Button -->
             <button 
               type="submit"
-              class="btn-primary btn-touch w-full py-3 px-6 rounded-xl font-medium transition-all duration-200 hover:scale-[1.02] touch-feedback disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn-secondary btn-touch w-full py-3 px-6 rounded-xl font-medium transition-all duration-200 hover:scale-[1.02] touch-feedback disabled:opacity-50 disabled:cursor-not-allowed"
               style="background: var(--color-brand-secondary); color: var(--color-text-primary); box-shadow: var(--shadow-neon);"
             >
               Sign In

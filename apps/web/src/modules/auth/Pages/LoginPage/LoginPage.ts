@@ -18,12 +18,8 @@ export default class LoginPage extends Component<Props, State> {
     super(props);
   }
 
-  onMount(): void {
-    const auth = appState.auth.get();
-    if (auth.isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }
+  // Note: Auth redirect is now handled by Router guards
+  // No need for onMount auth check
 
   getInitialState(): State {
     return {

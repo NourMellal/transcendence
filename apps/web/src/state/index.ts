@@ -1,8 +1,8 @@
 import Signal from '../core/signal';
 import type { GameStateOutput } from '../modules/game/types/game.types';
 
-// Auth state interface
-export interface AuthState {
+// Auth state data interface (used by the Signal)
+export interface AuthStateData {
   user: any | null;
   isLoading: boolean;
   token?: string;
@@ -30,7 +30,7 @@ export interface GameState {
   error: string | null;
 }
 
-const createInitialAuthState = (): AuthState => ({
+const createInitialAuthState = (): AuthStateData => ({
   user: null,
   isLoading: false,
   token: '',
@@ -43,7 +43,7 @@ const createInitialAuthState = (): AuthState => ({
 });
 
 export const appState = {
-  auth: new Signal<AuthState>(createInitialAuthState()),
+  auth: new Signal<AuthStateData>(createInitialAuthState()),
   ui: new Signal<UIState>({
     twoFAModalVisible: false,
     twoFAError: undefined,
