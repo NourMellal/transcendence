@@ -1,7 +1,9 @@
 import { httpClient } from './client';
+import type { RequestConfig } from '@/modules/shared/types/http.types';
 import {
   User,
   UserProfile,
+  UserStats,
   Friend,
   UserDTOs,
   PaginatedResponse,
@@ -11,6 +13,7 @@ import {
 } from '../../models';
 import { appState } from '@/state';
 
+// API prefix for user endpoints - empty for now but can be configured
 const API_PREFIX = '';
 
 /**
@@ -23,7 +26,10 @@ export class UserService {
    */
   async getMe(): Promise<User> {
     const response = await httpClient.get<User>(`${API_PREFIX}/users/me`);
-    return response.data!;
+    if (!response.data) {
+      throw new Error('Failed to fetch user profile');
+    }
+    return response.data;
   }
 
   /**
@@ -32,9 +38,12 @@ export class UserService {
   async getProfile(userId?: string): Promise<UserProfile> {
     if (userId) {
       const response = await httpClient.get<User>(`${API_PREFIX}/users/${userId}`);
+      if (!response.data) {
+        throw new Error('Failed to fetch user profile');
+      }
       const stats = await this.getUserStats(userId).catch(() => this.buildEmptyStats());
       return {
-        ...response.data!,
+        ...response.data,
         stats,
         friends: [],
         matchHistory: [],
@@ -66,7 +75,10 @@ export class UserService {
     if (request.avatar) body.avatar = request.avatar;
 
     const response = await httpClient.patch<UserDTOs.UpdateProfileResponse>(`${API_PREFIX}/users/me`, body);
-    return response.data!;
+    if (!response.data) {
+      throw new Error('Update profile failed: no data returned');
+    }
+    return response.data;
   }
 
   /**
@@ -221,7 +233,7 @@ export class UserService {
    */
   async getMyStats(): Promise<UserStats> {
     const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/me`);
-    return this.mapStats(response.data!);
+    return this.mapStats(response.data);
   }
 
   /**
@@ -229,7 +241,7 @@ export class UserService {
    */
   async getUserStats(userId: string): Promise<UserStats> {
     const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/users/${userId}`);
-    return this.mapStats(response.data!);
+    return this.mapStats(response.data);
   }
 
   private async getMyGames(status?: GameStatus): Promise<ApiGameSummary[]> {
@@ -255,13 +267,16 @@ export class UserService {
   }
 
   private mapFriend(friend: ApiFriend): Friend {
+    const presenceStatus = friend.presenceStatus ?? (friend.isOnline ? 'ONLINE' : 'OFFLINE');
     return {
       id: friend.id,
       username: friend.username,
       displayName: friend.displayName ?? undefined,
       avatar: friend.avatar ?? undefined,
-      isOnline: Boolean(friend.isOnline),
-      status: friend.isOnline ? 'ONLINE' : 'OFFLINE',
+      isOnline: presenceStatus === 'ONLINE' || presenceStatus === 'INGAME',
+      status: presenceStatus,
+      presenceStatus,
+      lastSeenAt: friend.lastSeenAt ?? undefined,
       friendshipStatus: friend.friendshipStatus,
       friendshipId: friend.friendshipId,
       isRequester: friend.isRequester,
@@ -349,8 +364,11 @@ export class UserService {
   /**
    * Update user status (online, offline, in-game)
    */
-  async updateStatus(status: 'ONLINE' | 'OFFLINE' | 'INGAME'): Promise<void> {
-    await httpClient.patch(`${API_PREFIX}/users/me/status`, { status });
+  async updateStatus(
+    status: 'ONLINE' | 'OFFLINE' | 'INGAME',
+    config: Partial<RequestConfig> = {}
+  ): Promise<void> {
+    await httpClient.post(`${API_PREFIX}/users/presence`, { status }, config);
   }
 
 
@@ -373,6 +391,8 @@ type ApiFriend = {
   displayName?: string | null;
   avatar?: string | null;
   isOnline: boolean;
+  presenceStatus?: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  lastSeenAt?: string;
   friendshipStatus: 'pending' | 'accepted' | 'rejected' | 'blocked';
   friendshipId: string;
   isRequester: boolean;
