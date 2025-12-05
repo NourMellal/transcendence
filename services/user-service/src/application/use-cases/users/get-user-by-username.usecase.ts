@@ -24,11 +24,11 @@ export class GetUserByUsernameUseCase implements IGetUserByUsernameUseCase {
         }
         
         // Fetch presence status if repository is available
-        let status: 'online' | 'offline' = 'offline';
+        let status: PresenceStatus = PresenceStatus.OFFLINE;
         if (this.presenceRepository) {
             const presence = await this.presenceRepository.findByUserId(user.id.toString());
-            if (presence && presence.status === PresenceStatus.ONLINE) {
-                status = 'online';
+            if (presence) {
+                status = presence.status;
             }
         }
         
