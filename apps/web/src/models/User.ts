@@ -48,8 +48,10 @@ export interface Friend {
   username: string;
   displayName?: string;
   avatar?: string;
-  status: 'ONLINE' | 'OFFLINE';
+  status: 'ONLINE' | 'OFFLINE' | 'INGAME';
   isOnline: boolean;
+  presenceStatus?: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  lastSeenAt?: string;
   friendshipStatus: 'pending' | 'accepted' | 'rejected' | 'blocked';
   friendshipId: string;
   isRequester: boolean;
