@@ -3,6 +3,7 @@ import CreateGamePage from '../pages/CreateGamePage';
 import LocalGamePage from '../pages/LocalGamePage';
 import { LobbyPage } from '../Pages/LobbyPage';
 import { PlayPage } from '../Pages/PlayPage';
+import { BrowseGamesPage } from '../pages/BrowseGamesPage';
 
 const routes = [
   {
@@ -13,6 +14,11 @@ const routes = [
   {
     path: '/game/create',
     component: CreateGamePage,
+    props: {},
+  },
+  {
+    path: '/game/browse',
+    component: BrowseGamesPage,
     props: {},
   },
   {

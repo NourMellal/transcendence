@@ -17,6 +17,8 @@ interface GameLobbyState {
   error: string | null;
   timeRemaining: number; // seconds until timeout
   connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed' | 'error';
+  isOwner: boolean;
+  canStart: boolean;
 }
 
 /**
@@ -53,6 +55,8 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       error: null,
       timeRemaining: 120, // 2 minutes
       connectionStatus: 'disconnected',
+      isOwner: false,
+      canStart: false,
     };
   }
 
@@ -83,6 +87,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
       this.state.game = game;
       this.state.isLoading = false;
+
+      // Check if current user is the game owner
+      if (game.players && game.players.length > 0) {
+        this.state.isOwner = game.players[0].id === this.state.currentUserId;
+      }
 
       // Update global app state
       appState.game.set({
@@ -217,21 +226,34 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
           <!-- Actions -->
           <div class="flex flex-col sm:flex-row gap-4">
-            <button
-              data-action="ready"
-              class="flex-1 py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300"
-              style="
-                background: ${isReady ? 'var(--color-success)' : 'var(--color-primary)'};
-                color: white;
-                opacity: ${!hasOpponent || isReady ? '0.5' : '1'};
-                cursor: ${!hasOpponent || isReady ? 'not-allowed' : 'pointer'};
-                transform: ${!hasOpponent || isReady ? 'scale(1)' : 'scale(1)'};
-                box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
-              "
-              ${!hasOpponent || isReady ? 'disabled' : ''}
-            >
-              ${isReady ? '✓ Ready' : '🎮 Ready Up'}
-            </button>
+            ${this.state.isOwner && this.state.canStart ? `
+              <button
+                data-action="start"
+                class="flex-1 py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 animate-pulse"
+                style="
+                  background: linear-gradient(135deg, var(--color-success), var(--color-brand-accent));
+                  color: white;
+                  box-shadow: 0 0 30px rgba(0, 255, 128, 0.6);
+                "
+              >
+                🚀 Start Game
+              </button>
+            ` : `
+              <button
+                data-action="ready"
+                class="flex-1 py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300"
+                style="
+                  background: ${isReady ? 'var(--color-success)' : 'var(--color-primary)'};
+                  color: white;
+                  opacity: ${!hasOpponent || isReady ? '0.5' : '1'};
+                  cursor: ${!hasOpponent || isReady ? 'not-allowed' : 'pointer'};
+                  box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+                "
+                ${!hasOpponent || isReady ? 'disabled' : ''}
+              >
+                ${isReady ? '✓ Ready' : '🎮 Ready Up'}
+              </button>
+            `}
 
             <button
               data-action="leave"
@@ -352,10 +374,12 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     if (!this.element) return;
 
     const readyBtn = this.element.querySelector('[data-action="ready"]') as HTMLButtonElement;
+    const startBtn = this.element.querySelector('[data-action="start"]') as HTMLButtonElement;
     const leaveBtn = this.element.querySelector('[data-action="leave"]') as HTMLButtonElement;
     const backBtn = this.element.querySelector('[data-action="back"]') as HTMLButtonElement;
 
     readyBtn?.addEventListener('click', () => this.handleReady());
+    startBtn?.addEventListener('click', () => this.handleStart());
     leaveBtn?.addEventListener('click', () => this.handleLeave());
     backBtn?.addEventListener('click', () => this.navigateTo('/profile'));
   }
@@ -369,6 +393,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       gameWS.send('ready', { gameId: this.props.gameId });
 
       this.state.isReady = true;
+      this.updateCanStart();
       this.refreshGameState();
 
       this.update({});
@@ -378,6 +403,38 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       this.state.error = error instanceof Error ? error.message : 'Failed to mark as ready';
       this.update({});
     }
+  }
+
+  private async handleStart(): Promise<void> {
+    if (!this.state.isOwner || !this.state.canStart) {
+      console.warn('[GameLobby] Only owner can start when both players ready');
+      return;
+    }
+
+    try {
+      console.log('[GameLobby] Owner starting game...');
+      if (gameWS.getState() === 'disconnected') {
+        await gameWS.connect();
+      }
+      gameWS.send('start_game', { gameId: this.props.gameId });
+      console.log('[GameLobby] ✅ Start signal sent');
+    } catch (error) {
+      console.error('[GameLobby] ❌ Failed to start game:', error);
+      this.state.error = error instanceof Error ? error.message : 'Failed to start game';
+      this.update({});
+    }
+  }
+
+  private updateCanStart(): void {
+    const game = this.state.game;
+    if (!game || !game.players || game.players.length < 2) {
+      this.state.canStart = false;
+      return;
+    }
+
+    // Both players must be ready
+    const allReady = game.players.every(p => p.ready === true);
+    this.state.canStart = this.state.isOwner && allReady;
   }
 
   private async handleLeave(): Promise<void> {
@@ -596,6 +653,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     );
 
     this.state.game = { ...this.state.game, players: updatedPlayers };
+    this.updateCanStart();
     appState.game.set({
       current: this.state.game,
       isLoading: false,

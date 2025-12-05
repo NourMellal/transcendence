@@ -43,6 +43,11 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private readonly PADDLE_SPEED = 8;
   private readonly INPUT_THROTTLE_MS = 16;
 
+  private mouseMoveHandler?: (event: MouseEvent) => void;
+  private touchMoveHandler?: (event: TouchEvent) => void;
+  private touchStartHandler?: (event: TouchEvent) => void;
+  private pointerMoveHandler?: (event: PointerEvent) => void;
+
   private mouseY: number = this.BASE_HEIGHT / 2;
   private keys: Record<string, boolean> = {};
   private lastInputSentAt = 0;
@@ -62,6 +67,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private readonly P1_DOWN = 's';
   private readonly P2_UP = 'ArrowUp';
   private readonly P2_DOWN = 'ArrowDown';
+  private readonly player2Controls = { up: 'ArrowUp', down: 'ArrowDown' };
   private handleButtonClick = (e: Event): void => {
     const target = e.target as HTMLElement;
     const button = target.closest('[data-action]') as HTMLButtonElement | null;
@@ -491,6 +497,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     const dpr = window.devicePixelRatio || 1;
     const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
     const aspectRatio = this.BASE_WIDTH / this.BASE_HEIGHT;
 
     let displayWidth = containerWidth;
