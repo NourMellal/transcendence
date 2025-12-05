@@ -58,6 +58,8 @@ export interface FriendDTO {
     readonly displayName?: string;
     readonly avatar?: string;
     readonly isOnline: boolean;
+    readonly presenceStatus?: 'ONLINE' | 'OFFLINE' | 'INGAME';
+    readonly lastSeenAt?: string;
     readonly friendshipStatus: FriendshipStatusDTO;
     readonly friendshipId: string;
     readonly isRequester: boolean;
