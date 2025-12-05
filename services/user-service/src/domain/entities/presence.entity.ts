@@ -1,6 +1,7 @@
 export enum PresenceStatus {
-    ONLINE = 'online',
-    OFFLINE = 'offline',
+    ONLINE = 'ONLINE',
+    OFFLINE = 'OFFLINE',
+    INGAME = 'INGAME',
 }
 
 export interface UserPresence {
