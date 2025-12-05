@@ -74,15 +74,26 @@ const DEFAULT_CONFIG: GameConfig = {
     arenaWidth: 800,
     arenaHeight: 600,
     scoreLimit: 11,
-    paddleSpeed: 8,
-    ballSpeed: 5
+    paddleSpeed: 720, // units per second; ~12px per frame at 60fps
+    ballSpeed: 900 // units per second; ~15px per frame at 60fps
 };
 
 export class Game {
     private constructor(private props: GameProps) {}
 
+    static defaultConfig(): GameConfig {
+        return { ...DEFAULT_CONFIG };
+    }
+
     static create(props: CreateGameProps): Game {
-        const config = { ...DEFAULT_CONFIG, ...props.config } satisfies GameConfig;
+        const merged = { ...DEFAULT_CONFIG, ...props.config };
+        const config: GameConfig = {
+            arenaWidth: merged.arenaWidth,
+            arenaHeight: merged.arenaHeight,
+            scoreLimit: merged.scoreLimit,
+            paddleSpeed: resolveSpeed(merged.paddleSpeed, DEFAULT_CONFIG.paddleSpeed),
+            ballSpeed: resolveSpeed(merged.ballSpeed, DEFAULT_CONFIG.ballSpeed)
+        };
         const initialBall = Ball.create(
             Position.create(config.arenaWidth / 2, config.arenaHeight / 2),
             Velocity.create(config.ballSpeed, config.ballSpeed)
@@ -219,6 +230,7 @@ export class Game {
             throw new Error('Cannot start a game without two players');
         }
 
+        this.resetForStart();
         this.props.status = GameStatus.IN_PROGRESS;
         this.props.startedAt = new Date();
         this.touch();
@@ -255,6 +267,21 @@ export class Game {
         const distance = this.props.config.paddleSpeed * deltaTime * (direction === 'up' ? -1 : 1);
         const newPaddle = player.paddle.move(distance);
         player.paddle = this.clampPaddle(newPaddle);
+        this.touch();
+    }
+
+    setPaddlePosition(playerId: string, y: number): void {
+        const player = this.findPlayer(playerId);
+        if (!player) {
+            throw new Error(`Player ${playerId} not in game`);
+        }
+
+        const next = Paddle.create(
+            Position.create(player.paddle.position.x, y),
+            player.paddle.height,
+            player.paddle.width
+        );
+        player.paddle = this.clampPaddle(next);
         this.touch();
     }
 
@@ -368,4 +395,36 @@ export class Game {
     private touch(): void {
         this.props.updatedAt = new Date();
     }
+
+    private resetForStart(): void {
+        // Center ball and paddles; reset score to zero
+        const centerX = this.props.config.arenaWidth / 2;
+        const centerY = this.props.config.arenaHeight / 2;
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        const resetVelocity = Velocity.create(this.props.config.ballSpeed * direction, this.props.config.ballSpeed);
+        const resetPosition = Position.create(centerX, centerY);
+        this.props.ball = Ball.create(resetPosition, resetVelocity);
+        this.props.score = Score.create(0, 0);
+
+        const paddleHeight = this.props.players[0]?.paddle.height ?? 80;
+        const paddleWidth = this.props.players[0]?.paddle.width ?? 12;
+        this.props.players = this.props.players.map((player, idx) => {
+            const x = idx === 0 ? 24 : this.props.config.arenaWidth - 24 - paddleWidth;
+            const y = (this.props.config.arenaHeight - paddleHeight) / 2;
+            return {
+                ...player,
+                paddle: Paddle.create(Position.create(x, y), paddleHeight, paddleWidth),
+            };
+        });
+    }
+}
+
+export function resolveSpeed(value: unknown, fallback: number): number {
+    const num = typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    if (num <= 0) return fallback;
+    // Treat small values as "per frame" legacy inputs; convert to units/second.
+    if (num <= 30) {
+        return num * 60;
+    }
+    return num;
 }

@@ -268,12 +268,11 @@ const wsUrlFromEnv =
 const apiBaseFromEnv =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL?.trim()) || '';
 
-const defaultWsHost = wsUrlFromEnv ||
+const defaultWsHost =
+  wsUrlFromEnv ||
   (/^https?:\/\//i.test(apiBaseFromEnv)
     ? apiBaseFromEnv.replace(/\/?api$/, '')
-    : typeof window !== 'undefined'
-      ? window.location.origin
-      : 'http://localhost:3002');
+    : 'http://localhost:3000');
 const defaultWsPath =
   import.meta.env.VITE_WS_GAME_PATH || '/api/games/ws/socket.io';
 

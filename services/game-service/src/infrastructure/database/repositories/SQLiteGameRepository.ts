@@ -1,5 +1,5 @@
-import { Game } from '../../../domain/entities';
-import { GameStatus } from '../../../domain/value-objects';
+import { Game, resolveSpeed } from '../../../domain/entities';
+import { GameStatus, Position, Velocity } from '../../../domain/value-objects';
 import { GameDatabase } from '../connection';
 import { IGameRepository, ListGamesParams } from '../../../application/ports/repositories/IGameRepository';
 
@@ -113,7 +113,73 @@ export class SQLiteGameRepository implements IGameRepository {
     }
 
     private mapRowToGame(row: GameRow): Game {
-        const snapshot = JSON.parse(row.snapshot);
+        const snapshot = this.sanitizeSnapshot(JSON.parse(row.snapshot));
         return Game.fromSnapshot(snapshot);
+    }
+
+    private sanitizeSnapshot(snapshot: any) {
+        const defaults = Game.defaultConfig();
+        const arenaWidth = snapshot?.config?.arenaWidth ?? defaults.arenaWidth;
+        const arenaHeight = snapshot?.config?.arenaHeight ?? defaults.arenaHeight;
+        const ballSpeed = resolveSpeed(snapshot?.config?.ballSpeed, defaults.ballSpeed);
+        const paddleSpeed = resolveSpeed(snapshot?.config?.paddleSpeed, defaults.paddleSpeed);
+        const paddleHeight = snapshot?.players?.[0]?.paddle?.height ?? 80;
+        const paddleWidth = snapshot?.players?.[0]?.paddle?.width ?? 12;
+
+        if (
+            snapshot?.ball == null ||
+            snapshot.ball.position == null ||
+            typeof snapshot.ball.position.x !== 'number' ||
+            typeof snapshot.ball.position.y !== 'number'
+        ) {
+            snapshot.ball = {
+                position: { x: arenaWidth / 2, y: arenaHeight / 2 },
+                velocity: { dx: ballSpeed, dy: ballSpeed }
+            };
+        }
+
+        if (
+            typeof snapshot.ball.velocity?.dx !== 'number' ||
+            typeof snapshot.ball.velocity?.dy !== 'number'
+        ) {
+            snapshot.ball.velocity = { dx: ballSpeed, dy: ballSpeed };
+        }
+
+        snapshot.players = (snapshot.players ?? []).map((player: any, idx: number) => {
+            const x = idx === 0 ? 24 : arenaWidth - 24 - paddleWidth;
+            const y = (arenaHeight - paddleHeight) / 2;
+            const pos = player?.paddle?.position ?? {};
+
+            return {
+                ...player,
+                paddle: {
+                    position: {
+                        x: typeof pos.x === 'number' ? pos.x : x,
+                        y: typeof pos.y === 'number' ? pos.y : y
+                    },
+                    height: player?.paddle?.height ?? paddleHeight,
+                    width: player?.paddle?.width ?? paddleWidth
+                },
+                ready: player?.ready ?? false,
+                isConnected: player?.isConnected ?? true
+            };
+        });
+
+        snapshot.score = {
+            player1: snapshot?.score?.player1 ?? 0,
+            player2: snapshot?.score?.player2 ?? 0
+        };
+
+        snapshot.status = snapshot?.status ?? GameStatus.WAITING;
+
+        snapshot.config = {
+            arenaWidth,
+            arenaHeight,
+            scoreLimit: snapshot?.config?.scoreLimit ?? defaults.scoreLimit,
+            paddleSpeed,
+            ballSpeed
+        };
+
+        return snapshot;
     }
 }

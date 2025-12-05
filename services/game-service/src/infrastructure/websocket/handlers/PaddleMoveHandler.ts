@@ -1,6 +1,9 @@
 import { Socket } from 'socket.io';
 import { HandlePaddleMoveUseCase } from '../../../application/use-cases';
 import { PaddleMoveInput } from '../../../application/dto';
+import { IGameRepository } from '../../../application/ports/repositories/IGameRepository';
+import { GameRoomManager } from '../GameRoomManager';
+import { toWireGameState } from '../../../application/use-cases/gameplay/UpdateGameStateUseCase';
 
 interface PaddleMovePayload {
     readonly gameId?: string;
@@ -10,7 +13,11 @@ interface PaddleMovePayload {
 }
 
 export class PaddleMoveHandler {
-    constructor(private readonly handlePaddleMoveUseCase: HandlePaddleMoveUseCase) {}
+    constructor(
+        private readonly handlePaddleMoveUseCase: HandlePaddleMoveUseCase,
+        private readonly gameRepository: IGameRepository,
+        private readonly roomManager: GameRoomManager
+    ) {}
 
     register(socket: Socket): void {
         socket.on('paddle_move', async (payload: PaddleMovePayload) => {
@@ -33,6 +40,10 @@ export class PaddleMoveHandler {
 
             try {
                 await this.handlePaddleMoveUseCase.execute(input);
+                const game = await this.gameRepository.findById(gameId);
+                if (game && game.status !== 'FINISHED' && game.status !== 'CANCELLED') {
+                    this.roomManager.emitToGame(gameId, 'game_state', toWireGameState(game.toSnapshot()));
+                }
             } catch (error) {
                 socket.emit('error', { message: (error as Error).message });
             }
@@ -52,15 +63,8 @@ export class PaddleMoveHandler {
     }
 
     private resolveDeltaTime(payload: PaddleMovePayload): number {
-        if (typeof payload.deltaTime === 'number') {
-            return payload.deltaTime;
-        }
-
-        if (typeof payload.y === 'number') {
-            return Math.abs(payload.y) || 0.016;
-        }
-
-        return 0.016;
+        // Ignore client delta; use a fixed server-side tick for smoother control
+        return 1 / 60;
     }
 
     private getActiveGameId(socket: Socket): string | undefined {

@@ -18,6 +18,7 @@ import {
 import { GameController, HealthController } from '../infrastructure/http/controllers';
 import { GamePhysics, CollisionDetector } from '../domain/services';
 import { GameLoop, GameRoomManager, ConnectionHandler, PaddleMoveHandler, DisconnectHandler } from '../infrastructure/websocket';
+import { PaddleSetHandler } from '../infrastructure/websocket/handlers/PaddleSetHandler';
 import { GameAuthService } from '../infrastructure/auth';
 
 export interface GameServiceContainer {
@@ -31,6 +32,7 @@ export interface GameServiceContainer {
         readonly connectionHandler: ConnectionHandler;
         readonly paddleMoveHandler: PaddleMoveHandler;
         readonly disconnectHandler: DisconnectHandler;
+        readonly paddleSetHandler: import('../infrastructure/websocket/handlers/PaddleSetHandler').PaddleSetHandler;
         readonly authService: GameAuthService;
     };
     readonly useCases: {
@@ -82,8 +84,9 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const gameLoop = new GameLoop(updateGameState);
     const roomManager = new GameRoomManager();
     const authService = new GameAuthService();
-    const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, readyUp);
-    const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove);
+    const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, readyUp, repository, disconnectPlayer);
+    const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove, repository, roomManager);
+    const paddleSetHandler = new PaddleSetHandler(updateGameState, roomManager);
     const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager, gameLoop);
 
     const userEventsChannel = await messagingConnection.getChannel();
@@ -112,6 +115,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
             connectionHandler,
             paddleMoveHandler,
             disconnectHandler,
+            paddleSetHandler,
             authService,
         },
         useCases: {

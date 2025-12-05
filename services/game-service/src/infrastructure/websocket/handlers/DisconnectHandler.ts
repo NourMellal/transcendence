@@ -23,7 +23,9 @@ export class DisconnectHandler {
                 rooms.map(async (gameId) => {
                     await this.disconnectPlayerUseCase.execute(gameId, playerId);
                     this.roomManager.leave(gameId, playerId);
-                    this.gameLoop.stop(gameId);
+                    if (this.roomManager.getPlayerCount(gameId) === 0) {
+                        this.gameLoop.stop(gameId);
+                    }
                 })
             );
         });
