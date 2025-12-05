@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { User } from '../../../domain/entities/user.entity';
 import { UserRepository, TwoFAService, SessionRepository, UserPresenceRepository, IPasswordHasher } from '../../../domain/ports';
 import type { ILoginUseCase } from '../../../domain/ports';
 import { PresenceStatus } from '../../../domain/entities/presence.entity';
 import type { JWTConfig } from '@transcendence/shared-utils';
+import { REFRESH_TOKEN_BYTES, MS_PER_DAY } from '@transcendence/shared-utils';
 import type { LoginUseCaseInputDTO, LoginUseCaseOutputDTO } from '../../dto/auth.dto';
-import crypto from 'crypto';
 import { Email } from '../../../domain/value-objects';
 import { AuthMapper } from '../../mappers/auth.mapper';
 
@@ -67,7 +68,21 @@ export class LoginUseCase implements ILoginUseCase {
         const { refreshToken } = await this.createRefreshSession(user.id.toString());
         await this.presenceRepository?.upsert(user.id.toString(), PresenceStatus.ONLINE, new Date());
 
-        const sanitizedUser: User = { ...user, passwordHash: undefined };
+        // Explicitly pick only safe fields to prevent leaking sensitive data
+        const sanitizedUser: User = {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            displayName: user.displayName,
+            avatar: user.avatar,
+            is2FAEnabled: user.is2FAEnabled,
+            oauthProvider: user.oauthProvider,
+            oauthId: user.oauthId,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            passwordHash: undefined,
+            twoFASecret: undefined,
+        };
         return AuthMapper.toLoginResponseDTO(sanitizedUser, accessToken, refreshToken);
     }
 
@@ -94,9 +109,9 @@ export class LoginUseCase implements ILoginUseCase {
     }
 
     private async createRefreshSession(userId: string): Promise<{ refreshToken: string; expiresAt: Date }> {
-        const refreshToken = crypto.randomBytes(48).toString('hex');
+        const refreshToken = crypto.randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
         const ttlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7');
-        const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + ttlDays * MS_PER_DAY);
 
         await this.sessionRepository.save({
             id: crypto.randomUUID(),
