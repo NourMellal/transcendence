@@ -5,6 +5,7 @@ import { GameRoomManager } from './GameRoomManager';
 import { ConnectionHandler } from './handlers/ConnectionHandler';
 import { PaddleMoveHandler } from './handlers/PaddleMoveHandler';
 import { DisconnectHandler } from './handlers/DisconnectHandler';
+import { PaddleSetHandler } from './handlers/PaddleSetHandler';
 import { GameAuthService } from '../auth';
 
 interface GameWebSocketServerDeps {
@@ -12,6 +13,7 @@ interface GameWebSocketServerDeps {
     readonly connectionHandler: ConnectionHandler;
     readonly paddleMoveHandler: PaddleMoveHandler;
     readonly disconnectHandler: DisconnectHandler;
+    readonly paddleSetHandler: PaddleSetHandler;
     readonly authService: GameAuthService;
 }
 
@@ -42,6 +44,7 @@ export class GameWebSocketServer implements IGameStateBroadcaster {
         this.io.on('connection', (socket) => {
             this.deps.connectionHandler.register(socket);
             this.deps.paddleMoveHandler.register(socket);
+            this.deps.paddleSetHandler.register(socket);
             this.deps.disconnectHandler.register(socket);
         });
     }
@@ -62,5 +65,13 @@ export class GameWebSocketServer implements IGameStateBroadcaster {
 
     broadcastGameState(gameId: string, payload: unknown): void {
         this.io.to(gameId).emit('game_state', payload);
+    }
+
+    broadcastBallState(gameId: string, payload: unknown): void {
+        this.io.to(gameId).emit('ball_state', payload);
+    }
+
+    broadcastPaddleUpdate(gameId: string, payload: unknown): void {
+        this.io.to(gameId).emit('paddle_update', payload);
     }
 }

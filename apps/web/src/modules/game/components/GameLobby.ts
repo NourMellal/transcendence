@@ -367,8 +367,6 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         await gameWS.connect();
       }
       gameWS.send('ready', { gameId: this.props.gameId });
-      // Also hit HTTP ready endpoint so DB state is updated via gateway
-      await gameService.setReady(this.props.gameId);
 
       this.state.isReady = true;
       this.refreshGameState();
