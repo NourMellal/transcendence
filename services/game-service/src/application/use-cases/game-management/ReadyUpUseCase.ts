@@ -9,7 +9,7 @@ export class ReadyUpUseCase {
         private readonly eventPublisher: IGameEventPublisher
     ) {}
 
-    async execute(gameId: string, playerId: string): Promise<{ started: boolean }> {
+    async execute(gameId: string, playerId: string): Promise<{ started: boolean; alreadyReady: boolean }> {
         const game = await this.gameRepository.findById(gameId);
         if (!game) {
             throw new GameNotFoundError(gameId);
@@ -18,6 +18,11 @@ export class ReadyUpUseCase {
         const isParticipant = game.players.some((player) => player.id === playerId);
         if (!isParticipant) {
             throw new InvalidGameStateError('Player is not part of this game');
+        }
+
+        const alreadyReady = game.players.some((player) => player.id === playerId && player.ready);
+        if (alreadyReady) {
+            return { started: false, alreadyReady: true };
         }
 
         const everyoneReady = game.markPlayerReady(playerId);
@@ -34,6 +39,6 @@ export class ReadyUpUseCase {
             started = true;
         }
 
-        return { started };
+        return { started, alreadyReady: false };
     }
 }

@@ -1,6 +1,7 @@
 import GamePage from '../pages/GamePage';
 import CreateGamePage from '../pages/CreateGamePage';
 import { LobbyPage } from '../Pages/LobbyPage';
+import { PlayPage } from '../Pages/PlayPage';
 
 const routes = [
   {
@@ -16,6 +17,10 @@ const routes = [
   {
     path: '/game/lobby/:id',
     component: LobbyPage,
+  },
+  {
+    path: '/game/play/:id',
+    component: PlayPage,
   },
 ];
 
