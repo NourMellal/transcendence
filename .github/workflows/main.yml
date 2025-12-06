@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main, ci/test-pipeline]
+    paths:
+      - 'services/user-service/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [dev, main, ci/test-pipeline]
+    paths:
+      - 'services/user-service/**'
+      - '.github/workflows/**'
+
+jobs:
+  user-service:
+    name: CI — user-service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies (workspace)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: pnpm --filter @transcendence/shared-types --filter @transcendence/shared-utils --filter @transcendence/shared-validation --filter @transcendence/shared-messaging run build
+
+      - name: Lint user-service
+        run: pnpm --filter @transcendence/user-service run lint
+
+      - name: Test user-service
+        run: pnpm --filter @transcendence/user-service run test -- --coverage
+
+      - name: Build user-service
+        run: pnpm --filter @transcendence/user-service run build
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          files: services/user-service/coverage/lcov.info
+          flags: user-service
+          token: ${{ secrets.CODECOV_TOKEN }}

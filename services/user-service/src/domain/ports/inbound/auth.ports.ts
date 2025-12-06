@@ -1,5 +1,4 @@
 import type {
-    AuthResponseDTO,
     AuthStatusInputDTO,
     AuthStatusResponseDTO,
     Disable2FAInputDTO,
