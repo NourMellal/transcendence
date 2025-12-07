@@ -32,10 +32,16 @@ export interface ISendMessageUseCase {
  * });
  */
 export class SendMessageUseCase implements ISendMessageUseCase {
+  private broadcaster?: any;
+
   constructor(
     private readonly messageRepository: IMessageRepository,
     private readonly conversationRepository: IconversationRepository  // ✅ Fixed
   ) {}
+
+  setBroadcaster(broadcaster: any): void {
+    this.broadcaster = broadcaster;
+  }
 
 
   /**
