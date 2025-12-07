@@ -143,6 +143,24 @@ export interface GameStateUpdateEvent {
   status?: GameStateOutput['status'];
 }
 
+export interface BallStateEvent {
+  gameId: string;
+  status?: GameStateOutput['status'];
+  ball: {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+  };
+}
+
+export interface PaddleUpdateEvent {
+  gameId: string;
+  playerId: string;
+  side: 'left' | 'right';
+  y: number;
+}
+
 export interface GameStartEvent {
   gameId: string;
   timestamp?: string;

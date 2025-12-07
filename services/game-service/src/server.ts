@@ -24,6 +24,7 @@ export async function startGameService(): Promise<void> {
             connectionHandler: container.websocket.connectionHandler,
             paddleMoveHandler: container.websocket.paddleMoveHandler,
             disconnectHandler: container.websocket.disconnectHandler,
+            paddleSetHandler: container.websocket.paddleSetHandler,
             authService: container.websocket.authService
         });
 

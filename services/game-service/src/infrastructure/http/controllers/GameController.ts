@@ -81,6 +81,7 @@ export class GameController {
         this.deps.roomManager.emitToGame(gameId, 'player_ready', { playerId: userId });
         if (started) {
           this.deps.gameLoop.start(gameId);
+          this.deps.roomManager.emitToGame(gameId, 'game_start', { gameId });
         }
         return reply.code(204).send();
       });

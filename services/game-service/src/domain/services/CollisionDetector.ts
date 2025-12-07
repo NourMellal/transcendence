@@ -15,6 +15,7 @@ export class CollisionDetector {
         const { arenaWidth, arenaHeight } = game.config;
         const outcome: CollisionOutcome = {};
         const { x, y } = ball.position;
+        const { dx } = ball.velocity;
 
         if (y - this.ballRadius <= 0 || y + this.ballRadius >= arenaHeight) {
             outcome.reflectsY = true;
@@ -31,11 +32,12 @@ export class CollisionDetector {
         }
 
         const [player1, player2] = game.players;
-        if (player1 && this.isCollidingWithPaddle(ball, player1.paddle)) {
+        // Only collide with paddle if ball is moving toward it
+        if (player1 && dx < 0 && this.isCollidingWithPaddle(ball, player1.paddle)) {
             outcome.reflectsX = true;
         }
 
-        if (player2 && this.isCollidingWithPaddle(ball, player2.paddle)) {
+        if (player2 && dx > 0 && this.isCollidingWithPaddle(ball, player2.paddle)) {
             outcome.reflectsX = true;
         }
 

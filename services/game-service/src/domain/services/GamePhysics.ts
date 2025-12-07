@@ -15,11 +15,11 @@ export class GamePhysics {
         let nextBall = movedBall;
 
         if (outcome.reflectsX) {
-            nextBall = nextBall.updateVelocity(nextBall.velocity.invertX());
+            nextBall = nextBall.updateVelocity(scaleVelocity(nextBall.velocity.invertX(), 1.05, game.config.ballSpeed * 2));
         }
 
         if (outcome.reflectsY) {
-            nextBall = nextBall.updateVelocity(nextBall.velocity.invertY());
+            nextBall = nextBall.updateVelocity(scaleVelocity(nextBall.velocity.invertY(), 1.05, game.config.ballSpeed * 2));
         }
 
         game.updateBall(nextBall);
@@ -49,10 +49,23 @@ export class GamePhysics {
     private resetBall(game: Game): void {
         const centerX = game.config.arenaWidth / 2;
         const centerY = game.config.arenaHeight / 2;
-        const direction = Math.random() > 0.5 ? 1 : -1 ;
-        const resetVelocity = Velocity.create(game.config.ballSpeed * direction, game.config.ballSpeed);
+        const directionX = Math.random() > 0.5 ? 1 : -1;
+        const directionY = (Math.random() - 0.5) * 2; // Range: -1 to 1
+        const resetVelocity = Velocity.create(
+            game.config.ballSpeed * directionX,
+            game.config.ballSpeed * directionY
+        );
         const resetPosition = Position.create(centerX, centerY);
         const resetBall = Ball.create(resetPosition, resetVelocity);
         game.updateBall(resetBall);
     }
+}
+
+function scaleVelocity(velocity: import('../value-objects').Velocity, factor: number, maxSpeed: number) {
+    const { dx, dy } = velocity;
+    const speed = Math.sqrt(dx * dx + dy * dy);
+    const nextSpeed = Math.min(speed * factor, maxSpeed);
+    if (speed === 0) return velocity;
+    const ratio = nextSpeed / speed;
+    return Velocity.create(dx * ratio, dy * ratio);
 }
