@@ -157,6 +157,22 @@ export class SQLiteUserRepository implements UserRepository {
         await this.db.run('DELETE FROM users WHERE id = ?', [id]);
     }
 
+    async search(query: string, limit: number = 10): Promise<User[]> {
+        if (!this.db) throw new Error('Database not initialized');
+
+        const searchPattern = `%${query}%`;
+        const rows = await this.db.all(
+            `SELECT * FROM users 
+             WHERE LOWER(username) LIKE LOWER(?) 
+                OR LOWER(display_name) LIKE LOWER(?) 
+                OR LOWER(email) LIKE LOWER(?)
+             LIMIT ?`,
+            [searchPattern, searchPattern, searchPattern, limit]
+        );
+
+        return rows.map(row => this.mapRowToUser(row));
+    }
+
     private mapRowToUser(row: any): User {
         return createUser({
             id: new UserId(row.id),
