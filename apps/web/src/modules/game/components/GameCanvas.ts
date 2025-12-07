@@ -6,6 +6,7 @@ import { isOnlineMode } from '../utils/featureFlags';
 
 interface GameCanvasProps {
   gameId?: string; // Optional: for online mode
+  onScoreUpdate?: (score: { left: number; right: number }) => void;
 }
 
 interface GameCanvasState {
@@ -154,6 +155,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     }
     
     this.renderer.render(this.ball, this.player1, this.player2);
+    this.notifyScore();
     
     // Attach event listeners after DOM is ready
     this.attachEventListeners();
@@ -387,6 +389,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.player1.score = 0;
     this.player2.score = 0;
     this.resetBall();
+    this.notifyScore();
   }
 
   private updateGame(): void {
@@ -433,9 +436,11 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     if (ball.x - ball.radius < 0) {
       player2.score++;
       this.resetBall();
+      this.notifyScore();
     } else if (ball.x + ball.radius > this.BASE_WIDTH) {
       player1.score++;
       this.resetBall();
+      this.notifyScore();
     }
   }
 
@@ -445,6 +450,12 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.updateGame();
     this.renderer.render(this.ball, this.player1, this.player2);
     this.animationId = requestAnimationFrame(() => this.gameLoop());
+  }
+
+  private notifyScore(): void {
+    if (typeof this.props.onScoreUpdate === 'function') {
+      this.props.onScoreUpdate({ left: this.player1.score, right: this.player2.score });
+    }
   }
 
   onUnmount(): void {

@@ -19,8 +19,7 @@ export default class SignupPage extends Component<Props, State> {
     super(props);
   }
 
-  // Note: Auth redirect is now handled by Router guards
-  // No need for onMount auth check
+  // Router guards already reroute authenticated sessions before this page renders.
 
   getInitialState(): State {
     return {

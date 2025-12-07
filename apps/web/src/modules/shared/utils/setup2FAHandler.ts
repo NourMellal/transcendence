@@ -35,9 +35,7 @@ export function setup2FAHandler(): void {
       }
     });
 
-    // Note: The actual code submission should happen in your UI component
-    // by calling event.resolve(code) when the user submits the form
-    // See example below in comments
+    // UI components call event.resolve(code) when the user submits the form; see the example below for the required wiring.
   });
 
   // Listen for 2FA completion events

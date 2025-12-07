@@ -186,7 +186,7 @@ export default class CreateGamePage extends Component<{}, CreateGameState> {
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row gap-3">
             <button 
-              data-action="cancel"
+              data-action="go-dashboard"
               class="btn-touch flex-1 px-6 py-4 rounded-xl font-semibold transition-all duration-300"
               style="background: rgba(47, 54, 61, 0.8); border: 2px solid var(--color-panel-border); color: var(--color-text-primary);"
               ${isCreating ? 'disabled' : ''}
@@ -259,9 +259,9 @@ export default class CreateGamePage extends Component<{}, CreateGameState> {
         await this.handleCreateGame();
         break;
 
-      case 'cancel':
-        navigate('/');
-        break;
+      case 'go-dashboard':
+        navigate('/dashboard');
+        return;
     }
   };
 

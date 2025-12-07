@@ -570,7 +570,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
           </div>
           <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
             <div class="rounded-2xl p-4" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
-              <p class="text-xs text-white/50">Total Games</p>
+              <p class="text-xs text-white/50">Finished Games</p>
               <p class="text-2xl font-bold mt-1">${totalGames}</p>
             </div>
             <div class="rounded-2xl p-4" style="background: rgba(0,217,255,0.08); border: 1px solid rgba(0,217,255,0.2);">
@@ -772,14 +772,15 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       
       resultContent = `
         <div class="flex items-center justify-between mt-4 p-3 rounded-xl" style="background: rgba(255,255,255,0.05);">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+               data-action="view-profile" data-user-id="${suggestion.id}">
             <img
               src="${suggestion.avatar ?? '/assets/images/ape.png'}"
               alt="${suggestion.displayName}"
               class="h-12 w-12 rounded-xl object-cover border border-white/20"
             />
             <div>
-              <p class="font-semibold">${suggestion.displayName}</p>
+              <p class="font-semibold hover:underline">${suggestion.displayName}</p>
               <p class="text-xs text-white/50">@${suggestion.username}</p>
             </div>
           </div>
@@ -921,14 +922,22 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
     return `
       <article class="flex items-center justify-between gap-3 rounded-2xl p-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" 
+             data-action="view-profile" data-user-id="${friend.id}">
           <div class="relative">
             <img src="${friend.avatar || '/assets/images/ape.png'}" alt="${friend.username}" class="h-12 w-12 rounded-xl object-cover" />
             <span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-black" style="background:${statusColor};"></span>
           </div>
           <div>
-            <p class="font-semibold">${friend.displayName ?? friend.username}</p>
+            <p class="font-semibold hover:underline">${friend.displayName ?? friend.username}</p>
             <p class="text-xs" style="color: rgba(255,255,255,0.6);">${statusText}</p>
+            <button
+              class="text-[11px] text-white/60 hover:text-white hover:underline mt-1"
+              data-action="view-profile"
+              data-user-id="${friend.id}"
+            >
+              View profile
+            </button>
           </div>
         </div>
         ${actions}
@@ -1147,6 +1156,11 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
     bindClick('[data-action="view-leaderboard"]', () => {
       navigate('/leaderboard');
+    });
+
+    bindClick('[data-action="view-profile"]', (el) => {
+      const userId = el.getAttribute('data-user-id');
+      if (userId) navigate(`/profile/${userId}`);
     });
 
     bindClick('[data-action="chat-friend"]', (el) => {

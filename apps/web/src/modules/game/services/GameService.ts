@@ -138,6 +138,7 @@ class GameService {
       throw new Error('Failed to load available games.');
     }
   }
+
 }
 
 /**

@@ -12,9 +12,13 @@ import {
   DashboardLeaderboardEntry,
 } from '../../models';
 import { appState } from '@/state';
+import { ApiError } from '@/modules/shared/services/HttpClient';
 
 // API prefix for user endpoints - empty for now but can be configured
 const API_PREFIX = '';
+
+// Cache for user data to avoid repeated API calls
+const userCache = new Map<string, { username: string; displayName?: string; avatar?: string }>();
 
 /**
  * User Service
@@ -175,12 +179,54 @@ export class UserService {
   }
 
   /**
+   * Get user info by ID (with caching)
+   */
+  async getUserInfo(userId: string): Promise<{ username: string; displayName?: string; avatar?: string }> {
+    // Check cache first
+    const cached = userCache.get(userId);
+    if (cached) return cached;
+
+    try {
+      const response = await httpClient.get<User>(`${API_PREFIX}/users/${userId}`);
+      if (response.data) {
+        const info = {
+          username: response.data.username,
+          displayName: response.data.displayName,
+          avatar: response.data.avatar,
+        };
+        userCache.set(userId, info);
+        return info;
+      }
+    } catch (error) {
+      console.warn(`[UserService] Failed to fetch user ${userId}:`, error);
+    }
+
+    // Return fallback
+    return { username: `Player ${userId.slice(0, 6)}` };
+  }
+
+  /**
    * Get user's match history
    */
   async getMatchHistory(_userId?: string, page = 1, limit = 20): Promise<PaginatedResponse<Match>> {
     const games = await this.getMyGames('FINISHED');
     const startIndex = (page - 1) * limit;
-    const paged = games.slice(startIndex, startIndex + limit).map((game) => this.mapGameToMatch(game));
+    const pagedGames = games.slice(startIndex, startIndex + limit);
+    
+    // Collect all unique player IDs and fetch their info
+    const playerIds = new Set<string>();
+    for (const game of pagedGames) {
+      if (game.player1) playerIds.add(game.player1);
+      if (game.player2) playerIds.add(game.player2);
+    }
+    
+    // Fetch user info for all players in parallel
+    await Promise.all(
+      Array.from(playerIds).map(id => this.getUserInfo(id))
+    );
+    
+    // Now map games to matches (userCache is populated)
+    const paged = pagedGames.map((game) => this.mapGameToMatch(game));
 
     return {
       data: paged,
@@ -212,6 +258,10 @@ export class UserService {
         avatar: entry.user.avatar,
       }));
     } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        console.warn('[UserService] Leaderboard endpoint not ready, returning empty list');
+        return [];
+      }
       console.warn('[UserService] Falling back to empty leaderboard', error);
       return [];
     }
@@ -232,16 +282,32 @@ export class UserService {
    * Fetch current user's stats
    */
   async getMyStats(): Promise<UserStats> {
-    const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/me`);
-    return this.mapStats(response.data);
+    try {
+      const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/me`);
+      return this.mapStats(response.data);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        console.warn('[UserService] /stats/me not available, returning empty stats');
+        return this.buildEmptyStats();
+      }
+      throw error;
+    }
   }
 
   /**
    * Fetch stats for a specific user
    */
   async getUserStats(userId: string): Promise<UserStats> {
-    const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/users/${userId}`);
-    return this.mapStats(response.data);
+    try {
+      const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/users/${userId}`);
+      return this.mapStats(response.data);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        console.warn('[UserService] Stats unavailable for user, returning empty stats');
+        return this.buildEmptyStats();
+      }
+      throw error;
+    }
   }
 
   private async getMyGames(status?: GameStatus): Promise<ApiGameSummary[]> {
@@ -340,6 +406,13 @@ export class UserService {
 
   private buildDisplayName(userId?: string | null): string {
     if (!userId) return 'Unknown Player';
+    
+    // Check cache for user info
+    const cached = userCache.get(userId);
+    if (cached) {
+      return cached.displayName || cached.username;
+    }
+    
     return `Player ${userId.slice(0, 6)}`;
   }
 

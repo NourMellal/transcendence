@@ -2,13 +2,12 @@ import type { Friend, UserProfile } from './User';
 import type { Match } from './Game';
 
 /**
- * Dashboard profile overview
- * Reuses the richer UserProfile model (stats, friends, match history)
+ * Dashboard profile view that mirrors the complete UserProfile structure.
  */
 export type DashboardProfile = UserProfile;
 
 /**
- * Recent match summary tailored for the dashboard widget
+ * Compact match summary displayed on dashboard widgets.
  */
 export interface DashboardMatchSummary {
   id: string;
@@ -17,24 +16,24 @@ export interface DashboardMatchSummary {
   opponentAvatar?: string;
   result: 'WON' | 'LOST';
   finalScore: string;
-  playedAt: string; // ISO date string
+  playedAt: string; // ISO 8601 timestamp string
   gameType?: string;
   rawMatch?: Match;
 }
 
 /**
- * Leaderboard entry for the compact leaderboard widget
+ * Leaderboard entry rendered in the compact dashboard widget.
  */
 export interface DashboardLeaderboardEntry {
   rank: number;
   userId: string;
   username: string;
-  winRate: number; // percentage (0-100) or 0-1 if backend returns ratio
+  winRate: number; // Percentage value ranging from 0 to 100
   avatar?: string;
 }
 
 /**
- * Combined dashboard payload
+ * Aggregated dashboard data consumed by the UI layer.
  */
 export interface DashboardSnapshot {
   profile: DashboardProfile | null;

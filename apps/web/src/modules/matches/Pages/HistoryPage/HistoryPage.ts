@@ -76,6 +76,7 @@ export default class MatchHistoryPage extends Component<Record<string, never>, S
       you = match.players.find((p) => p.isWinner) ?? match.players[0];
     }
     const opponent = match.players.find((p) => p.id !== you?.id) ?? match.players[0];
+    const opponentName = this.formatPlayerName(opponent);
     const youScore = you?.score ?? 0;
     const oppScore = opponent?.score ?? 0;
     const youWon = you ? match.winner.id === you.id : match.winner.id === match.players[0]?.id;
@@ -90,7 +91,7 @@ export default class MatchHistoryPage extends Component<Record<string, never>, S
         <div class="flex items-center justify-between gap-4">
           <div>
             <p class="text-xs uppercase tracking-wide text-white/50">Opponent</p>
-            <p class="text-lg font-semibold">${opponent?.username ?? 'Unknown'}</p>
+            <p class="text-lg font-semibold">${opponentName}</p>
           </div>
           <div class="text-right">
             <p class="text-xs uppercase tracking-wide text-white/50">Result</p>
@@ -112,6 +113,14 @@ export default class MatchHistoryPage extends Component<Record<string, never>, S
         </div>
       </article>
     `;
+  }
+
+  private formatPlayerName(player?: Match['players'][number]): string {
+    if (!player) return 'Unknown opponent';
+    if (player.username && player.username !== player.id) {
+      return player.username;
+    }
+    return `Player ${player.id.slice(0, 6)}`;
   }
 
   private renderContent(): string {
