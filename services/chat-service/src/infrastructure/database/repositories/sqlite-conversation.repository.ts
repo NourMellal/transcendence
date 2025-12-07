@@ -3,7 +3,6 @@ import { Conversation } from '../../../domain/entities/conversation.entity';
 import { IconversationRepository } from 'src/domain/repositories/conversation-repository';
 export class SQLiteConversationRepository implements IconversationRepository {
   constructor(private db: Database) {}
-  // ============================================
   async save(conversation: Conversation): Promise<void> {
     return new Promise((resolve, reject) => {
       const query = `
@@ -58,9 +57,7 @@ export class SQLiteConversationRepository implements IconversationRepository {
     userId2: string
   ): Promise<Conversation | null> {
     return new Promise((resolve, reject) => {
-      // Sort user IDs to match how they're stored in the database
       const [sortedUser1, sortedUser2] = [userId1, userId2].sort();
-
       const query = `
         SELECT * FROM conversations 
         WHERE user1_id = ? AND user2_id = ?
