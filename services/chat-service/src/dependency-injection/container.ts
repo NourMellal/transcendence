@@ -15,6 +15,7 @@ import { ConnectionHandler } from '../infrastructure/websocket/handlers/Connecti
 import { SendMessageHandler } from '../infrastructure/websocket/handlers/SendMessageHandler';
 import { DisconnectHandler } from '../infrastructure/websocket/handlers/DisconnectHandler';
 import { WebSocketAuthService } from '../infrastructure/websocket/services/WebSocketAuthService';
+import { exit } from 'process';
 
 export interface ChatServiceContainer {
     readonly repositories: {
@@ -99,15 +100,14 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     const sendMessageUseCase = new SendMessageUseCase(messageRepository, conversationRepository);
     const getMessagesUseCase = new GetMessagesUseCase(messageRepository);
     const getConversationsUseCase = new GetConversationsUseCase(conversationRepository);
-
     const chatController = new ChatController(
         sendMessageUseCase,
         getMessagesUseCase,
         getConversationsUseCase
     );
-    const healthController = new HealthController();
-
-    const messagingConnection = await amqp.connect(config.messaging.uri);
+    const healthController = new HealthController(); 
+    const messagingConnection = await amqp.connect(config.messaging.uri);  
+    console.log("Problem in  MQ") ;     
     const userEventsHandler = new UserEventsHandler();
     const messagingChannel = await messagingConnection.createChannel();
     userEventsHandler.setChannel(messagingChannel);

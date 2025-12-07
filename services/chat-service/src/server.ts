@@ -1,13 +1,11 @@
 import { createHttpServer } from './infrastructure/http/server';
 import { loadChatServiceConfig, logger } from './infrastructure/config';
 import { createContainer } from './dependency-injection/container';
-
-export async function startChatService(): Promise<void> {
+export async function startChatService(): Promise<void> {    
     try {
         logger.info('🚀 Starting Chat Service...');
-        
         const config = await loadChatServiceConfig();
-        const container = await createContainer(config);
+        const container = await createContainer(config); 
 
         // HTTP Server ONLY (no WebSocket/messaging yet)
         const app = createHttpServer({
@@ -17,7 +15,7 @@ export async function startChatService(): Promise<void> {
             },
             internalApiKey: config.internalApiKey
         });
-
+        console.log("database Out if we reached here ")   
         const shutdown = async () => {
             logger.info('🛑 Shutting down Chat Service...');
             await app.close();
@@ -36,3 +34,5 @@ export async function startChatService(): Promise<void> {
         process.exit(1);
     }
 }
+
+startChatService() ;   
