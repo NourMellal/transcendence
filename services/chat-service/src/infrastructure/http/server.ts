@@ -1,4 +1,5 @@
 import fastify, { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
 import { createAuthMiddleware } from './middleware/authMiddleware';
 import { registerErrorHandler } from './middleware/errorHandler';  
 import { registerRequestLogger } from './middleware/requestLogger';
@@ -10,6 +11,12 @@ interface CreateHttpServerOptions {
 
 export function createHttpServer(options: CreateHttpServerOptions): FastifyInstance {
     const app = fastify({ logger: { level: 'info' } });
+
+    // Register CORS
+    app.register(cors, {
+        origin: process.env.CORS_ORIGIN || '*',
+        credentials: true
+    });
 
     registerRequestLogger(app);
     registerErrorHandler(app);

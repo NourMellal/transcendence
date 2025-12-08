@@ -27,7 +27,6 @@ export async function startChatService(): Promise<void> {
 
         await app.listen({ port: config.port, host: '0.0.0.0' });
         logger.info(`💬 Chat Service running on port ${config.port}`);
-        logger.info(`📱 Swagger: http://localhost:${config.port}/documentation`);
 
     } catch (error) {
         logger.error(error, 'Failed to start Chat Service');

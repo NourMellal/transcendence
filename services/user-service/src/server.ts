@@ -54,7 +54,7 @@ import { RabbitMQUserEventsPublisher } from './infrastructure/messaging/RabbitMQ
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
-const DB_PATH = process.env.DB_PATH || './data/users.db';
+const DB_PATH = process.env.DB_PATH || join(__dirname, '../data/users.db');
 
 async function main() {
     // Initialize Vault JWT Service

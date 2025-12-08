@@ -62,6 +62,8 @@ components:
       $ref: './components/schemas/chat.yaml#/ChatMessage'
     SendMessageRequest:
       $ref: './components/schemas/chat.yaml#/SendMessageRequest'
+    Conversation:
+      $ref: './components/schemas/chat.yaml#/Conversation'
     
     # Tournament schemas
     Tournament:
