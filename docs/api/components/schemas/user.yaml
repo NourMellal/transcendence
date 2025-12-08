@@ -8,6 +8,10 @@ User:
     username:
       type: string
       example: "great_ponger"
+    displayName:
+      type: string
+      nullable: true
+      example: "Great Ponger"
     email:
       type: string
       format: email
@@ -24,7 +28,7 @@ User:
       type: string
       enum: [ONLINE, OFFLINE, INGAME]
       example: ONLINE
-  required: [id, username, email, is2FAEnabled, status]
+  required: [id, username, email, is2FAEnabled]
 
 UpdateUserRequest:
   type: object
@@ -52,8 +56,8 @@ PresenceUpdateRequest:
   properties:
     status:
       type: string
-      enum: [online, offline]
-      example: "online"
+      enum: [ONLINE, OFFLINE, INGAME]
+      example: "ONLINE"
 
 UserPresence:
   type: object
@@ -63,7 +67,7 @@ UserPresence:
       format: uuid
     status:
       type: string
-      enum: [online, offline]
+      enum: [ONLINE, OFFLINE, INGAME]
     lastSeenAt:
       type: string
       format: date-time

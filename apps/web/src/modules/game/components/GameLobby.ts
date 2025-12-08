@@ -4,6 +4,7 @@ import type { GameStateOutput, PlayerInfo } from '../types/game.types';
 import { gameService } from '../services/GameService';
 import { gameWS } from '@/modules/shared/services/WebSocketClient';
 import { userService } from '@/services/api/UserService';
+import { navigate } from '@/routes';
 
 interface GameLobbyProps {
   gameId: string;
@@ -357,7 +358,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
     readyBtn?.addEventListener('click', () => this.handleReady());
     leaveBtn?.addEventListener('click', () => this.handleLeave());
-    backBtn?.addEventListener('click', () => this.navigateTo('/profile'));
+    backBtn?.addEventListener('click', () => this.navigateTo('/dashboard'));
   }
 
   private async handleReady(): Promise<void> {
@@ -386,12 +387,12 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       await gameService.leaveGame(this.props.gameId);
       console.log('[GameLobby] ✅ Successfully left game');
       gameWS.disconnect();
-      this.navigateTo('/profile');
+      this.navigateTo('/dashboard');
     } catch (error) {
       console.error('[GameLobby] ❌ Failed to leave game:', error);
       // Still navigate away even if leave fails
       gameWS.disconnect();
-      this.navigateTo('/profile');
+      this.navigateTo('/dashboard');
     }
   }
 
@@ -605,7 +606,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   private navigateTo(path: string): void {
-    window.location.href = path;
+    navigate(path);
   }
 
   onUnmount(): void {

@@ -1,8 +1,8 @@
 import Signal from '../core/signal';
 import type { GameStateOutput } from '../modules/game/types/game.types';
 
-// Auth state interface
-export interface AuthState {
+// Auth state data interface (used by the Signal)
+export interface AuthStateData {
   user: any | null;
   isLoading: boolean;
   token?: string;
@@ -30,7 +30,7 @@ export interface GameState {
   error: string | null;
 }
 
-const createInitialAuthState = (): AuthState => ({
+const createInitialAuthState = (): AuthStateData => ({
   user: null,
   isLoading: false,
   token: '',
@@ -43,7 +43,7 @@ const createInitialAuthState = (): AuthState => ({
 });
 
 export const appState = {
-  auth: new Signal<AuthState>(createInitialAuthState()),
+  auth: new Signal<AuthStateData>(createInitialAuthState()),
   ui: new Signal<UIState>({
     twoFAModalVisible: false,
     twoFAError: undefined,
@@ -58,7 +58,7 @@ export const appState = {
 };
 
 export class AuthActions {
-  static async login(email: string, password: string) {
+  static async login(_email: string, _password: string) {
     appState.auth.set({
       ...appState.auth.get(),
       isLoading: true,
@@ -116,7 +116,7 @@ export class AuthActions {
     });
   }
 
-  static completeOAuthFlow(success: boolean) {
+  static completeOAuthFlow(_success: boolean) {
     const current = appState.auth.get();
     appState.auth.set({
       ...current,

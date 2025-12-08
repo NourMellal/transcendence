@@ -14,6 +14,7 @@ export interface UserProfileDTO {
     readonly avatar?: string;
     readonly is2FAEnabled: boolean;
     readonly oauthProvider?: 'local' | '42';
+    readonly status?: 'ONLINE' | 'OFFLINE' | 'INGAME';
     readonly createdAt: string;
     readonly updatedAt: string;
 }

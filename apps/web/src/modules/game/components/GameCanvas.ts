@@ -17,6 +17,7 @@ import { appState } from '@/state';
 
 interface GameCanvasProps {
   gameId?: string; // Optional: for online mode
+  onScoreUpdate?: (score: { left: number; right: number }) => void;
 }
 
 type ConnectionStatus = WSConnectionState | 'reconnecting';
@@ -42,6 +43,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private readonly WALL_PADDING = 25;
   private readonly PADDLE_SPEED = 8;
   private readonly INPUT_THROTTLE_MS = 16;
+  private readonly WINNING_SCORE = 11;
 
   private mouseY: number = this.BASE_HEIGHT / 2;
   private keys: Record<string, boolean> = {};
@@ -54,20 +56,16 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private isRunning: boolean = false;
   private mySide: 'left' | 'right' = 'left';
 
-  // Configurable controls (can be changed later)
-  private readonly player2Controls = {
-    up: 'ArrowUp',
-    down: 'ArrowDown',
-  };
-
+  private keyDownHandler?: (e: KeyboardEvent) => void;
+  private keyUpHandler?: (e: KeyboardEvent) => void;
   private mouseMoveHandler?: (e: MouseEvent) => void;
   private touchMoveHandler?: (e: TouchEvent) => void;
   private touchStartHandler?: (e: TouchEvent) => void;
   private pointerMoveHandler?: (e: PointerEvent) => void;
-  private keyDownHandler?: (e: KeyboardEvent) => void;
-  private keyUpHandler?: (e: KeyboardEvent) => void;
   private startStopBtn?: HTMLButtonElement | null;
   private restartBtn?: HTMLButtonElement | null;
+  private readonly player2Controls = { up: 'ArrowUp', down: 'ArrowDown' };
+  private readonly player1Controls = { up: 'w', down: 's' };
   private handleButtonClick = (e: Event): void => {
     const target = e.target as HTMLElement;
     const button = target.closest('[data-action]') as HTMLButtonElement | null;
@@ -326,10 +324,14 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       document.removeEventListener('keydown', this.keyDownHandler);
     }
     this.keyDownHandler = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      // Prevent scrolling for game control keys
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown' ||
+          event.key === 'w' || event.key === 's' || event.key === 'W' || event.key === 'S') {
         event.preventDefault();
       }
-      this.keys[event.key] = true;
+      // Store lowercase for letter keys for consistent checking
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      this.keys[key] = true;
     };
     document.addEventListener('keydown', this.keyDownHandler);
 
@@ -337,7 +339,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       document.removeEventListener('keyup', this.keyUpHandler);
     }
     this.keyUpHandler = (event: KeyboardEvent) => {
-      this.keys[event.key] = false;
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      this.keys[key] = false;
     };
     document.addEventListener('keyup', this.keyUpHandler);
   }
@@ -637,16 +640,26 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.resetBall();
     this.updateScoreDisplay();
     this.renderer.render(this.ball, this.player1, this.player2);
+
+    // Re-enable start button after reset
+    if (this.startStopBtn) {
+      this.startStopBtn.textContent = '▶️ Start Game';
+      this.startStopBtn.disabled = false;
+      this.startStopBtn.style.opacity = '1';
+    }
   }
 
   private updateLocalPhysics(): void {
     const { ball, player1, player2 } = this;
 
-    player1.y = this.clampLocalPaddleY(this.mouseY - player1.height / 2, player1.height);
+    // Player 1 keyboard controls (W/S)
+    if (this.keys[this.player1Controls.up]) player1.y -= this.PADDLE_SPEED;
+    if (this.keys[this.player1Controls.down]) player1.y += this.PADDLE_SPEED;
+    player1.y = this.clampLocalPaddleY(player1.y, player1.height);
 
+    // Player 2 keyboard controls (Arrow keys)
     if (this.keys[this.player2Controls.up]) player2.y -= this.PADDLE_SPEED;
     if (this.keys[this.player2Controls.down]) player2.y += this.PADDLE_SPEED;
-
     player2.y = this.clampLocalPaddleY(player2.y, player2.height);
 
     ball.x += ball.velocityX;
@@ -684,10 +697,28 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       player2.score++;
       this.resetBall();
       this.updateScoreDisplay();
+      this.props.onScoreUpdate?.({ left: player1.score, right: player2.score });
+      if (player2.score >= this.WINNING_SCORE) {
+        this.endGame('Player 2');
+        return;
+      }
     } else if (ball.x + ball.radius > this.BASE_WIDTH) {
       player1.score++;
       this.resetBall();
       this.updateScoreDisplay();
+      this.props.onScoreUpdate?.({ left: player1.score, right: player2.score });
+      if (player1.score >= this.WINNING_SCORE) {
+        this.endGame('Player 1');
+        return;
+      }
+    }
+  }
+
+  private endGame(winner: string): void {
+    this.stopLoop();
+    if (this.startStopBtn) {
+      this.startStopBtn.textContent = `🏆 ${winner} Wins!`;
+      this.startStopBtn.disabled = true;
     }
   }
 

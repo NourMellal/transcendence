@@ -125,15 +125,6 @@ export async function registerUserRoutes(
         const user = getUser(request);
         const { userId } = request.params;
 
-        // if ((user?.userId || user?.sub) !== userId) {
-        //     return reply.code(403).send({
-        //         statusCode: 403,
-        //         error: 'Forbidden',
-        //         message: '' +
-        //           'You can only access your own profile',
-        //     });
-        // }
-
         const response = await fetch(`${userServiceUrl}/users/${userId}`, {
             method: 'GET',
             headers: {
@@ -180,6 +171,30 @@ export async function registerUserRoutes(
                 'Authorization': request.headers.authorization || '',
             },
             body: JSON.stringify(request.body),
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
+     * GET /api/users/by-username/:username
+     * Protected - Search for user by username
+     */
+    fastify.get<{ Params: { username: string } }>('/api/users/by-username/:username', {
+        preHandler: [requireAuth]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { username } = request.params;
+
+        const response = await fetch(`${userServiceUrl}/users/by-username/${encodeURIComponent(username)}`, {
+            method: 'GET',
+            headers: {
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
         });
 
         const data = await response.json();

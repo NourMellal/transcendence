@@ -1,14 +1,17 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { createUser } from '../../../domain/entities/user.entity';
+import { PresenceStatus } from '../../../domain/entities/presence.entity';
 import type {
     IOAuth42CallbackUseCase,
     OAuthService,
     UserRepository,
-    SessionRepository
+    SessionRepository,
+    UserPresenceRepository
 } from '../../../domain/ports';
 import { OAuthStateManager } from '../../services/oauth-state.manager';
 import type { JWTConfig } from '@transcendence/shared-utils';
+import { REFRESH_TOKEN_BYTES, MS_PER_DAY, MAX_USERNAME_GENERATION_ATTEMPTS } from '@transcendence/shared-utils';
 import { DisplayName, Email, UserId, Username } from '../../../domain/value-objects';
 import type { OAuthCallbackRequestDTO, OAuthCallbackResponseDTO } from '../../dto/auth.dto';
 
@@ -22,7 +25,8 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
         private readonly userRepository: UserRepository,
         private readonly sessionRepository: SessionRepository,
         private readonly jwtProvider: JWTProvider,
-        private readonly stateManager: OAuthStateManager
+        private readonly stateManager: OAuthStateManager,
+        private readonly presenceRepository?: UserPresenceRepository
     ) { }
 
     async execute(input: OAuthCallbackRequestDTO): Promise<OAuthCallbackResponseDTO> {
@@ -84,6 +88,9 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
 
         const refreshToken = await this.createRefreshSession(user.id.toString());
 
+        // Set user presence to ONLINE after successful OAuth login
+        await this.presenceRepository?.upsert(user.id.toString(), PresenceStatus.ONLINE, new Date());
+
         return {
             sessionToken: accessToken,
             userId: user.id.toString(),
@@ -100,8 +107,11 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
         let attempt = sanitized;
         let suffix = 1;
 
-        // Guarantee uniqueness by checking repository
+        // Guarantee uniqueness by checking repository with max attempts guard
         while (await this.userRepository.findByUsername(attempt)) {
+            if (suffix >= MAX_USERNAME_GENERATION_ATTEMPTS) {
+                throw new Error('Unable to generate unique username after maximum attempts');
+            }
             attempt = `${sanitized}${suffix}`;
             suffix += 1;
         }
@@ -116,9 +126,9 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
     }
 
     private async createRefreshSession(userId: string): Promise<string> {
-        const refreshToken = crypto.randomBytes(48).toString('hex');
+        const refreshToken = crypto.randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
         const ttlDays = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7');
-        const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + ttlDays * MS_PER_DAY);
 
         await this.sessionRepository.save({
             id: crypto.randomUUID(),

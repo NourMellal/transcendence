@@ -8,9 +8,14 @@ import type {
     IGetUserUseCase,
     IUpdateProfileUseCase
 } from '../../../domain/ports';
+import type { IGetUserByUsernameUseCase } from '../../../application/use-cases/users/get-user-by-username.usecase';
 
 interface GetUserParams {
     userId: string;
+}
+
+interface GetUserByUsernameParams {
+    username: string;
 }
 
 interface DeleteUserRequestBody {
@@ -21,7 +26,8 @@ export class UserController {
     constructor(
         private updateProfileUseCase: IUpdateProfileUseCase,
         private getUserUseCase: IGetUserUseCase,
-        private deleteUserUseCase: IDeleteUserUseCase
+        private deleteUserUseCase: IDeleteUserUseCase,
+        private getUserByUsernameUseCase?: IGetUserByUsernameUseCase
     ) { }
 
     async getUser(
@@ -249,5 +255,48 @@ export class UserController {
             error: 'Bad Request',
             message: (error as Error)?.message || 'Invalid request payload',
         });
+    }
+
+    async getUserByUsername(
+        request: FastifyRequest<{ Params: GetUserByUsernameParams }>,
+        reply: FastifyReply
+    ): Promise<void> {
+        try {
+            if (!this.getUserByUsernameUseCase) {
+                reply.code(500).send({
+                    error: 'Internal Server Error',
+                    message: 'getUserByUsernameUseCase not configured'
+                });
+                return;
+            }
+
+            const { username } = request.params;
+            
+            if (!username || typeof username !== 'string' || username.trim().length === 0) {
+                reply.code(400).send({
+                    error: 'Bad Request',
+                    message: 'Username parameter is required'
+                });
+                return;
+            }
+
+            const user = await this.getUserByUsernameUseCase.execute({ username: username.trim() });
+
+            if (!user) {
+                reply.code(404).send({
+                    error: 'Not Found',
+                    message: 'User not found'
+                });
+                return;
+            }
+
+            reply.code(200).send(user);
+        } catch (error: any) {
+            request.log.error(error);
+            reply.code(500).send({
+                error: 'Internal Server Error',
+                message: 'An error occurred while fetching user'
+            });
+        }
     }
 }

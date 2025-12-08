@@ -2,7 +2,7 @@
 // Example integration: Setup 2FA event listener for UI components
 // Call this once during app initialization
 
-import { authEvents } from './AuthEventEmitter';
+import { authEvents, TwoFARequiredEvent, TwoFACompletedEvent, LogoutEvent } from './AuthEventEmitter';
 import { appState, AuthActions } from '../../../state';
 
 /**
@@ -12,7 +12,7 @@ import { appState, AuthActions } from '../../../state';
  */
 export function setup2FAHandler(): void {
   // Listen for 2FA required events
-  authEvents.on('2fa-required', async (event) => {
+  authEvents.on('2fa-required', async (event: TwoFARequiredEvent) => {
     console.log('[2FA Handler] 2FA code required');
 
     // Show 2FA prompt in UI
@@ -35,13 +35,11 @@ export function setup2FAHandler(): void {
       }
     });
 
-    // Note: The actual code submission should happen in your UI component
-    // by calling event.resolve(code) when the user submits the form
-    // See example below in comments
+    // UI components call event.resolve(code) when the user submits the form; see the example below for the required wiring.
   });
 
   // Listen for 2FA completion events
-  authEvents.on('2fa-completed', (event) => {
+  authEvents.on('2fa-completed', (event: TwoFACompletedEvent) => {
     console.log('[2FA Handler] 2FA flow completed, success:', event.success);
 
     if (event.success) {
@@ -52,12 +50,12 @@ export function setup2FAHandler(): void {
   });
 
   // Listen for token refresh events
-  authEvents.on('token-refreshed', (event) => {
+  authEvents.on('token-refreshed', () => {
     console.log('[2FA Handler] Token refreshed successfully');
   });
 
   // Listen for logout events
-  authEvents.on('logout', (event) => {
+  authEvents.on('logout', (event: LogoutEvent) => {
     console.log('[2FA Handler] User logged out, reason:', event.reason);
   });
 }
@@ -78,7 +76,7 @@ let current2FAResolve: ((code: string) => void) | null = null;
 let current2FAReject: ((reason?: string) => void) | null = null;
 
 // Store the resolve/reject functions when 2FA is required
-authEvents.on('2fa-required', (event) => {
+authEvents.on('2fa-required', (event: TwoFARequiredEvent) => {
   current2FAResolve = event.resolve;
   current2FAReject = event.reject;
 });

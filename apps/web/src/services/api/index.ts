@@ -16,4 +16,4 @@ export { ChatService, chatService } from './ChatService';
 // Export types
 export type { ApiResponse, RequestConfig } from '../../modules/shared/services/HttpClient';
 
-// Note: AuthService is in ../auth/AuthService.ts and integrates with existing MSW setup
+// AuthService remains in ../auth/AuthService.ts because it hooks into the MSW-specific wiring.

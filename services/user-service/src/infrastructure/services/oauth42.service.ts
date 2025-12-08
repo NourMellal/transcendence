@@ -55,9 +55,6 @@ export class OAuth42Service implements OAuthService {
         };
         this.initialized = true;
 
-        if (!this.config) {
-            throw new Error('OAuth42 configuration is missing');
-        }
         if (!this.config.clientId || !this.config.clientSecret) {
             console.warn('[OAuth42Service] Client ID/Secret missing. OAuth login will fail until configured.');
         }
@@ -97,7 +94,8 @@ export class OAuth42Service implements OAuthService {
 
         if (!tokenResponse.ok) {
             const body = await tokenResponse.text();
-            throw new Error(`Failed to exchange code for token: ${tokenResponse.status} ${body}`);
+            console.error('[OAuth42Service] Token exchange failed:', { status: tokenResponse.status, body });
+            throw new Error('Failed to exchange OAuth code for token');
         }
 
         const tokenData = await tokenResponse.json() as { access_token?: string };
@@ -113,7 +111,8 @@ export class OAuth42Service implements OAuthService {
 
         if (!profileResponse.ok) {
             const body = await profileResponse.text();
-            throw new Error(`Failed to fetch profile: ${profileResponse.status} ${body}`);
+            console.error('[OAuth42Service] Profile fetch failed:', { status: profileResponse.status, body });
+            throw new Error('Failed to fetch user profile from OAuth provider');
         }
 
         const profile = await profileResponse.json() as OAuth42Profile;

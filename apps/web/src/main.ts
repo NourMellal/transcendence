@@ -2,6 +2,7 @@ import { mountRoot } from "./core/utils";
 import { initRouter } from "./routes";
 import "./styles/main.css";
 import { authService } from "./services/auth/AuthService";
+import { presenceManager } from "./services/presence/presence-manager";
 
 console.log('🚀 Transcendence - Cyberpunk Edition');
 console.log('🎨 Design system loaded');
@@ -13,6 +14,7 @@ console.log('🎨 Design system loaded');
   if (app) {
     // Hydrate session before rendering
     await authService.hydrateFromStorage();
+    presenceManager.initialize();
 
     // Mount root component
     mountRoot(app);

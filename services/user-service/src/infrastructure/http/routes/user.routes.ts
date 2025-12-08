@@ -7,6 +7,10 @@ interface GetUserParams {
     userId: string;
 }
 
+interface GetUserByUsernameParams {
+    username: string;
+}
+
 interface DeleteUserRequestBody {
     reason?: string;
 }
@@ -77,6 +81,13 @@ export function registerUserRoutes(
         reply: FastifyReply
     ) => {
         return userController.deleteUser(request, reply);
+    });
+
+    // GET /users/by-username/:username - Get user by username
+    fastify.get<{ Params: GetUserByUsernameParams }>('/users/by-username/:username', {
+        preHandler: [validateInternalApiKey]
+    }, async (request: FastifyRequest<{ Params: GetUserByUsernameParams }>, reply: FastifyReply) => {
+        return userController.getUserByUsername(request, reply);
     });
 
     fastify.log.info('✅ User routes registered');

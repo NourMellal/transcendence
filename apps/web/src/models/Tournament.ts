@@ -1,5 +1,5 @@
 import { User } from './User';
-import { Game, Match } from './Game';
+import { Match } from './Game';
 
 /**
  * Frontend Tournament model
@@ -96,7 +96,7 @@ export interface TournamentSettings {
     ballSpeed: number;
     powerUpsEnabled: boolean;
   };
-  matchDuration?: number; // in minutes, null for unlimited
+  matchDuration?: number | null; // in minutes, null for unlimited
   breakBetweenMatches: number; // in minutes
   registrationDeadline?: string; // ISO date string
   isPublic: boolean;

@@ -174,3 +174,31 @@
         description: Forbidden
       '404':
         description: User not found
+
+/users/by-username/{username}:
+  get:
+    tags: [Users]
+    operationId: Users_getByUsername
+    summary: Search for a user by username
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 50
+        description: The username to search for (exact match)
+    responses:
+      '200':
+        description: User profile found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '401':
+        description: Not authenticated
+      '404':
+        description: User not found

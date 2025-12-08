@@ -12,6 +12,7 @@ export function createMockUserRepository(): Mocked<UserRepository> {
         findById: vi.fn(),
         findByEmail: vi.fn(),
         findByUsername: vi.fn(),
+        findByDisplayName: vi.fn(),
         save: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),

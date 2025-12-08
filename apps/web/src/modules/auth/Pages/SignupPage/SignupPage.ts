@@ -19,6 +19,8 @@ export default class SignupPage extends Component<Props, State> {
     super(props);
   }
 
+  // Router guards already reroute authenticated sessions before this page renders.
+
   getInitialState(): State {
     return {
       username: '',
@@ -315,7 +317,7 @@ export default class SignupPage extends Component<Props, State> {
       error: null,
     });
 
-    navigate('/profile');
+      navigate('/dashboard');
 
   } catch (error: any) {
     console.error('Signup error:', error);
