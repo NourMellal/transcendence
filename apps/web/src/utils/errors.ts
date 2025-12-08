@@ -11,15 +11,15 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;
   }
-  
+
   if (error instanceof Error) {
     return error.message;
   }
-  
+
   if (typeof error === 'string') {
     return error;
   }
-  
+
   return 'An unexpected error occurred';
 }
 
@@ -30,12 +30,12 @@ export function isNetworkError(error: unknown): boolean {
   if (error instanceof ApiError) {
     return error.status === 0; // Network error
   }
-  
+
   if (error instanceof Error) {
     return error.message.toLowerCase().includes('network') ||
            error.message.toLowerCase().includes('fetch');
   }
-  
+
   return false;
 }
 
@@ -46,7 +46,7 @@ export function isAuthError(error: unknown): boolean {
   if (error instanceof ApiError) {
     return error.status === 401 || error.status === 403;
   }
-  
+
   return false;
 }
 
@@ -57,7 +57,7 @@ export function isValidationError(error: unknown): boolean {
   if (error instanceof ApiError) {
     return error.status === 400 || error.status === 422;
   }
-  
+
   return false;
 }
 
@@ -68,7 +68,7 @@ export function isServerError(error: unknown): boolean {
   if (error instanceof ApiError) {
     return error.status >= 500;
   }
-  
+
   return false;
 }
 
@@ -76,10 +76,13 @@ export function isServerError(error: unknown): boolean {
  * Get validation errors from API response
  */
 export function getValidationErrors(error: unknown): Record<string, string[]> {
-  if (error instanceof ApiError && error.response?.errors) {
-    return error.response.errors;
+  if (error instanceof ApiError && error.response) {
+    const response = error.response as { errors?: Record<string, string[]> };
+    if (response.errors) {
+      return response.errors;
+    }
   }
-  
+
   return {};
 }
 
@@ -94,7 +97,7 @@ export function formatErrorForLogging(error: unknown, context?: string): {
   timestamp: string;
 } {
   const timestamp = new Date().toISOString();
-  
+
   if (error instanceof ApiError) {
     return {
       message: error.message,
@@ -103,7 +106,7 @@ export function formatErrorForLogging(error: unknown, context?: string): {
       timestamp
     };
   }
-  
+
   if (error instanceof Error) {
     return {
       message: error.message,
@@ -112,7 +115,7 @@ export function formatErrorForLogging(error: unknown, context?: string): {
       timestamp
     };
   }
-  
+
   return {
     message: String(error),
     context,
@@ -141,7 +144,7 @@ export interface ErrorNotification {
  * Convert error to UI notification
  */
 export function errorToNotification(
-  error: unknown, 
+  error: unknown,
   options: {
     dismissible?: boolean;
     action?: ErrorNotification['action'];
@@ -149,13 +152,13 @@ export function errorToNotification(
 ): ErrorNotification {
   const message = getErrorMessage(error);
   let severity: ErrorSeverity = 'error';
-  
+
   if (isNetworkError(error)) {
     severity = 'warning';
   } else if (isValidationError(error)) {
     severity = 'info';
   }
-  
+
   return {
     id: crypto.randomUUID(),
     message,
@@ -184,24 +187,24 @@ export async function withRetry<T>(
     backoff = true,
     shouldRetry = (error) => isNetworkError(error) || isServerError(error)
   } = options;
-  
+
   let lastError: unknown;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
-      
+
       if (attempt === maxRetries || !shouldRetry(error)) {
         throw error;
       }
-      
+
       const waitTime = backoff ? delay * Math.pow(2, attempt) : delay;
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
-  
+
   throw lastError;
 }
 
@@ -224,7 +227,7 @@ export const ERROR_MESSAGES = {
  */
 export function showError(message: string): void {
   console.error('ERROR:', message);
-  
+
   // Create simple toast notification
   const toast = document.createElement('div');
   toast.className = 'error-toast';
@@ -244,9 +247,9 @@ export function showError(message: string): void {
     max-width: 300px;
     word-wrap: break-word;
   `;
-  
+
   document.body.appendChild(toast);
-  
+
   // Auto remove after 5 seconds
   setTimeout(() => {
     if (toast.parentNode) {
@@ -260,7 +263,7 @@ export function showError(message: string): void {
  */
 export function showSuccess(message: string): void {
   console.log('SUCCESS:', message);
-  
+
   // Create simple toast notification
   const toast = document.createElement('div');
   toast.className = 'success-toast';
@@ -280,9 +283,9 @@ export function showSuccess(message: string): void {
     max-width: 300px;
     word-wrap: break-word;
   `;
-  
+
   document.body.appendChild(toast);
-  
+
   // Auto remove after 3 seconds
   setTimeout(() => {
     if (toast.parentNode) {

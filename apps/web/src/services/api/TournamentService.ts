@@ -3,7 +3,6 @@ import {
   Tournament,
   TournamentDTOs,
   TournamentMatch,
-  TournamentLeaderboard
 } from '../../models';
 
 const API_PREFIX = '';
@@ -34,14 +33,14 @@ export class TournamentService {
    */
   async getTournaments(
     status?: 'registration' | 'in_progress' | 'finished',
-    page = 1, 
+    page = 1,
     limit = 20
   ): Promise<TournamentDTOs.TournamentListResponse> {
     let endpoint = `${API_PREFIX}/tournaments?page=${page}&limit=${limit}`;
     if (status) {
       endpoint += `&status=${status}`;
     }
-    
+
     const response = await httpClient.get<TournamentDTOs.TournamentListResponse>(endpoint);
     return response.data!;
   }
@@ -50,7 +49,7 @@ export class TournamentService {
    * Register for a tournament
    */
   async registerForTournament(
-    tournamentId: string, 
+    tournamentId: string,
     request: TournamentDTOs.RegisterForTournamentRequest
   ): Promise<TournamentDTOs.RegisterForTournamentResponse> {
     const response = await httpClient.post<TournamentDTOs.RegisterForTournamentResponse>(
@@ -72,7 +71,8 @@ export class TournamentService {
    */
   async startTournament(tournamentId: string): Promise<TournamentDTOs.StartTournamentResponse> {
     const response = await httpClient.post<TournamentDTOs.StartTournamentResponse>(
-      `${API_PREFIX}/tournaments/${tournamentId}/start`
+      `${API_PREFIX}/tournaments/${tournamentId}/start`,
+      {}
     );
     return response.data!;
   }
@@ -81,7 +81,7 @@ export class TournamentService {
    * Cancel a tournament (for tournament creator or admin)
    */
   async cancelTournament(tournamentId: string): Promise<void> {
-    await httpClient.post(`${API_PREFIX}/tournaments/${tournamentId}/cancel`);
+    await httpClient.post(`${API_PREFIX}/tournaments/${tournamentId}/cancel`, {});
   }
 
   /**
@@ -92,7 +92,7 @@ export class TournamentService {
     if (round !== undefined) {
       endpoint += `?round=${round}`;
     }
-    
+
     const response = await httpClient.get<TournamentMatch[]>(endpoint);
     return response.data!;
   }

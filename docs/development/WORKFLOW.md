@@ -40,14 +40,14 @@ pnpm dev:all
 ### 🔧 Modifying Shared Packages
 
 #### When to modify shared packages:
-- Adding new data structures used by multiple services
-- Creating common utility functions
-- Adding validation schemas for new API endpoints
+- Adding new utility functions for multiple services
+- Creating common validation schemas for API endpoints
+- Adding messaging event contracts
 
 #### Workflow:
 ```bash
-# 1. Make changes in packages/shared-types, shared-utils, or shared-validation
-cd packages/shared-types
+# 1. Make changes in packages/shared-utils, shared-validation, or shared-messaging
+cd packages/shared-utils
 # Edit src/index.ts
 
 # 2. Build the package
@@ -58,16 +58,14 @@ pnpm build
 pnpm dev:all
 ```
 
-#### Example: Adding a new shared type
+#### Example: Adding a new shared utility
 ```typescript
-// In packages/shared-types/src/index.ts
-export interface GameRoom {
-  id: string;
-  player1Id: string;
-  player2Id?: string;
-  status: 'waiting' | 'playing' | 'finished';
-  createdAt: Date;
-}
+// In packages/shared-utils/src/index.ts
+export const formatGameDuration = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 ```
 
 ### 🎮 Working on Individual Services

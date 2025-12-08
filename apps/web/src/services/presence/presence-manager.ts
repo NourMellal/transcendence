@@ -16,12 +16,11 @@ function resolveHeartbeatInterval(): number {
 
 export class PresenceManager {
   private readonly heartbeatMs = resolveHeartbeatInterval();
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private intervalId: number | null = null;
   private currentStatus: PresenceStatus = 'OFFLINE';
   private initialized = false;
   private lifecycleBound = false;
-  private unsubscribeAuth?: () => void;
-  private unsubscribeLogout?: () => void;
+  private unsubscribers: Array<() => void> = [];
 
   initialize(): void {
     if (this.initialized || typeof window === 'undefined') {
@@ -29,10 +28,12 @@ export class PresenceManager {
     }
 
     this.initialized = true;
-    this.unsubscribeAuth = appState.auth.subscribe((authState) => this.handleAuthChange(authState));
-    this.unsubscribeLogout = authEvents.on('logout', () => {
-      void this.flushStatus('OFFLINE', true);
-    });
+    this.unsubscribers.push(
+      appState.auth.subscribe((authState) => this.handleAuthChange(authState)),
+      authEvents.on('logout', () => {
+        void this.flushStatus('OFFLINE', true);
+      })
+    );
     this.handleAuthChange(appState.auth.get());
     this.bindLifecycleListeners();
   }

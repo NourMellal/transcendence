@@ -10,7 +10,6 @@
         "test": "vitest"
     },
     "dependencies": {
-        "@transcendence/shared-types": "workspace:*",
         "node-vault": "^0.10.9"
     },
     "devDependencies": {

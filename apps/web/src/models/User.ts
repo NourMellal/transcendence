@@ -12,6 +12,7 @@ export interface User {
   avatar?: string;
   isTwoFAEnabled: boolean;
   status?: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  oauthProvider?: '42' | 'local' | null; // OAuth provider used for authentication
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
@@ -92,7 +93,15 @@ export namespace UserDTOs {
   }
 
   export interface UpdateProfileResponse {
-    user: User;
+    id: string;
+    email: string;
+    username: string;
+    displayName?: string;
+    avatar?: string;
+    is2FAEnabled: boolean;
+    oauthProvider?: 'local' | '42';
+    updatedAt: string;
+    message: string;
   }
 
   export interface Generate2FAResponse {

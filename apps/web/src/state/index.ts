@@ -58,7 +58,7 @@ export const appState = {
 };
 
 export class AuthActions {
-  static async login(email: string, password: string) {
+  static async login(_email: string, _password: string) {
     appState.auth.set({
       ...appState.auth.get(),
       isLoading: true,
@@ -116,7 +116,7 @@ export class AuthActions {
     });
   }
 
-  static completeOAuthFlow(success: boolean) {
+  static completeOAuthFlow(_success: boolean) {
     const current = appState.auth.get();
     appState.auth.set({
       ...current,

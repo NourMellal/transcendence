@@ -43,7 +43,7 @@ class GameService {
       const response = await httpClient.post<CreateGameResponse>(this.basePath, request);
 
       console.log('[GameService] ✅ Game created:', response.data);
-      return response.data;
+      return response.data!;
     } catch (error) {
       console.error('[GameService] ❌ Failed to create game:', error);
       throw new Error('Failed to create game. Please try again.');
@@ -61,7 +61,7 @@ class GameService {
       const response = await httpClient.get<GameStateOutput>(`${this.basePath}/${gameId}`);
 
       console.log('[GameService] ✅ Game fetched:', (response.data as any)?.status);
-      return response.data;
+      return response.data!;
     } catch (error) {
       console.error('[GameService] ❌ Failed to fetch game:', error);
       throw new Error('Game not found or no longer available.');
@@ -79,7 +79,7 @@ class GameService {
       const response = await httpClient.post<GameStateOutput>(`${this.basePath}/${gameId}/join`, {});
 
       console.log('[GameService] ✅ Joined game successfully');
-      return response.data;
+      return response.data!;
     } catch (error) {
       console.error('[GameService] ❌ Failed to join game:', error);
       throw new Error('Failed to join game. It may be full or already started.');
@@ -131,8 +131,8 @@ class GameService {
 
       const response = await httpClient.get<{ games: GameStateOutput[]; total: number }>(this.basePath);
 
-      console.log('[GameService] ✅ Fetched', (response.data as any)?.games?.length ?? 0, 'games');
-      return response.data.games;
+      console.log('[GameService] ✅ Fetched', response.data?.games?.length ?? 0, 'games');
+      return response.data!.games;
     } catch (error) {
       console.error('[GameService] ❌ Failed to list games:', error);
       throw new Error('Failed to load available games.');

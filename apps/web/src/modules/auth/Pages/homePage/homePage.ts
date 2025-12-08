@@ -1,5 +1,5 @@
 import { Component } from "../../../../core";
-import navBar from "../../components/navbar/navbar";
+
 type Props = { start?: number; label?: string  };
 type State = { count: number };
 
@@ -13,11 +13,11 @@ export default class homePage extends Component<Props, State> {
   }
 
   render()  {
-    return [ 
-        `<div class="home-container" >  
+    return [
+        `<div class="home-container" >
         </div>`
     ];
   }
   protected attachEventListeners(): void {
 }
-}  
+}

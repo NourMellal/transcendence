@@ -6,7 +6,6 @@ import {
   DashboardMatchSummary,
   DashboardProfile,
   Friend,
-  User,
 } from '@/models';
 import { userService } from '@/services/api/UserService';
 import { authManager } from '@/utils/auth';
@@ -264,7 +263,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       this.scheduleFriendRequestFeedbackReset();
     } finally {
       window.setTimeout(() => {
-        const nextStatus = { ...this.state.friendRequestStatus, [friendId]: 'idle' };
+        const nextStatus: Record<string, InviteStatus> = { ...this.state.friendRequestStatus, [friendId]: 'idle' };
         this.setState({ friendRequestStatus: nextStatus });
       }, 2500);
     }
@@ -391,9 +390,6 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     `;
   }
 
-  private getSuggestionKey(friendId: string): string {
-    return `suggest-${friendId}`;
-  }
 
   private getFriendshipKey(friendshipId: string): string {
     return `friendship-${friendshipId}`;
@@ -417,7 +413,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
   private async handleUserSearch(username: string): Promise<void> {
     const trimmedUsername = username.trim();
-    
+
     if (!trimmedUsername) {
       this.setState({
         userSearchQuery: '',
@@ -435,7 +431,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
     try {
       const user = await userService.searchUserByUsername(trimmedUsername);
-      
+
       if (!user) {
         this.setState({ userSearchStatus: 'not-found' });
         return;
@@ -444,12 +440,12 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       // Check if user is already a friend or is the current user
       const currentUserId = appState.auth.get().user?.id;
       const friendIds = new Set(this.state.friends.map((f) => f.id));
-      
+
       if (user.id === currentUserId) {
         this.setState({ userSearchStatus: 'not-found' });
         return;
       }
-      
+
       if (friendIds.has(user.id)) {
         this.setState({ userSearchStatus: 'not-found' });
         return;
@@ -746,7 +742,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     const suggestion = userSearchResult;
 
     let resultContent = '';
-    
+
     if (userSearchStatus === 'loading') {
       resultContent = `
         <div class="text-sm text-white/50 py-4 text-center">
@@ -769,7 +765,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       const status = this.state.friendRequestStatus[suggestion.id] ?? 'idle';
       const buttonLabel =
         status === 'loading' ? 'Sending...' : status === 'success' ? 'Request Sent' : 'Send Friend Request';
-      
+
       resultContent = `
         <div class="flex items-center justify-between mt-4 p-3 rounded-xl" style="background: rgba(255,255,255,0.05);">
           <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
@@ -922,7 +918,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
     return `
       <article class="flex items-center justify-between gap-3 rounded-2xl p-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);">
-        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" 
+        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
              data-action="view-profile" data-user-id="${friend.id}">
           <div class="relative">
             <img src="${friend.avatar || '/assets/images/ape.png'}" alt="${friend.username}" class="h-12 w-12 rounded-xl object-cover" />
@@ -1197,7 +1193,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     // User search functionality
     const searchButton = this.element.querySelector<HTMLElement>('[data-action="search-user"]');
     const searchInput = this.element.querySelector<HTMLInputElement>('#user-search-input');
-    
+
     if (searchButton && searchInput) {
       const searchHandler = (event: Event) => {
         event.preventDefault();

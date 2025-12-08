@@ -25,7 +25,7 @@ class AuthManager {
     isLoading: false,
     error: null
   };
-  
+
   private listeners: Array<(state: AuthState) => void> = [];
 
   /**
@@ -40,7 +40,7 @@ class AuthManager {
    */
   subscribe(listener: (state: AuthState) => void): () => void {
     this.listeners.push(listener);
-    
+
     // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(listener);
@@ -63,7 +63,7 @@ class AuthManager {
    */
   async initialize(): Promise<void> {
     this.setState({ isLoading: true, error: null });
-    
+
     try {
       const user = await authService.getStatus();
       if (user) {
@@ -94,7 +94,7 @@ class AuthManager {
    */
   async login(email: string, password: string, twoFACode?: string): Promise<void> {
     this.setState({ isLoading: true, error: null });
-    
+
     try {
       const response = await authService.login({ email, password, twoFACode });
       this.setState({
@@ -116,7 +116,7 @@ class AuthManager {
    */
   async register(username: string, email: string, password: string): Promise<void> {
     this.setState({ isLoading: true, error: null });
-    
+
     try {
       const response = await authService.register({ username, email, password });
       this.setState({
@@ -145,7 +145,7 @@ class AuthManager {
    */
   async handle42Callback(code: string, state: string): Promise<void> {
     this.setState({ isLoading: true, error: null });
-    
+
     try {
       const response = await authService.handle42Callback(code, state);
       this.setState({
@@ -172,7 +172,7 @@ class AuthManager {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error);
     }
-    
+
     this.setState({
       user: null,
       isAuthenticated: false,
@@ -206,7 +206,7 @@ export function useAuth(): AuthState & {
   login: (email: string, password: string, twoFACode?: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  start42Login: () => Promise<void>;
+  start42Login: () => void;
   clearError: () => void;
 } {
   return {
