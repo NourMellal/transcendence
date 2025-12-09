@@ -1,5 +1,5 @@
 import { Server as HttpServer } from 'http';
-import { Server as SocketIOServer, Socket } from 'socket.io';
+import { Server as SocketIOServer, Socket } from 'socket.io'
 import { Message } from '../../domain/entities/message.entity';
 import { logger } from '../config';
 
@@ -18,7 +18,7 @@ export class ChatWebSocketServer {
     constructor(httpServer: HttpServer, deps: ChatWebSocketServerDeps) {
         this.io = new SocketIOServer(httpServer, {
             cors: { origin: '*' },
-            path: '/chat'
+            path: '/socket.io/'
         });
         this.deps = deps;
         this.configure();
@@ -36,6 +36,11 @@ export class ChatWebSocketServer {
                 next(error as Error);
             }
         });
+
+        // Set the Socket.IO server on handlers that need broadcasting
+        if (this.deps.sendMessageHandler.setServer) {
+            this.deps.sendMessageHandler.setServer(this.io);
+        }
 
         this.io.on('connection', (socket) => {
             const userId = socket.data.userId;

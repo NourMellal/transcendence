@@ -8,8 +8,8 @@ export class SQLiteConversationRepository implements IconversationRepository {
       const query = `
         INSERT OR REPLACE INTO conversations (
           id,
-          user1_id,
-          user2_id,
+          participant1_id,
+          participant2_id,
           last_message_at
         ) VALUES (?, ?, ?, ?)
       `;
@@ -35,7 +35,7 @@ export class SQLiteConversationRepository implements IconversationRepository {
     return new Promise((resolve, reject) => {
       const query = `
         SELECT * FROM conversations 
-        WHERE user1_id = ? OR user2_id = ?
+        WHERE participant1_id = ? OR participant2_id = ?
         ORDER BY last_message_at DESC
       `;
 
@@ -60,7 +60,7 @@ export class SQLiteConversationRepository implements IconversationRepository {
       const [sortedUser1, sortedUser2] = [userId1, userId2].sort();
       const query = `
         SELECT * FROM conversations 
-        WHERE user1_id = ? AND user2_id = ?
+        WHERE participant1_id = ? AND participant2_id = ?
       `;
 
       const params = [sortedUser1, sortedUser2];
@@ -102,7 +102,7 @@ export class SQLiteConversationRepository implements IconversationRepository {
   private mapRowToConversation(row: any): Conversation {
     return Conversation.reconstitute({
       id: row.id,
-      participants: [row.user1_id, row.user2_id],
+      participants: [row.participant1_id, row.participant2_id],
       lastMessageAt: new Date(row.last_message_at)
     });
   }

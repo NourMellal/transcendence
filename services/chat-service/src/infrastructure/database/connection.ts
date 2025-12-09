@@ -1,5 +1,4 @@
-import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
+import * as sqlite3 from 'sqlite3';
 import * as path from 'path';
 import * as fs from 'fs';
 

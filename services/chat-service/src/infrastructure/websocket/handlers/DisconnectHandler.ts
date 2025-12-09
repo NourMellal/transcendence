@@ -1,8 +1,9 @@
 import { Socket } from 'socket.io';
 import { logger } from '../../config';
+import { RoomManager } from '../RoomManager';
 
 export class DisconnectHandler {
-    constructor(private readonly roomManager: any) {}
+    constructor(private readonly roomManager: RoomManager) {}
 
     register(socket: Socket): void {
         socket.on('disconnect', () => {
