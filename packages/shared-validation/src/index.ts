@@ -109,12 +109,14 @@ export const createGameSchema = z.object({
   }).optional()
 });
 
-// Chat validation schemas (placeholder for future use)
+// Chat validation schemas
 export const sendMessageSchema = z.object({
     content: z.string()
         .min(1, 'Message content is required')
         .max(1000, 'Message must not exceed 1000 characters'),
-    type: z.enum(['text', 'system']).default('text')
+    type: z.enum(['GLOBAL', 'PRIVATE', 'GAME']),
+    recipientId: z.string().uuid().optional(),
+    gameId: z.string().optional()
 });
 
 // Friend validation schemas

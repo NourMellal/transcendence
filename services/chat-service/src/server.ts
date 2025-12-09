@@ -3,8 +3,8 @@ import { createContainer } from './dependency-injection/container';
 import { ChatWebSocketServer } from './infrastructure/websocket/ChatWebSocketServer';
 import { createServer } from 'http';
 import fastify, { FastifyInstance } from 'fastify';
-import { registerErrorHandler } from './infrastructure/http/middleware/errorHandler';
-import { registerRequestLogger } from './infrastructure/http/middleware/requestLogger';
+import { registerErrorHandler } from './infrastructure/http/middlewares/errorHandler';
+import { registerRequestLogger } from './infrastructure/http/middlewares/requestLogger';
 import { registerRoutes , HttpRoutesDeps } from './infrastructure/http/routes';
 interface CreateHttpServerOptions {
     readonly routes: HttpRoutesDeps;
