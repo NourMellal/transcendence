@@ -7,6 +7,7 @@ interface ChatWebSocketServerDeps {
     readonly connectionHandler: any;
     readonly sendMessageHandler: any;
     readonly disconnectHandler: any;
+    readonly typingHandler: any;
     readonly authService: any;
     readonly internalApiKey?: string;
 }
@@ -18,7 +19,8 @@ export class ChatWebSocketServer {
     constructor(httpServer: HttpServer, deps: ChatWebSocketServerDeps) {
         this.io = new SocketIOServer(httpServer, {
             cors: { origin: '*' },
-            path: '/api/chat/ws'
+            // Gateway proxy strips /api/chat/ws prefix, so we use /socket.io
+            path: '/socket.io'
         });
         this.deps = deps;
         this.configure();
@@ -42,6 +44,9 @@ export class ChatWebSocketServer {
         if (this.deps.sendMessageHandler.setServer) {
             this.deps.sendMessageHandler.setServer(this.io);
         }
+        if (this.deps.typingHandler.setServer) {
+            this.deps.typingHandler.setServer(this.io);
+        }
 
         this.io.on('connection', (socket) => {
             const userId = socket.data.userId;
@@ -51,6 +56,7 @@ export class ChatWebSocketServer {
 
             this.deps.connectionHandler.register(socket);
             this.deps.sendMessageHandler.register(socket);
+            this.deps.typingHandler.register(socket);
             this.deps.disconnectHandler.register(socket);
         });
     }

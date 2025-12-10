@@ -54,6 +54,7 @@ export async function startChatService(): Promise<void> {
             connectionHandler: container.websocket.connectionHandler,
             sendMessageHandler: container.websocket.sendMessageHandler,
             disconnectHandler: container.websocket.disconnectHandler,
+            typingHandler: container.websocket.typingHandler,
             authService: container.websocket.authService,
             internalApiKey: config.internalApiKey
         });

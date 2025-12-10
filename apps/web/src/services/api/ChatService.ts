@@ -1,81 +1,70 @@
 import { httpClient } from './client';
 import {
   ChatMessage,
+  Conversation,
+  GetMessagesParams,
+  MessagesResponse,
+  SendMessageParams,
   Notification,
   PaginatedResponse
 } from '../../models';
 
-const API_PREFIX = '';
+const API_PREFIX = '/chat';
 
 /**
  * Chat Service
  * Handles chat messages, notifications, and real-time communication
+ * Aligned with backend chat-service API endpoints
  */
 export class ChatService {
   /**
-   * Send a direct message to another user
+   * Get paginated message history
+   * GET /api/chat/messages?type=DIRECT|GAME&recipientId=X or &gameId=Y
    */
-  async sendDirectMessage(recipientId: string, content: string): Promise<ChatMessage> {
-    const response = await httpClient.post<ChatMessage>(`${API_PREFIX}/chat/messages`, {
-      recipientId,
-      content,
-      type: 'text'
-    });
-    return response.data!;
-  }
-
-  /**
-   * Send a game invitation through chat
-   */
-  async sendGameInvitation(recipientId: string, gameId: string): Promise<ChatMessage> {
-    const response = await httpClient.post<ChatMessage>(`${API_PREFIX}/chat/messages`, {
-      recipientId,
-      content: `Game invitation: ${gameId}`,
-      type: 'game_invite',
-      data: { gameId }
-    });
-    return response.data!;
-  }
-
-  /**
-   * Get chat messages with a specific user
-   */
-  async getDirectMessages(
-    userId: string,
-    page = 1,
-    limit = 50
-  ): Promise<PaginatedResponse<ChatMessage>> {
-    const response = await httpClient.get<PaginatedResponse<ChatMessage>>(
-      `${API_PREFIX}/chat/messages/direct/${userId}?page=${page}&limit=${limit}`
+  async getMessages(params: GetMessagesParams): Promise<MessagesResponse> {
+    const { type, recipientId, gameId, page = 1, limit = 50 } = params;
+    
+    let queryParams = `type=${type}&page=${page}&limit=${limit}`;
+    
+    if (recipientId) {
+      queryParams += `&recipientId=${recipientId}`;
+    }
+    
+    if (gameId) {
+      queryParams += `&gameId=${gameId}`;
+    }
+    
+    const response = await httpClient.get<MessagesResponse>(
+      `${API_PREFIX}/messages?${queryParams}`
     );
     return response.data!;
   }
 
   /**
-   * Get all conversations (list of users with last message)
+   * Get all conversations with participants, type, lastMessage, unreadCount
+   * GET /api/chat/conversations
    */
-  async getConversations(): Promise<Array<{
-    userId: string;
-    username: string;
-    avatar?: string;
-    lastMessage?: ChatMessage;
-    unreadCount: number;
-  }>> {
-    const response = await httpClient.get<Array<{
-      userId: string;
-      username: string;
-      avatar?: string;
-      lastMessage?: ChatMessage;
-      unreadCount: number;
-    }>>(`${API_PREFIX}/chat/conversations`);
+  async getConversations(): Promise<Conversation[]> {
+    const response = await httpClient.get<Conversation[]>(`${API_PREFIX}/conversations`);
+    // Handle both array response and object with data property
+    const data = response.data;
+    return Array.isArray(data) ? data : [];
+  }
+
+  /**
+   * Send a message via REST (prefer WebSocket for real-time)
+   * POST /api/chat/send
+   */
+  async sendMessage(params: SendMessageParams): Promise<ChatMessage> {
+    const response = await httpClient.post<ChatMessage>(`${API_PREFIX}/send`, params);
     return response.data!;
   }
 
   /**
    * Mark messages as read
    */
-  async markAsRead(userId: string): Promise<void> {
-    await httpClient.post(`${API_PREFIX}/chat/conversations/${userId}/read`, {});
+  async markAsRead(conversationId: string): Promise<void> {
+    await httpClient.post(`${API_PREFIX}/conversations/${conversationId}/read`, {});
   }
 
   /**

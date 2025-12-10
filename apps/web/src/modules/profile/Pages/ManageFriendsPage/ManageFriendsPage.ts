@@ -81,29 +81,42 @@ export default class ManageFriendsPage extends Component<Record<string, never>, 
       <article class="glass-card p-4 rounded-2xl flex flex-col gap-3">
         <div class="flex items-center gap-3">
           <img src="${friend.avatar || '/assets/images/ape.png'}" alt="${friend.username}" class="h-12 w-12 rounded-xl object-cover border border-white/10" />
-          <div>
+          <div class="flex-1">
             <p class="font-semibold">${friend.displayName ?? friend.username}</p>
             <p class="text-xs text-white/60">@${friend.username}</p>
             <p class="text-xs text-white/40">Status: ${friend.friendshipStatus}</p>
           </div>
         </div>
-        ${
-          isBlocked
-            ? `
-                <div>
+        <div class="flex gap-2">
+          ${
+            !isBlocked && friend.friendshipStatus === 'accepted'
+              ? `
+                  <a
+                    href="/chat?friendId=${friend.id}"
+                    class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm flex-1 text-center"
+                    style="background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--color-success);"
+                  >
+                    💬 Chat
+                  </a>
+                `
+              : ''
+          }
+          ${
+            isBlocked
+              ? `
                   <button
                     data-action="unblock-friend"
                     data-friend-id="${friend.id}"
-                    class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
+                    class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm flex-1"
                     style="background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--color-success);"
                     ${isLoading ? 'disabled' : ''}
                   >
                     Unblock
                   </button>
-                </div>
-              `
-            : ''
-        }
+                `
+              : ''
+          }
+        </div>
       </article>
     `;
   }
