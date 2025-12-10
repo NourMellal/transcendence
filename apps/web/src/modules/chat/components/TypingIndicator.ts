@@ -8,7 +8,7 @@ interface TypingIndicatorState {}
 
 /**
  * TypingIndicator Component
- * Shows animated typing indicator with username
+ * Shows animated typing indicator with username 
  */
 export default class TypingIndicator extends Component<TypingIndicatorProps, TypingIndicatorState> {
   constructor(props: TypingIndicatorProps) {
