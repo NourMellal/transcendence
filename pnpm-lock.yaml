@@ -178,10 +178,6 @@ importers:
         version: 5.9.2
 
   packages/shared-messaging:
-    dependencies:
-      '@transcendence/shared-types':
-        specifier: workspace:*
-        version: link:../shared-types
     devDependencies:
       typescript:
         specifier: ^5.3.3
@@ -190,17 +186,8 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(msw@2.12.0(@types/node@24.10.0)(typescript@5.9.2))(sass-embedded@1.93.3)(sass@1.94.1)(tsx@4.21.0)(yaml@2.8.1)
 
-  packages/shared-types:
-    devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.2
-
   packages/shared-utils:
     dependencies:
-      '@transcendence/shared-types':
-        specifier: workspace:*
-        version: link:../shared-types
       node-vault:
         specifier: ^0.10.9
         version: 0.10.9
@@ -217,9 +204,6 @@ importers:
 
   packages/shared-validation:
     dependencies:
-      '@transcendence/shared-types':
-        specifier: workspace:*
-        version: link:../shared-types
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -242,18 +226,12 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
-      '@transcendence/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
       '@transcendence/shared-validation':
         specifier: workspace:*
         version: link:../../packages/shared-validation
-      amqplib:
-        specifier: ^0.10.9
-        version: 0.10.9
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -276,9 +254,6 @@ importers:
         specifier: ^5.1.7
         version: 5.1.7
     devDependencies:
-      '@types/amqplib':
-        specifier: ^0.10.8
-        version: 0.10.8
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
@@ -300,9 +275,6 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
-      '@transcendence/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -355,9 +327,6 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
-      '@transcendence/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -410,9 +379,6 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
-      '@transcendence/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -6780,7 +6746,7 @@ snapshots:
     dependencies:
       '@vitest/spy': 3.2.4
       estree-walker: 3.0.3
-      magic-string: 0.30.21
+      magic-string: 0.30.17
     optionalDependencies:
       msw: 2.12.0(@types/node@20.19.26)(typescript@5.9.3)
       vite: 7.1.12(@types/node@20.19.26)(jiti@2.6.1)(lightningcss@1.30.2)(sass-embedded@1.93.3)(sass@1.94.1)(tsx@4.21.0)(yaml@2.8.1)
