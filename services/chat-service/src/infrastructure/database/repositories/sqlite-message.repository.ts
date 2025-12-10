@@ -1,7 +1,6 @@
 import { Database } from 'sqlite3';
 import { Message } from '../../../domain/entities/message.entity';
 import { IMessageRepository } from 'src/domain/repositories/message.respository';
-import { MessageType } from 'src/domain/value-objects/messageType';
 
 export class SQLiteMessageRepository implements IMessageRepository {
   constructor(private db: Database) {}
@@ -11,6 +10,7 @@ export class SQLiteMessageRepository implements IMessageRepository {
       const query = `
         INSERT OR REPLACE INTO messages (
           id,
+          conversation_id,
           sender_id,
           sender_username,
           content,
@@ -18,11 +18,12 @@ export class SQLiteMessageRepository implements IMessageRepository {
           recipient_id,
           game_id,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const params = [
         message.id.toString(),
+        message.conversationId,
         message.senderId,
         message.senderUsername,
         message.content.getValue(),
@@ -42,13 +43,13 @@ export class SQLiteMessageRepository implements IMessageRepository {
     });
   }
 
-  async findByType(
-    type: MessageType,
+  async findByConversationId(
+    conversationId: string,
     options: { limit: number; before?: Date }
   ): Promise<Message[]> {
     return new Promise((resolve, reject) => {
-      let query = 'SELECT * FROM messages WHERE type = ?';
-      const params: any[] = [type];
+      let query = 'SELECT * FROM messages WHERE conversation_id = ?';
+      const params: any[] = [conversationId];
 
       if (options.before) {
         query += ' AND created_at < ?';
@@ -60,7 +61,7 @@ export class SQLiteMessageRepository implements IMessageRepository {
 
       this.db.all(query, params, (err, rows: any[]) => {
         if (err) {
-          reject(new Error(`Failed to find messages by type: ${err.message}`));
+          reject(new Error(`Failed to find messages: ${err.message}`));
         } else {
           const messages = rows.map(row => this.mapRowToMessage(row));
           resolve(messages);
@@ -69,71 +70,22 @@ export class SQLiteMessageRepository implements IMessageRepository {
     });
   }
 
-  async findPrivateMessages(
-    userId1: string,
-    userId2: string,
-    options: { limit: number; before?: Date }
-  ): Promise<Message[]> {
+  async findLatestByConversationId(conversationId: string): Promise<Message | null> {
     return new Promise((resolve, reject) => {
-      let query = `
+      const query = `
         SELECT * FROM messages 
-        WHERE type = ? 
-        AND (
-          (sender_id = ? AND recipient_id = ?)
-          OR
-          (sender_id = ? AND recipient_id = ?)
-        )
+        WHERE conversation_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1
       `;
 
-      const params: any[] = [
-        MessageType.PRIVATE,
-        userId1,
-        userId2,
-        userId2,
-        userId1
-      ];
-
-      if (options.before) {
-        query += ' AND created_at < ?';
-        params.push(options.before.toISOString());
-      }
-
-      query += ' ORDER BY created_at DESC LIMIT ?';
-      params.push(options.limit);
-
-      this.db.all(query, params, (err, rows: any[]) => {
+      this.db.get(query, [conversationId], (err, row: any) => {
         if (err) {
-          reject(new Error(`Failed to find private messages: ${err.message}`));
+          reject(new Error(`Failed to find latest message: ${err.message}`));
+        } else if (!row) {
+          resolve(null);
         } else {
-          const messages = rows.map(row => this.mapRowToMessage(row));
-          resolve(messages);
-        }
-      });
-    });
-  }
-
-  async findGameMessages(
-    gameId: string,
-    options: { limit: number; before?: Date }
-  ): Promise<Message[]> {
-    return new Promise((resolve, reject) => {
-      let query = 'SELECT * FROM messages WHERE type = ? AND game_id = ?';
-      const params: any[] = [MessageType.GAME, gameId];
-
-      if (options.before) {
-        query += ' AND created_at < ?';
-        params.push(options.before.toISOString());
-      }
-
-      query += ' ORDER BY created_at DESC LIMIT ?';
-      params.push(options.limit);
-
-      this.db.all(query, params, (err, rows: any[]) => {
-        if (err) {
-          reject(new Error(`Failed to find game messages: ${err.message}`));
-        } else {
-          const messages = rows.map(row => this.mapRowToMessage(row));
-          resolve(messages);
+          resolve(this.mapRowToMessage(row));
         }
       });
     });
@@ -142,6 +94,7 @@ export class SQLiteMessageRepository implements IMessageRepository {
   private mapRowToMessage(row: any): Message {
     return Message.reconstitute({
       id: row.id,
+      conversationId: row.conversation_id,
       senderId: row.sender_id,
       senderUsername: row.sender_username,
       content: row.content,

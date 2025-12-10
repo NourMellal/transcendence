@@ -9,10 +9,24 @@ export interface GetConversationsRequestDTO {
  * Single conversation in response
  */
 export interface ConversationDTO {
-  id: string;
+  conversationId: string;
+  type: 'DIRECT' | 'GAME';
+  participants: [string, string];
   otherUserId: string;         // The other person in the conversation
   otherUsername?: string;      // Display name (optional, can be fetched from User Service)
+  gameId?: string;
   lastMessageAt: string;       // ISO 8601 format
+  lastMessage?: {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    senderUsername: string;
+    content: string;
+    type: 'DIRECT' | 'GAME';
+    recipientId?: string;
+    gameId?: string;
+    createdAt: string;
+  };
   unreadCount?: number;        // Number of unread messages (optional for MVP)
 }
 

@@ -15,7 +15,6 @@
         "@transcendence/shared-messaging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
-        "amqplib": "^0.10.9",
         "dotenv": "^16.6.1",
         "fastify": "^4.29.1",
         "jsonwebtoken": "^9.0.3",
@@ -25,7 +24,6 @@
         "sqlite3": "^5.1.7"
     },
     "devDependencies": {
-        "@types/amqplib": "^0.10.8",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^20.19.26",
         "tsx": "^4.21.0",

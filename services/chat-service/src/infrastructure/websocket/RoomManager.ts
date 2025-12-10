@@ -6,13 +6,6 @@ export class RoomManager {
     attachServer(io: SocketIOServer): void {
     }
 
-    joinGlobalRoom(socketId: string, userId: string): void {
-        if (!this.userRooms.has(userId)) {
-            this.userRooms.set(userId, new Set());
-        }
-        this.userRooms.get(userId)!.add('global');
-    }
-
     joinUserRoom(socketId: string, userId: string): void {
         if (!this.userRooms.has(userId)) {
             this.userRooms.set(userId, new Set());

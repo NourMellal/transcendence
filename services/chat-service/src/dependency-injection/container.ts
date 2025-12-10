@@ -1,6 +1,5 @@
 import { Database } from 'sqlite3';
 import { promisify } from 'util';
-import amqp from 'amqplib';
 import { ChatServiceConfig, logger } from '../infrastructure/config';
 import { SQLiteMessageRepository } from '../infrastructure/database/repositories/sqlite-message.repository';
 import { SQLiteConversationRepository } from '../infrastructure/database/repositories/sqlite-conversation.repository';
@@ -9,13 +8,14 @@ import { GetMessagesUseCase } from '../application/use-cases/get-messages.usecas
 import { GetConversationsUseCase } from '../application/use-cases/get-conversation.usecase';
 import { ChatController } from '../infrastructure/http/controllers/chat.contoller';
 import { HealthController } from '../infrastructure/http/controllers/health.controller';
-import { UserEventsHandler } from '../infrastructure/messaging/handlers/UserEventsHandler';
 import { RoomManager } from '../infrastructure/websocket/RoomManager';
 import { ConnectionHandler } from '../infrastructure/websocket/handlers/ConnectionHandler';
 import { SendMessageHandler } from '../infrastructure/websocket/handlers/SendMessageHandler';
 import { DisconnectHandler } from '../infrastructure/websocket/handlers/DisconnectHandler';
 import { WebSocketAuthService } from '../infrastructure/websocket/services/WebSocketAuthService';
-import { exit } from 'process';
+import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
+import { GameServiceClient } from '../infrastructure/external/GameServiceClient';
+import { FriendshipPolicy, GameChatPolicy } from '../application/services/chat-policies';
 
 export interface ChatServiceContainer {
     readonly repositories: {
@@ -30,10 +30,6 @@ export interface ChatServiceContainer {
     readonly controllers: {
         readonly chatController: ChatController;
         readonly healthController: HealthController;
-    };
-    readonly messaging: {
-        readonly connection: any;
-        readonly userEventsHandler: UserEventsHandler;
     };
     readonly websocket: {
         readonly roomManager: RoomManager;
@@ -51,6 +47,7 @@ async function initializeDatabase(dbPath: string): Promise<Database> {
     await runAsync(`
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
             sender_id TEXT NOT NULL,
             sender_username TEXT NOT NULL,
             content TEXT NOT NULL,
@@ -62,24 +59,27 @@ async function initializeDatabase(dbPath: string): Promise<Database> {
     `);
 
     await runAsync(`
-        CREATE INDEX IF NOT EXISTS idx_messages_type ON messages(type)
+        CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, created_at DESC)
     `);
 
     await runAsync(`
-        CREATE INDEX IF NOT EXISTS idx_messages_private ON messages(sender_id, recipient_id) WHERE type = 'private'
+        CREATE INDEX IF NOT EXISTS idx_messages_direct ON messages(sender_id, recipient_id) WHERE type = 'DIRECT'
     `);
 
     await runAsync(`
-        CREATE INDEX IF NOT EXISTS idx_messages_game ON messages(game_id) WHERE type = 'game'
+        CREATE INDEX IF NOT EXISTS idx_messages_game ON messages(game_id) WHERE type = 'GAME'
     `);
 
     await runAsync(`
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
+            type TEXT NOT NULL,
             participant1_id TEXT NOT NULL,
             participant2_id TEXT NOT NULL,
+            game_id TEXT,
             last_message_at TEXT NOT NULL,
-            UNIQUE(participant1_id, participant2_id)
+            UNIQUE(participant1_id, participant2_id, type),
+            UNIQUE(game_id, type)
         )
     `);
 
@@ -96,25 +96,29 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
 
     const messageRepository = new SQLiteMessageRepository(db);
     const conversationRepository = new SQLiteConversationRepository(db);
+    const userServiceClient = new UserServiceClient(config.userServiceBaseUrl, config.internalApiKey);
+    const gameServiceClient = new GameServiceClient(config.gameServiceBaseUrl, config.internalApiKey);
+    const friendshipPolicy = new FriendshipPolicy(userServiceClient);
+    const gameChatPolicy = new GameChatPolicy(gameServiceClient);
 
-    const sendMessageUseCase = new SendMessageUseCase(messageRepository, conversationRepository);
-    const getMessagesUseCase = new GetMessagesUseCase(messageRepository);
-    const getConversationsUseCase = new GetConversationsUseCase(conversationRepository);
+    const sendMessageUseCase = new SendMessageUseCase(
+        messageRepository,
+        conversationRepository,
+        friendshipPolicy,
+        gameChatPolicy
+    );
+    const getMessagesUseCase = new GetMessagesUseCase(messageRepository, conversationRepository);
+    const getConversationsUseCase = new GetConversationsUseCase(conversationRepository, messageRepository);
     const chatController = new ChatController(
         sendMessageUseCase,
         getMessagesUseCase,
         getConversationsUseCase
     );
     const healthController = new HealthController(); 
-    const messagingConnection = await amqp.connect(config.messaging.uri);  
-    console.log("Problem in  MQ") ;     
-    const userEventsHandler = new UserEventsHandler();
-    const messagingChannel = await messagingConnection.createChannel();
-    userEventsHandler.setChannel(messagingChannel);
 
     const roomManager = new RoomManager();
     const authService = new WebSocketAuthService(config.jwtSecret);
-    const connectionHandler = new ConnectionHandler(roomManager, authService);
+    const connectionHandler = new ConnectionHandler(roomManager, gameChatPolicy);
     const sendMessageHandler = new SendMessageHandler(sendMessageUseCase);
     const disconnectHandler = new DisconnectHandler(roomManager);
 
@@ -133,10 +137,6 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
         controllers: {
             chatController,
             healthController
-        },
-        messaging: {
-            connection: messagingConnection,
-            userEventsHandler
         },
         websocket: {
             roomManager,

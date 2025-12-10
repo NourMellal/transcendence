@@ -69,16 +69,18 @@ echo ""
 
 # Test: Get conversations
 echo "📋 GET /conversations"
-curl -X GET http://localhost:3003/conversations \
+curl -X GET http://localhost:3003/chat/conversations \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "x-internal-api-key: $INTERNAL_API_KEY" \
   -H "Content-Type: application/json" \
   -w "\nStatus: %{http_code}\n"
 echo ""
 
 # Test: Send a message
 echo "📤 POST /messages (direct message)"
-curl -X POST http://localhost:3003/messages \
+curl -X POST http://localhost:3003/chat/messages \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "x-internal-api-key: $INTERNAL_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "content": "Hello from test script!",
@@ -90,8 +92,9 @@ echo ""
 
 # Test: Get messages
 echo "📥 GET /messages"
-curl -X GET "http://localhost:3003/messages?type=DIRECT&recipientId=test-recipient-id&limit=10" \
+curl -X GET "http://localhost:3003/chat/messages?type=DIRECT&recipientId=test-recipient-id&limit=10" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "x-internal-api-key: $INTERNAL_API_KEY" \
   -H "Content-Type: application/json" \
   -w "\nStatus: %{http_code}\n"
 echo ""

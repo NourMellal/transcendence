@@ -1,6 +1,8 @@
 import { Database } from 'sqlite3';
 import { Conversation } from '../../../domain/entities/conversation.entity';
 import { IconversationRepository } from 'src/domain/repositories/conversation-repository';
+import { MessageType } from 'src/domain/value-objects/messageType';
+
 export class SQLiteConversationRepository implements IconversationRepository {
   constructor(private db: Database) {}
   async save(conversation: Conversation): Promise<void> {
@@ -8,16 +10,20 @@ export class SQLiteConversationRepository implements IconversationRepository {
       const query = `
         INSERT OR REPLACE INTO conversations (
           id,
+          type,
           participant1_id,
           participant2_id,
+          game_id,
           last_message_at
-        ) VALUES (?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
       `;
 
       const params = [
         conversation.id.toString(),
+        conversation.type,
         conversation.participants[0],
         conversation.participants[1],
+        conversation.gameId || null,
         conversation.lastMessageAt.toISOString()
       ];
 
@@ -54,16 +60,17 @@ export class SQLiteConversationRepository implements IconversationRepository {
 
   async findByParticipants(
     userId1: string,
-    userId2: string
+    userId2: string,
+    type: MessageType
   ): Promise<Conversation | null> {
     return new Promise((resolve, reject) => {
       const [sortedUser1, sortedUser2] = [userId1, userId2].sort();
       const query = `
         SELECT * FROM conversations 
-        WHERE participant1_id = ? AND participant2_id = ?
+        WHERE participant1_id = ? AND participant2_id = ? AND type = ?
       `;
 
-      const params = [sortedUser1, sortedUser2];
+      const params = [sortedUser1, sortedUser2, type];
 
       this.db.get(query, params, (err, row: any) => {
         if (err) {
@@ -78,12 +85,31 @@ export class SQLiteConversationRepository implements IconversationRepository {
     });
   }
 
+  async findByGameId(gameId: string): Promise<Conversation | null> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM conversations 
+        WHERE game_id = ? AND type = ?
+      `;
+
+      this.db.get(query, [gameId, MessageType.GAME], (err, row: any) => {
+        if (err) {
+          reject(new Error(`Failed to find game conversation: ${err.message}`));
+        } else if (!row) {
+          resolve(null);
+        } else {
+          resolve(this.mapRowToConversation(row));
+        }
+      });
+    });
+  }
+
   async getUnreadCount(userId: string, recipientId: string): Promise<number> {
     return new Promise((resolve, reject) => {
       const query = `
         SELECT COUNT(*) as count
         FROM messages 
-        WHERE type = 'PRIVATE'
+        WHERE type = 'DIRECT'
         AND sender_id = ?
         AND recipient_id = ?
       `;
@@ -103,6 +129,8 @@ export class SQLiteConversationRepository implements IconversationRepository {
     return Conversation.reconstitute({
       id: row.id,
       participants: [row.participant1_id, row.participant2_id],
+      type: row.type as MessageType,
+      gameId: row.game_id || undefined,
       lastMessageAt: new Date(row.last_message_at)
     });
   }

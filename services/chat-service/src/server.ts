@@ -6,6 +6,7 @@ import fastify, { FastifyInstance } from 'fastify';
 import { registerErrorHandler } from './infrastructure/http/middlewares/errorHandler';
 import { registerRequestLogger } from './infrastructure/http/middlewares/requestLogger';
 import { registerRoutes , HttpRoutesDeps } from './infrastructure/http/routes';
+import { createInternalApiMiddleware } from './infrastructure/http/middlewares/internalApi.middleware';
 interface CreateHttpServerOptions {
     readonly routes: HttpRoutesDeps;
     readonly internalApiKey?: string;
@@ -17,6 +18,11 @@ export async function createHttpServer(options: CreateHttpServerOptions): Promis
     registerRequestLogger(app);
     registerErrorHandler(app);
     registerRoutes(app, options.routes);
+
+    if (options.internalApiKey) {
+        const middleware = createInternalApiMiddleware(options.internalApiKey);
+        app.addHook('onRequest', middleware);
+    }
 
     return app;
 }
@@ -48,7 +54,8 @@ export async function startChatService(): Promise<void> {
             connectionHandler: container.websocket.connectionHandler,
             sendMessageHandler: container.websocket.sendMessageHandler,
             disconnectHandler: container.websocket.disconnectHandler,
-            authService: container.websocket.authService
+            authService: container.websocket.authService,
+            internalApiKey: config.internalApiKey
         });
 
         logger.info('✅ WebSocket server initialized');
@@ -73,7 +80,7 @@ export async function startChatService(): Promise<void> {
 
         logger.info(`💬 Chat Service running on port ${config.port}`);
         logger.info(`📡 HTTP API: http://localhost:${config.port}/chat`);
-        logger.info(`🔌 WebSocket: ws://localhost:${config.port}/socket.io`);
+        logger.info(`🔌 WebSocket: ws://localhost:${config.port}/api/chat/ws`);
 
     } catch (error) {
         logger.error(error, 'Failed to start Chat Service');

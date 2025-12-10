@@ -1,6 +1,5 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io'
-import { Message } from '../../domain/entities/message.entity';
 import { logger } from '../config';
 
 interface ChatWebSocketServerDeps {
@@ -9,6 +8,7 @@ interface ChatWebSocketServerDeps {
     readonly sendMessageHandler: any;
     readonly disconnectHandler: any;
     readonly authService: any;
+    readonly internalApiKey?: string;
 }
 
 export class ChatWebSocketServer {
@@ -18,7 +18,7 @@ export class ChatWebSocketServer {
     constructor(httpServer: HttpServer, deps: ChatWebSocketServerDeps) {
         this.io = new SocketIOServer(httpServer, {
             cors: { origin: '*' },
-            path: '/socket.io/'
+            path: '/api/chat/ws'
         });
         this.deps = deps;
         this.configure();
@@ -27,6 +27,7 @@ export class ChatWebSocketServer {
     private configure(): void {
         this.io.use(async (socket, next) => {
             try {
+                this.ensureInternalKey(socket);
                 const token = this.extractToken(socket);
                 const authContext = await this.deps.authService.verifyToken(token);
                 socket.data.userId = authContext.userId;
@@ -73,52 +74,11 @@ export class ChatWebSocketServer {
         throw new Error('Unauthorized: missing token');
     }
 
-    broadcastGlobalMessage(message: Message): void {
-        this.io.to('global').emit('new_message', {
-            id: message.id.toString(),
-            senderId: message.senderId,
-            senderUsername: message.senderUsername,
-            content: message.content.getValue(),
-            type: message.type,
-            createdAt: message.createdAt.toISOString()
-        });
-    }
-
-    broadcastPrivateMessage(message: Message): void {
-        if (message.recipientId) {
-            this.io.to(`user:${message.senderId}`).emit('new_message', {
-                id: message.id.toString(),
-                senderId: message.senderId,
-                senderUsername: message.senderUsername,
-                content: message.content.getValue(),
-                type: message.type,
-                recipientId: message.recipientId,
-                createdAt: message.createdAt.toISOString()
-            });
-
-            this.io.to(`user:${message.recipientId}`).emit('new_message', {
-                id: message.id.toString(),
-                senderId: message.senderId,
-                senderUsername: message.senderUsername,
-                content: message.content.getValue(),
-                type: message.type,
-                recipientId: message.recipientId,
-                createdAt: message.createdAt.toISOString()
-            });
-        }
-    }
-
-    broadcastGameMessage(message: Message): void {
-        if (message.gameId) {
-            this.io.to(`game:${message.gameId}`).emit('new_message', {
-                id: message.id.toString(),
-                senderId: message.senderId,
-                senderUsername: message.senderUsername,
-                content: message.content.getValue(),
-                type: message.type,
-                gameId: message.gameId,
-                createdAt: message.createdAt.toISOString()
-            });
+    private ensureInternalKey(socket: Socket): void {
+        if (!this.deps.internalApiKey) return;
+        const headerKey = socket.handshake.headers['x-internal-api-key'];
+        if (headerKey !== this.deps.internalApiKey) {
+            throw new Error('Unauthorized');
         }
     }
 }

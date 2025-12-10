@@ -1,44 +1,47 @@
- import { parseArgs } from "util";
-import { MessageId } from "../value-objects/MessageId";  
- import { MessageContent } from "../value-objects/messageContents";   
- import { MessageType } from "../value-objects/messageType";    
+import { MessageId } from '../value-objects/MessageId';
+import { MessageContent } from '../value-objects/messageContents';
+import { MessageType } from '../value-objects/messageType';
 
- export class Message {  
-    private constructor(
-        private readonly _id: MessageId,
-        private readonly _senderId: string,
-        private readonly _senderUsername: string,
-        private readonly _content: MessageContent,
-        private readonly _type: MessageType,
-        private readonly _recipientId: string | undefined,
-        private readonly _gameId: string | undefined,
-        private readonly _createdAt: Date
-  ){}   
+export class Message {
+  private constructor(
+    private readonly _id: MessageId,
+    private readonly _conversationId: string,
+    private readonly _senderId: string,
+    private readonly _senderUsername: string,
+    private readonly _content: MessageContent,
+    private readonly _type: MessageType,
+    private readonly _recipientId: string | undefined,
+    private readonly _gameId: string | undefined,
+    private readonly _createdAt: Date
+  ) {}
 
-  static create  (params:  {     
-     senderId: string;
+  static create(params: {
+    conversationId: string;
+    senderId: string;
     senderUsername: string;
     content: string;
     type: MessageType;
     recipientId?: string;
     gameId?: string;
-  } )  : Message
-  {    
-      return new Message(  
-      MessageId.create()  ,
+  }): Message {
+    Message.validateBusinessRules(params);
+
+    return new Message(
+      MessageId.create(),
+      params.conversationId,
       params.senderId,
       params.senderUsername,
-      
-      new MessageContent(params.content) ,
+      new MessageContent(params.content),
       params.type,
       params.recipientId,
       params.gameId,
-      new Date()     
-      )
-  }    
+      new Date()
+    );
+  }
 
- static reconstitute(params: {
+  static reconstitute(params: {
     id: string;
+    conversationId: string;
     senderId: string;
     senderUsername: string;
     content: string;
@@ -52,6 +55,7 @@ import { MessageId } from "../value-objects/MessageId";
 
     return new Message(
       id,
+      params.conversationId,
       params.senderId,
       params.senderUsername,
       content,
@@ -63,36 +67,36 @@ import { MessageId } from "../value-objects/MessageId";
   }
 
   private static validateBusinessRules(params: {
+    conversationId: string;
     senderId: string;
     senderUsername: string;
     type: MessageType;
     recipientId?: string;
     gameId?: string;
   }): void {
+    if (!params.conversationId || params.conversationId.trim() === '') {
+      throw new Error('conversationId is required');
+    }
     if (!params.senderId || params.senderId.trim() === '') {
-      throw new Error('SenderId is required');
+      throw new Error('senderId is required');
     }
     if (!params.senderUsername || params.senderUsername.trim() === '') {
-      throw new Error('SenderUsername is required');
+      throw new Error('senderUsername is required');
     }
-    if (params.type === MessageType.PRIVATE && !params.recipientId) {
-      throw new Error('PRIVATE messages require a recipientId');
+    if (params.type === MessageType.DIRECT && !params.recipientId) {
+      throw new Error('DIRECT messages require a recipientId');
     }
     if (params.type === MessageType.GAME && !params.gameId) {
       throw new Error('GAME messages require a gameId');
     }
-    if (params.type === MessageType.GLOBAL) {
-      if (params.recipientId) {
-        throw new Error('GLOBAL messages cannot have a recipientId');
-      }
-      if (params.gameId) {
-        throw new Error('GLOBAL messages cannot have a gameId');
-      }
-    }
-  }   
+  }
 
   get id(): MessageId {
     return this._id;
+  }
+
+  get conversationId(): string {
+    return this._conversationId;
   }
 
   get senderId(): string {
@@ -123,20 +127,17 @@ import { MessageId } from "../value-objects/MessageId";
     return this._createdAt;
   }
 
-  isPrivate(): boolean {
-    return this._type === MessageType.PRIVATE;
-  }
-
-  isGlobal(): boolean {
-    return this._type === MessageType.GLOBAL;
+  isDirect(): boolean {
+    return this._type === MessageType.DIRECT;
   }
 
   isGameMessage(): boolean {
     return this._type === MessageType.GAME;
-  }  
-   
-    toJson(): {
+  }
+
+  toJson(): {
     id: string;
+    conversationId: string;
     senderId: string;
     senderUsername: string;
     content: string;
@@ -144,18 +145,17 @@ import { MessageId } from "../value-objects/MessageId";
     recipientId?: string;
     gameId?: string;
     createdAt: string;
-  }  {  
-            return( { 
-                    id :  this._id.toString() ,   
-                    senderId :  this._senderId  ,  
-                    senderUsername : this._senderUsername ,  
-                    content:  this.content.toString()  ,   
-                    type : this._type ,      
-                    recipientId:this._recipientId,   
-                    gameId : this._gameId ,    
-                    createdAt : this._createdAt.toISOString() ,   
-            }) 
+  } {
+    return {
+      id: this._id.toString(),
+      conversationId: this._conversationId,
+      senderId: this._senderId,
+      senderUsername: this._senderUsername,
+      content: this.content.toString(),
+      type: this._type,
+      recipientId: this._recipientId,
+      gameId: this._gameId,
+      createdAt: this._createdAt.toISOString(),
+    };
   }
-
-}   
-
+}

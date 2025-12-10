@@ -5,6 +5,7 @@ import {
   GetConversationsResponseDTO,
   ConversationDTO 
 } from '../dto/get-conversations.dto';
+import { IMessageRepository } from 'src/domain/repositories/message.respository';
 
 /**
  * Use Case Interface
@@ -42,7 +43,8 @@ export interface IGetConversationsUseCase {
  */
 export class GetConversationsUseCase implements IGetConversationsUseCase {
   constructor(
-    private readonly conversationRepository: IconversationRepository
+    private readonly conversationRepository: IconversationRepository,
+    private readonly messageRepository: IMessageRepository
   ) {}
 
   /**
@@ -100,15 +102,35 @@ export class GetConversationsUseCase implements IGetConversationsUseCase {
       otherUserId
     );
 
+    const lastMessage = await this.messageRepository.findLatestByConversationId(
+      conversation.id.toString()
+    );
+
     // TODO: Fetch other user's username from User Service
     // const userDetails = await this.userServiceClient.getUserById(otherUserId);
     // For now: otherUsername is undefined (frontend can fetch separately)
 
     return {
-      id: conversation.id.toString(),
+      conversationId: conversation.id.toString(),
+      type: conversation.type,
+      participants: [conversation.participants[0], conversation.participants[1]],
       otherUserId,
       otherUsername: undefined,  // TODO: Integrate with User Service
+      gameId: conversation.gameId,
       lastMessageAt: conversation.lastMessageAt.toISOString(),
+      lastMessage: lastMessage
+        ? {
+            id: lastMessage.id.toString(),
+            conversationId: lastMessage.conversationId,
+            senderId: lastMessage.senderId,
+            senderUsername: lastMessage.senderUsername,
+            content: lastMessage.content.getValue(),
+            type: lastMessage.type,
+            recipientId: lastMessage.recipientId,
+            gameId: lastMessage.gameId,
+            createdAt: lastMessage.createdAt.toISOString()
+          }
+        : undefined,
       unreadCount
     };
   }

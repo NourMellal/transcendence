@@ -1,10 +1,13 @@
 
-import { ConversationId  } from "../value-objects/conversationId";
+import { ConversationId } from "../value-objects/conversationId";
+import { MessageType } from "../value-objects/messageType";
 
 export class Conversation {
   private constructor(
     private readonly _id: ConversationId,
     private readonly _participants: readonly [string, string], // Always exactly 2 users
+    private readonly _type: MessageType,
+    private readonly _gameId: string | undefined,
     private _lastMessageAt: Date
   ) {
   }
@@ -12,14 +15,16 @@ export class Conversation {
   // ============================================
   // FACTORY METHOD: Create New Conversation
   // ============================================
-  static create(userId1: string, userId2: string): Conversation {
-    Conversation.validateBusinessRules(userId1, userId2);
+  static createDirect(userId1: string, userId2: string): Conversation {
+    Conversation.validateDirectBusinessRules(userId1, userId2);
     const participants = [userId1, userId2].sort() as [string, string];
-    return new Conversation(
-      ConversationId.create(),
-      participants,
-      new Date()
-    );
+    return new Conversation(ConversationId.create(), participants, MessageType.DIRECT, undefined, new Date());
+  }
+
+  static createGame(gameId: string, userId1: string, userId2: string): Conversation {
+    Conversation.validateGameBusinessRules(gameId, userId1, userId2);
+    const participants = [userId1, userId2].sort() as [string, string];
+    return new Conversation(ConversationId.create(), participants, MessageType.GAME, gameId, new Date());
   }
 
   // ============================================
@@ -28,6 +33,8 @@ export class Conversation {
   static reconstitute(params: {
     id: string;
     participants: [string, string];
+    type: MessageType;
+    gameId?: string;
     lastMessageAt: Date;
   }): Conversation {
     const id = ConversationId.from(params.id);
@@ -35,6 +42,8 @@ export class Conversation {
     return new Conversation(
       id,
       params.participants,
+      params.type,
+      params.gameId,
       params.lastMessageAt
     );
   }
@@ -42,7 +51,7 @@ export class Conversation {
   // ============================================
   // BUSINESS RULES VALIDATION
   // ============================================
-  private static validateBusinessRules(userId1: string, userId2: string): void {
+  private static validateDirectBusinessRules(userId1: string, userId2: string): void {
     // Rule 1: Both user IDs must be provided
     if (!userId1 || userId1.trim() === '') {
       throw new Error('First user ID is required');
@@ -58,6 +67,13 @@ export class Conversation {
     }
   }
 
+  private static validateGameBusinessRules(gameId: string, userId1: string, userId2: string): void {
+    if (!gameId || gameId.trim() === '') {
+      throw new Error('Game ID is required for game conversations');
+    }
+    this.validateDirectBusinessRules(userId1, userId2);
+  }
+
   // ============================================
   // GETTERS
   // ============================================
@@ -67,6 +83,14 @@ export class Conversation {
 
   get participants(): readonly [string, string] {
     return this._participants;
+  }
+
+  get type(): MessageType {
+    return this._type;
+  }
+
+  get gameId(): string | undefined {
+    return this._gameId;
   }
 
   get lastMessageAt(): Date {
@@ -108,11 +132,15 @@ export class Conversation {
   toJSON(): {
     id: string;
     participants: [string, string];
+    type: MessageType;
+    gameId?: string;
     lastMessageAt: string;
   } {
     return {
       id: this._id.toString(),
       participants: [...this._participants] as [string, string],
+      type: this._type,
+      gameId: this._gameId,
       lastMessageAt: this._lastMessageAt.toISOString()
     };
   }

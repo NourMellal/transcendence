@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
 import { ISendMessageUseCase } from '../../../application/use-cases/sendMessageUseCase';
 import { IGetMessagesUseCase } from '../../../application/use-cases/get-messages.usecase';
 import { IGetConversationsUseCase } from '../../../application/use-cases/get-conversation.usecase';
+import { MessageType } from '../../../domain/value-objects/messageType';
 
 export class ChatController {
   constructor(
@@ -25,11 +26,16 @@ export class ChatController {
 
       const body = request.body as any;
 
+      const normalizedType = String(body.type || '').toUpperCase();
+      if (!MessageType.isValid(normalizedType)) {
+        return reply.code(400).send({ error: 'Invalid message type' });
+      }
+
       const result = await this.sendMessageUseCase.execute({
         senderId: user.id.toString(),
         senderUsername: user.username,
         content: body.content,
-        type: body.type,
+        type: normalizedType as MessageType,
         recipientId: body.recipientId,
         gameId: body.gameId
       });
@@ -49,7 +55,7 @@ export class ChatController {
                     message: 'Unauthenticated request.' 
             })
       const result = await this.getMessagesUseCase.execute({
-        type: query.type,
+        type: String(query.type || '').toUpperCase() as MessageType,
         userId:user.id.toString(),
         recipientId: query.recipientId,
         gameId: query.gameId,

@@ -4,10 +4,10 @@ import { MessageType } from "src/domain/value-objects/messageType";
  * Input DTO - Query parameters
  */
 export interface GetMessagesRequestDTO {
-  type: MessageType;           // GLOBAL, PRIVATE, or GAME
+  type: MessageType;           // DIRECT or GAME
   userId: string;              // Current user (for authorization)
   
-  // For PRIVATE messages
+  // For DIRECT messages
   recipientId?: string;        // The other user in conversation
   
   // For GAME messages
@@ -23,6 +23,7 @@ export interface GetMessagesRequestDTO {
  */
 export interface MessageDTO {
   id: string;
+  conversationId: string;
   senderId: string;
   senderUsername: string;
   content: string;

@@ -1,6 +1,5 @@
 export enum MessageType {
-  GLOBAL = 'GLOBAL',
-  PRIVATE = 'PRIVATE',
+  DIRECT = 'DIRECT',
   GAME = 'GAME'
 }
 
@@ -10,7 +9,7 @@ export namespace MessageType {
   }
 
   export function requiresRecipient(type: MessageType): boolean {
-    return type === MessageType.PRIVATE;
+    return type === MessageType.DIRECT;
   }
 
   export function requiresGameId(type: MessageType): boolean {

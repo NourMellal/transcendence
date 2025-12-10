@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import { join } from 'path';
 import { createChatServiceVault, getEnvVarAsNumber } from '@transcendence/shared-utils';
-import { createMessagingConfig, MessagingConfig } from '../messaging/config/messaging.config';
 
 dotenv.config({ path: join(__dirname, '../../../.env') });
 
@@ -10,7 +9,8 @@ export interface ChatServiceConfig {
     readonly databasePath: string;
     readonly internalApiKey?: string;
     readonly jwtSecret: string;
-    readonly messaging: MessagingConfig;
+    readonly userServiceBaseUrl: string;
+    readonly gameServiceBaseUrl: string;
 }
 
 function resolveDatabaseFilePath(): string {
@@ -23,7 +23,8 @@ function buildEnvFallback(): ChatServiceConfig {
         databasePath: resolveDatabaseFilePath(),
         internalApiKey: process.env.INTERNAL_API_KEY,
         jwtSecret: process.env.JWT_SECRET || 'fallback-jwt-secret-for-development',
-        messaging: createMessagingConfig()
+        userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
+        gameServiceBaseUrl: process.env.GAME_SERVICE_URL || 'http://game-service:3002'
     };
 }
 
@@ -46,7 +47,8 @@ export async function loadChatServiceConfig(): Promise<ChatServiceConfig> {
             databasePath: resolveDatabaseFilePath(),
             internalApiKey: internalApiKey ?? undefined,
             jwtSecret: jwtConfig.secretKey,
-            messaging: createMessagingConfig()
+            userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
+            gameServiceBaseUrl: process.env.GAME_SERVICE_URL || 'http://game-service:3002'
         };
     } catch (error) {
         const err = error as Error;

@@ -16,20 +16,21 @@ export class SendMessageHandler {
             try {
                 const userId = socket.data.userId;
                 const username = socket.data.username;
+                const type = String(data.type).toUpperCase();
 
                 const result = await this.sendMessageUseCase.execute({
                     senderId: userId,
                     senderUsername: username,
                     content: data.content,
-                    type: data.type,
+                    type: type,
                     recipientId: data.recipientId,
                     gameId: data.gameId
                 });
 
-                // Broadcast to appropriate rooms
                 if (this.io) {
                     const messagePayload = {
                         id: result.id,
+                        conversationId: result.conversationId,
                         senderId: result.senderId,
                         senderUsername: result.senderUsername,
                         content: result.content,
@@ -39,12 +40,11 @@ export class SendMessageHandler {
                         createdAt: result.createdAt
                     };
 
-                    if (result.type === 'GLOBAL') {
-                        this.io.to('global').emit('new_message', messagePayload);
-                    } else if (result.type === 'PRIVATE' && result.recipientId) {
+                    if (result.type === 'DIRECT' && result.recipientId) {
                         this.io.to(`user:${result.senderId}`).emit('new_message', messagePayload);
                         this.io.to(`user:${result.recipientId}`).emit('new_message', messagePayload);
                     } else if (result.type === 'GAME' && result.gameId) {
+                        socket.join(`game:${result.gameId}`);
                         this.io.to(`game:${result.gameId}`).emit('new_message', messagePayload);
                     }
                 }

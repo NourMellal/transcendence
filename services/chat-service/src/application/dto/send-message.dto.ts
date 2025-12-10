@@ -12,6 +12,7 @@ export interface SendMessageRequestDTO {
 
 export interface SendMessageResponseDTO {
   id: string;
+  conversationId: string;
   senderId: string;
   senderUsername: string;
   content: string;

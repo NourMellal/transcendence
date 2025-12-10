@@ -1,175 +1,123 @@
 import { Message } from '../../domain/entities/message.entity';
-import { Conversation } from '../../domain/entities/conversation.entity';      
+import { Conversation } from '../../domain/entities/conversation.entity';
 import { IMessageRepository } from 'src/domain/repositories/message.respository';
 import { MessageType } from 'src/domain/value-objects/messageType';
 import { SendMessageRequestDTO, SendMessageResponseDTO } from '../dto/send-message.dto';
 import { IconversationRepository } from 'src/domain/repositories/conversation-repository';
 
+export interface IFriendshipPolicy {
+  ensureCanDirectMessage(senderId: string, recipientId: string): Promise<void>;
+}
 
-/**
- * Use Case Interface
- */
+export interface IGameChatPolicy {
+  ensureCanChatInGame(gameId: string, userId: string): Promise<{ participants: [string, string] }>;
+}
+
 export interface ISendMessageUseCase {
   execute(dto: SendMessageRequestDTO): Promise<SendMessageResponseDTO>;
 }
 
-
-/**
- * Send Message Use Case
- * 
- * Handles the complete workflow of sending a chat message:
- * - Validates permissions
- * - Creates and saves message
- * - Updates conversation (for private messages)
- * 
- * @example
- * const result = await sendMessageUseCase.execute({
- *   senderId: 'user-123',
- *   senderUsername: 'alice',
- *   content: 'Hello!',
- *   type: MessageType.PRIVATE,
- *   recipientId: 'user-456'
- * });
- */
 export class SendMessageUseCase implements ISendMessageUseCase {
-  private broadcaster?: any;
-
   constructor(
     private readonly messageRepository: IMessageRepository,
-    private readonly conversationRepository: IconversationRepository  // ✅ Fixed
+    private readonly conversationRepository: IconversationRepository,
+    private readonly friendshipPolicy: IFriendshipPolicy,
+    private readonly gameChatPolicy: IGameChatPolicy
   ) {}
 
-  setBroadcaster(broadcaster: any): void {
-    this.broadcaster = broadcaster;
-  }
-
-
-  /**
-   * Execute the send message workflow
-   */
   async execute(dto: SendMessageRequestDTO): Promise<SendMessageResponseDTO> {
-    // Step 1: Validate business permissions
-    await this.validatePermissions(dto);
+    const type = this.normalizeType(dto.type);
 
+    if (type === MessageType.DIRECT) {
+      if (!dto.recipientId) {
+        throw new Error('recipientId is required for DIRECT messages');
+      }
+      await this.friendshipPolicy.ensureCanDirectMessage(dto.senderId, dto.recipientId);
+    }
 
-    // Step 2: Create Message entity
-    // Entity validates: content length, type rules, required fields
+    let gameParticipants: [string, string] | undefined;
+
+    if (type === MessageType.GAME) {
+      if (!dto.gameId) {
+        throw new Error('gameId is required for GAME messages');
+      }
+      const { participants } = await this.gameChatPolicy.ensureCanChatInGame(dto.gameId, dto.senderId);
+      gameParticipants = participants;
+
+      // Ensure game conversation exists before saving message
+      await this.ensureGameConversation(dto.gameId, participants[0], participants[1]);
+    }
+
+    const conversation = await this.resolveConversation(dto, type, gameParticipants);
+
     const message = Message.create({
+      conversationId: conversation.id.toString(),
       senderId: dto.senderId,
       senderUsername: dto.senderUsername,
       content: dto.content,
-      type: dto.type,
+      type,
       recipientId: dto.recipientId,
       gameId: dto.gameId
     });
 
-
-    // Step 3: Persist message to database
     await this.messageRepository.save(message);
 
+    conversation.updateLastMessageTime();
+    await this.conversationRepository.save(conversation);
 
-    // Step 4: Handle conversation update (for private messages only)
-    if (message.isPrivate() && dto.recipientId) {
-      await this.handleConversation(dto.senderId, dto.recipientId);
-    }
-
-
-    // Step 5: Convert entity to DTO for response
     return this.toResponseDTO(message);
   }
 
-
-  // ============================================
-  // PRIVATE HELPER METHODS
-  // ============================================
-
-
-  /**
-   * Validate user has permission to send this type of message
-   */
-  private async validatePermissions(dto: SendMessageRequestDTO): Promise<void> {
-    // Validate PRIVATE message requirements
-    if (dto.type === MessageType.PRIVATE) {
-      if (!dto.recipientId) {
-        throw new Error('recipientId is required for PRIVATE messages');
-      }
-
-
-      // Check if sender can message recipient
-      // TODO: Integrate with User Service API
-      // const canMessage = await this.userServiceClient.canMessage(
-      //   dto.senderId, 
-      //   dto.recipientId
-      // );
-      // if (!canMessage) {
-      //   throw new Error('Cannot send message: users are not friends or user is blocked');
-      // }
-
-
-      // For now: Allow all private messages (MVP)
+  private normalizeType(raw: MessageType | string): MessageType {
+    const upper = String(raw).toUpperCase();
+    if (!MessageType.isValid(upper)) {
+      throw new Error(`Invalid message type: ${raw}`);
     }
-
-
-    // Validate GAME message requirements
-    if (dto.type === MessageType.GAME) {
-      if (!dto.gameId) {
-        throw new Error('gameId is required for GAME messages');
-      }
-
-
-      // Check if sender is in this game
-      // TODO: Integrate with Game Service API
-      // const isInGame = await this.gameServiceClient.isUserInGame(
-      //   dto.senderId,
-      //   dto.gameId
-      // );
-      // if (!isInGame) {
-      //   throw new Error('Cannot send message: user is not in this game');
-      // }
-
-
-      // For now: Allow all game messages (MVP)
-    }
-
-
-    // GLOBAL messages: No special validation needed
+    return upper as MessageType;
   }
 
-
-  /**
-   * Handle conversation creation/update for private messages
-   */
-  private async handleConversation(
-    senderId: string,
-    recipientId: string
-  ): Promise<void> {
-    // Try to find existing conversation
-    let conversation = await this.conversationRepository.findByParticipants(
-      senderId,
-      recipientId
-    );
-
-
-    if (!conversation) {
-      // First message between these users - create new conversation
-      conversation = Conversation.create(senderId, recipientId);
-    } else {
-      // Existing conversation - update last message timestamp
-      conversation.updateLastMessageTime();
+  private async resolveConversation(
+    dto: SendMessageRequestDTO,
+    type: MessageType,
+    gameParticipants?: [string, string]
+  ): Promise<Conversation> {
+    if (type === MessageType.DIRECT) {
+      const existing = await this.conversationRepository.findByParticipants(
+        dto.senderId,
+        dto.recipientId!,
+        MessageType.DIRECT
+      );
+      if (existing) {
+        return existing;
+      }
+      return Conversation.createDirect(dto.senderId, dto.recipientId!);
     }
 
+    // GAME
+    const existing = await this.conversationRepository.findByGameId(dto.gameId!);
+    if (existing) {
+      return existing;
+    }
+    if (!gameParticipants) {
+      const ensured = await this.gameChatPolicy.ensureCanChatInGame(dto.gameId!, dto.senderId);
+      gameParticipants = ensured.participants;
+    }
+    return Conversation.createGame(dto.gameId!, gameParticipants[0], gameParticipants[1]);
+  }
 
-    // Save (insert or update)
+  private async ensureGameConversation(gameId: string, player1: string, player2: string): Promise<void> {
+    const existing = await this.conversationRepository.findByGameId(gameId);
+    if (existing) {
+      return;
+    }
+    const conversation = Conversation.createGame(gameId, player1, player2);
     await this.conversationRepository.save(conversation);
   }
 
-
-  /**
-   * Convert Message entity to response DTO
-   */
   private toResponseDTO(message: Message): SendMessageResponseDTO {
     return {
       id: message.id.toString(),
+      conversationId: message.conversationId,
       senderId: message.senderId,
       senderUsername: message.senderUsername,
       content: message.content.getValue(),
