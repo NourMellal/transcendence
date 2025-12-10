@@ -46,6 +46,12 @@ Friend:
     friendshipStatus:
       type: string
       enum: [pending, accepted, rejected, blocked]
+    friendshipId:
+      type: string
+      format: uuid
+    isRequester:
+      type: boolean
+      description: Whether the authenticated user initiated the request
   required: [id, username, isOnline, friendshipStatus]
 
 FriendListResponse:

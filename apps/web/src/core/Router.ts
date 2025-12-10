@@ -1,6 +1,13 @@
 import Component from "./Component";
 import { Route, ComponentConstructor } from "./types";
 import { viewSignal } from "./utils";
+import { appState } from "../state";
+
+// Routes that should redirect authenticated users to dashboard
+const GUEST_ONLY_ROUTES = ['/auth/login', '/auth/signup'];
+
+// Routes that require authentication (redirect to login if not authenticated)
+const PROTECTED_ROUTES = ['/dashboard', '/profile', '/game', '/chat', '/friends'];
 
 export default class Router {
    private _routes: Route[];
@@ -27,17 +34,56 @@ export default class Router {
     }
   }
 
+  /**
+   * Check auth guards before navigating.
+   * Returns true if navigation should proceed, false if redirected.
+   */
+  private checkAuthGuards(path: string): boolean {
+    const isAuthenticated = appState.auth.get().isAuthenticated;
+    
+    // Redirect logged-in users away from guest-only pages (login/signup)
+    if (GUEST_ONLY_ROUTES.some(route => path.startsWith(route))) {
+      if (isAuthenticated) {
+        // Use setTimeout to avoid navigation during navigation
+        setTimeout(() => this.navigate('/dashboard'), 0);
+        return false;
+      }
+    }
+    
+    // Redirect unauthenticated users away from protected pages
+    if (PROTECTED_ROUTES.some(route => path.startsWith(route))) {
+      if (!isAuthenticated) {
+        setTimeout(() => this.navigate('/auth/login'), 0);
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
 navigate(path: string): void  { 
      if (!path) return;
      if (path === this._location) return;
+     
+     // Check auth guards before proceeding
+     if (!this.checkAuthGuards(path)) {
+       return;
+     }
+     
      history.pushState(null, '', path); 
      this.handleNavigation(path);
   };
   start(): void  
    {    
-      this._location =  window.location.pathname  ;    
+      this._location =  window.location.pathname;
       window.addEventListener('popstate', this.onPopState.bind(this));
-      this.handleNavigation(this._location)  ;  
+      
+      // Check auth guards on initial load
+      if (!this.checkAuthGuards(this._location)) {
+        return;
+      }
+      
+      this.handleNavigation(this._location);
    };
 
   destroy(): void {
@@ -49,6 +95,12 @@ navigate(path: string): void  {
    private onPopState(): void {
       const path = window.location.pathname;
       if (path === this._location) return;
+      
+      // Check auth guards on browser back/forward
+      if (!this.checkAuthGuards(path)) {
+        return;
+      }
+      
       this.handleNavigation(path);
    };  
 

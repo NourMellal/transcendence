@@ -5,6 +5,7 @@
  */
 
 import { User } from '../../domain/entities/user.entity';
+import { PresenceStatus } from '../../domain/entities/presence.entity';
 import { UserProfileDTO, UpdateProfileResponseDTO } from '../dto/user.dto';
 
 export class UserMapper {
@@ -12,7 +13,7 @@ export class UserMapper {
      * Convert User entity to UserProfileDTO
      * Filters out sensitive data (passwordHash, twoFASecret)
      */
-    static toProfileDTO(user: User): UserProfileDTO {
+    static toProfileDTO(user: User, status: PresenceStatus = PresenceStatus.OFFLINE): UserProfileDTO {
         return {
             id: user.id.toString(),
             email: user.email.toString(),
@@ -21,6 +22,7 @@ export class UserMapper {
             avatar: user.avatar,
             is2FAEnabled: user.is2FAEnabled,
             oauthProvider: user.oauthProvider,
+            status,
             createdAt: user.createdAt.toISOString(),
             updatedAt: user.updatedAt.toISOString(),
         };

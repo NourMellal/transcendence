@@ -1,4 +1,4 @@
-export type PresenceStatusDTO = 'online' | 'offline';
+export type PresenceStatusDTO = 'ONLINE' | 'OFFLINE' | 'INGAME';
 
 export interface UpdatePresenceInputDTO {
     readonly userId: string;

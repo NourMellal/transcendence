@@ -125,8 +125,7 @@ Services communicate asynchronously through **RabbitMQ**:
 ### Shared Packages
 ```
 packages/
-├── shared-types/         # TypeScript interfaces
-├── shared-utils/         # Common utilities
+├── shared-utils/         # Common utilities, response builders
 ├── shared-validation/    # Zod validation schemas
 └── shared-messaging/     # Event contracts
 ```

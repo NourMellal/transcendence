@@ -49,4 +49,8 @@ export class GameRoomManager {
     emitToGame(gameId: string, event: string, payload: unknown): void {
         this.io?.to(gameId).emit(event, payload);
     }
+
+    getPlayerCount(gameId: string): number {
+        return this.roomPlayers.get(gameId)?.size ?? 0;
+    }
 }

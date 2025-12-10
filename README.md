@@ -114,8 +114,7 @@ transcendence/
 │
 ├── packages/                      # Shared Kernel
 │   ├── shared-messaging/          # Integration event contracts
-│   ├── shared-types/              # TypeScript types
-│   ├── shared-utils/              # Utilities (Vault helper)
+│   ├── shared-utils/              # Utilities (Vault helper, response builders)
 │   └── shared-validation/         # Input validation
 │
 ├── infrastructure/

@@ -274,6 +274,17 @@ export class HttpClient {
     const originalConfig = originalEntry?.config;
     const originalUrl = originalEntry?.url || response.url;
 
+    // Check if this is an auth-related request (login, signup, etc.)
+    // These should NOT trigger token refresh - just return the error as-is
+    const authPaths = ['/auth/login', '/auth/signup', '/auth/register', '/auth/42/callback'];
+    const isAuthRequest = authPaths.some(path => originalUrl.includes(path));
+    
+    if (isAuthRequest) {
+      console.log('[HttpClient] 🔐 Auth request failed with 401, returning original error');
+      // Return the response as-is to let the caller handle the error message
+      return response;
+    }
+
     // If we've already retried this request, avoid infinite refresh loops
     if (originalConfig && (originalConfig as any)._retry) {
       console.error('[HttpClient] ♻️ Detected retry of an already-retried request — aborting and logging out');
@@ -572,7 +583,7 @@ export class HttpClient {
 
       // Store tokens
       localStorage.setItem('token', token);
-      // Note: Backend should provide refreshToken too, adjust if needed
+      // Backend currently persists only the access token; extend this block when refresh tokens ship.
 
       // Update app state
       const currentAuth = appState.auth.get();

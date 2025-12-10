@@ -41,7 +41,7 @@ export class ChatService {
    * Get chat messages with a specific user
    */
   async getDirectMessages(
-    userId: string, 
+    userId: string,
     page = 1,
     limit = 50
   ): Promise<PaginatedResponse<ChatMessage>> {
@@ -75,7 +75,7 @@ export class ChatService {
    * Mark messages as read
    */
   async markAsRead(userId: string): Promise<void> {
-    await httpClient.post(`${API_PREFIX}/chat/conversations/${userId}/read`);
+    await httpClient.post(`${API_PREFIX}/chat/conversations/${userId}/read`, {});
   }
 
   /**
@@ -92,14 +92,14 @@ export class ChatService {
    * Mark notification as read
    */
   async markNotificationAsRead(notificationId: string): Promise<void> {
-    await httpClient.patch(`${API_PREFIX}/notifications/${notificationId}/read`);
+    await httpClient.patch(`${API_PREFIX}/notifications/${notificationId}/read`, {});
   }
 
   /**
    * Mark all notifications as read
    */
   async markAllNotificationsAsRead(): Promise<void> {
-    await httpClient.patch(`${API_PREFIX}/notifications/read-all`);
+    await httpClient.patch(`${API_PREFIX}/notifications/read-all`, {});
   }
 
   /**

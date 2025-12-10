@@ -11,7 +11,6 @@
     },
     "dependencies": {
         "@transcendence/shared-messaging": "workspace:*",
-        "@transcendence/shared-types": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
         "amqplib": "^0.10.3",

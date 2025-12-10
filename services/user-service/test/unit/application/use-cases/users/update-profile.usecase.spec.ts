@@ -28,6 +28,7 @@ describe('UpdateProfileUseCase', () => {
         userRepository.findById.mockResolvedValueOnce(existingUser).mockResolvedValueOnce(persistedUser);
         userRepository.findByEmail.mockResolvedValue(null);
         userRepository.findByUsername.mockResolvedValue(null);
+        userRepository.findByDisplayName.mockResolvedValue(null);
         passwordHasher.hash.mockResolvedValue('new-hash');
 
         const useCase = factory();
@@ -62,5 +63,21 @@ describe('UpdateProfileUseCase', () => {
         const useCase = factory();
 
         await expect(useCase.execute({ userId: 'missing' })).rejects.toThrow('User not found');
+    });
+
+    it('throws when display name already exists', async () => {
+        const existingUser = createTestUser({ id: new UserId('user-1') });
+        const conflictingUser = createTestUser({
+            id: new UserId('user-2'),
+            displayName: new DisplayName('taken-name'),
+        });
+
+        userRepository.findById.mockResolvedValue(existingUser);
+        userRepository.findByDisplayName.mockResolvedValue(conflictingUser);
+
+        const useCase = factory();
+        await expect(
+            useCase.execute({ userId: 'user-1', displayName: 'taken-name' })
+        ).rejects.toThrow('Display name already exists');
     });
 });

@@ -1,24 +1,93 @@
 import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
+import { appState } from '../../../../state';
+import { authService } from '../../../../services/auth/AuthService';
 
 type Props = {};
 type State = {
   activePlayers: number;
   gamesPlayed: number;
   tournaments: number;
+  isAuthenticated: boolean;
+  username: string | null;
 };
 
 export default class HomePage extends Component<Props, State> {
+  private authUnsubscribe: (() => void) | null = null;
+
   constructor(props: Props = {}) {
     super(props);
   }
 
   getInitialState(): State {
+    const auth = appState.auth.get();
     return {
       activePlayers: 1337,
       gamesPlayed: 42069,
       tournaments: 420,
+      isAuthenticated: auth.isAuthenticated,
+      username: auth.user?.username ?? null,
     };
+  }
+
+  onMount(): void {
+    // Subscribe to auth state changes
+    this.authUnsubscribe = appState.auth.subscribe(() => {
+      const auth = appState.auth.get();
+      this.setState({
+        isAuthenticated: auth.isAuthenticated,
+        username: auth.user?.username ?? null,
+      });
+    });
+  }
+
+  onUnmount(): void {
+    if (this.authUnsubscribe) {
+      this.authUnsubscribe();
+      this.authUnsubscribe = null;
+    }
+  }
+
+  private renderAuthButtons(): string {
+    const { isAuthenticated, username } = this.state;
+
+    if (isAuthenticated) {
+      return `
+        <span class="text-sm text-white/70 hidden sm:inline">Welcome, ${username ?? 'User'}</span>
+        <button
+          data-action="dashboard"
+          class="btn-touch px-3 sm:px-4 py-2 text-sm font-medium transition touch-feedback"
+          style="color: rgba(255, 255, 255, 0.8);"
+        >
+          Dashboard
+        </button>
+        <button
+          data-action="logout"
+          class="btn-touch px-4 sm:px-6 py-2 rounded-full text-sm font-medium transition touch-feedback"
+          style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2);"
+        >
+          Sign Out
+        </button>
+      `;
+    }
+
+    return `
+      <button
+        data-action="login"
+        class="btn-touch px-3 sm:px-4 py-2 text-sm font-medium transition touch-feedback"
+        style="color: rgba(255, 255, 255, 0.8);"
+      >
+        Sign In
+      </button>
+      <button
+        data-action="register"
+        class="btn-touch px-4 sm:px-6 py-2 rounded-full text-sm font-medium transition touch-feedback"
+        style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2);"
+      >
+        <span class="hidden sm:inline">Create Account</span>
+        <span class="sm:hidden">Sign Up</span>
+      </button>
+    `;
   }
 
   render() {
@@ -29,21 +98,7 @@ export default class HomePage extends Component<Props, State> {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div class="text-lg sm:text-xl font-semibold tracking-tight">Transcendence</div>
           <div class="flex items-center gap-2 sm:gap-3">
-            <button
-              data-action="login"
-              class="btn-touch px-3 sm:px-4 py-2 text-sm font-medium transition touch-feedback"
-              style="color: rgba(255, 255, 255, 0.8);"
-            >
-              Sign In
-            </button>
-            <button
-              data-action="register"
-              class="btn-touch px-4 sm:px-6 py-2 rounded-full text-sm font-medium transition touch-feedback"
-              style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2);"
-            >
-              <span class="hidden sm:inline">Create Account</span>
-              <span class="sm:hidden">Sign Up</span>
-            </button>
+            ${this.renderAuthButtons()}
           </div>
         </div>
       </nav>
@@ -205,6 +260,29 @@ export default class HomePage extends Component<Props, State> {
       btn.addEventListener('click', handler);
       this.subscriptions.push(() => btn.removeEventListener('click', handler));
     });
+
+    // Dashboard button (authenticated users)
+    const dashboardBtn = this.element.querySelector('[data-action="dashboard"]');
+    if (dashboardBtn) {
+      const handler = (e: Event) => {
+        e.preventDefault();
+        navigate('/dashboard');
+      };
+      dashboardBtn.addEventListener('click', handler);
+      this.subscriptions.push(() => dashboardBtn.removeEventListener('click', handler));
+    }
+
+    // Logout button (authenticated users)
+    const logoutBtn = this.element.querySelector('[data-action="logout"]');
+    if (logoutBtn) {
+      const handler = async (e: Event) => {
+        e.preventDefault();
+        await authService.logout();
+        // Page will re-render automatically via appState.auth subscription
+      };
+      logoutBtn.addEventListener('click', handler);
+      this.subscriptions.push(() => logoutBtn.removeEventListener('click', handler));
+    }
 
     // Play button
     const playBtn = this.element.querySelector('[data-action="play-now"]');

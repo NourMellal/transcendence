@@ -1,4 +1,8 @@
-export default class Component<P = {}, S = {}> {
+/**
+ * Base Component class for the frontend framework.
+ * All UI components should extend this abstract class.
+ */
+export default abstract class Component<P = {}, S = {}> {
   protected element: HTMLElement | null = null;
   protected state: S;
   protected props: P;
@@ -8,24 +12,25 @@ export default class Component<P = {}, S = {}> {
     this.props = props;
     this.state = this.getInitialState();
   }
+
   abstract getInitialState(): S;
 
   setState(part: Partial<S>) {
-    this.state = { ...(this.state as any), ...(part as any) } as S;
+    this.state = { ...(this.state as object), ...(part as object) } as S;
     // Re-render this component in-place using the Component's own update logic
     if (!this.element || !this.element.parentElement) return;
-    
+
     const parent = this.element.parentElement;
     const raw = this.render();
     const content = this.buildContent(raw);
-    
+
     parent.replaceChild(content, this.element);
     this.element = content;
     this.attachEventListeners();
   }
 
   // render may return a string, an HTMLElement, or an array mixing strings, elements and Components
-  abstract render(): string | HTMLElement | Array<string | HTMLElement | Component<any, any>>;
+  abstract render(): string | HTMLElement | Array<string | HTMLElement | Component<unknown, unknown>>;
 
   onMount?(): void;
   onUpdate?(prevProps: P, prevState: S): void;
@@ -37,8 +42,8 @@ export default class Component<P = {}, S = {}> {
    * - string returned: parsed into nodes and wrapped in a div
    * - array returned: each item can be string|HTMLElement|Component; Components are mounted into placeholders
    */
-  protected buildContent(content: string | HTMLElement | Array<string | HTMLElement | Component<any, any>>): HTMLElement {
-    // If render returned an element, use it directly   
+  protected buildContent(content: string | HTMLElement | Array<string | HTMLElement | Component<unknown, unknown>>): HTMLElement {
+    // If render returned an element, use it directly
     if (content instanceof HTMLElement) return content;
 
     const appendStringToContainer = (html: string, container: HTMLElement) => {
@@ -94,7 +99,7 @@ export default class Component<P = {}, S = {}> {
     return wrapper;
   }
 
-  mount(container?: HTMLElement | string | Component<any, any>): HTMLElement {
+  mount(container?: HTMLElement | string | Component<unknown, unknown>): HTMLElement {
     let mountTarget: HTMLElement | null = null;
 
     if (container === undefined) {
@@ -122,7 +127,7 @@ export default class Component<P = {}, S = {}> {
     return this.element;
   }
 
-  update(newProps: Partial<Props>) {
+  update(newProps: Partial<P>) {
     const prevProps = this.props;
     const prevState = this.state;
 
@@ -130,7 +135,7 @@ export default class Component<P = {}, S = {}> {
 
     if (!this.element) return;
 
-    if (this.shouldUpdate(newProps as Props, this.state)) {
+    if (this.shouldUpdate(newProps as P, this.state)) {
       const parent = this.element.parentElement;
       if (parent) {
         const raw = this.render();
@@ -156,7 +161,7 @@ export default class Component<P = {}, S = {}> {
     }
   }
 
-  protected shouldUpdate(_newProps: Props, _newState: State): boolean {
+  protected shouldUpdate(_newProps: P, _newState: S): boolean {
     return true;
   }
 

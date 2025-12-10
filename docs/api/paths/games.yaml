@@ -258,6 +258,37 @@
               message: "Unable to retrieve game"
               code: INTERNAL_ERROR
 
+  delete:
+    tags: [Games]
+    operationId: Games_deleteGame
+    summary: Delete a game
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Game deleted successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Game deleted successfully"
+      '401':
+        description: Not authenticated
+      '403':
+        description: Not authorized to delete this game
+      '404':
+        description: Game not found
+
 /games/{gameId}/join:
   post:
     tags: [Games]

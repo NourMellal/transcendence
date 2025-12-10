@@ -2,6 +2,7 @@ import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
 import { authService } from '../../../../services/auth/AuthService';
 import { appState } from '../../../../state';
+import { ApiError } from '@/modules/shared/services/HttpClient';
 
 type Props = {};
 type State = {
@@ -17,6 +18,8 @@ export default class LoginPage extends Component<Props, State> {
   constructor(props: Props = {}) {
     super(props);
   }
+
+  // Router guards already reroute authenticated sessions before this page renders.
 
   getInitialState(): State {
     return {
@@ -251,11 +254,25 @@ export default class LoginPage extends Component<Props, State> {
         isAuthenticated: Boolean(response.user),
         isLoading: false,
       });
-      navigate('/profile');
+      navigate('/dashboard');
     } catch (error) {
+      let message = 'Unable to sign in. Please try again.';
+
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          message = 'Invalid email or password.';
+        } else if (error.status >= 500) {
+          message = 'Service is temporarily unavailable. Please try later.';
+        }
+      } else if (error instanceof Error) {
+        message = /refresh token/i.test(error.message)
+          ? 'Invalid email or password.'
+          : error.message;
+      }
+
       this.setState({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Login failed'
+        error: message,
       });
     }
   }

@@ -130,6 +130,8 @@ paths:
     $ref: './paths/users.yaml#/~1users~1{userId}~1presence'
   /users/{userId}:
     $ref: './paths/users.yaml#/~1users~1{userId}'
+  /users/by-username/{username}:
+    $ref: './paths/users.yaml#/~1users~1by-username~1{username}'
   /friends:
     $ref: './paths/friends.yaml#/~1friends'
   /friends/requests:

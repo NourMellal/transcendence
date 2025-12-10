@@ -7,10 +7,12 @@ import { Match } from './Game';
 export interface User {
   id: string;
   username: string;
+  displayName?: string;
   email: string;
   avatar?: string;
   isTwoFAEnabled: boolean;
   status?: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  oauthProvider?: '42' | 'local' | null; // OAuth provider used for authentication
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
@@ -45,8 +47,15 @@ export interface UserStats {
 export interface Friend {
   id: string;
   username: string;
+  displayName?: string;
   avatar?: string;
   status: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  isOnline: boolean;
+  presenceStatus?: 'ONLINE' | 'OFFLINE' | 'INGAME';
+  lastSeenAt?: string;
+  friendshipStatus: 'pending' | 'accepted' | 'rejected' | 'blocked';
+  friendshipId: string;
+  isRequester: boolean;
   addedAt: string; // ISO date string
 }
 
@@ -78,11 +87,21 @@ export namespace UserDTOs {
 
   export interface UpdateProfileRequest {
     username?: string;
-    avatar?: File;
+    displayName?: string;
+    email?: string;
+    avatar?: string;
   }
 
   export interface UpdateProfileResponse {
-    user: User;
+    id: string;
+    email: string;
+    username: string;
+    displayName?: string;
+    avatar?: string;
+    is2FAEnabled: boolean;
+    oauthProvider?: 'local' | '42';
+    updatedAt: string;
+    message: string;
   }
 
   export interface Generate2FAResponse {
