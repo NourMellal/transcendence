@@ -38,6 +38,24 @@ export class ConnectionHandler {
             }
         });
 
+        socket.on('typing', async (data) => {
+            try {
+                const gameId = data?.gameId;
+                const recipientId = data?.recipientId;
+
+                if (gameId) {
+                    await this.gameChatPolicy.ensureCanChatInGame(gameId, userId);
+                    this.roomManager.joinGameRoom(socket.id, userId, gameId);
+                    socket.to(`game:${gameId}`).emit('user_typing', { userId, username });
+                } else if (recipientId) {
+                    socket.to(`user:${recipientId}`).emit('user_typing', { userId, username });
+                }
+            } catch (error) {
+                const err = error as Error;
+                socket.emit('message_error', { error: err.message });
+            }
+        });
+
         logger.info(`User ${username} joined user room`);
     }
 }

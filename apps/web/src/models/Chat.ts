@@ -31,6 +31,7 @@ export interface Conversation {
   type: ChatMessageType;
   recipientId?: string;
   recipientUsername?: string;
+  recipientHandle?: string;
   recipientAvatar?: string;
   gameId?: string;
   isOnline?: boolean;
@@ -55,8 +56,8 @@ export interface GetMessagesParams {
   type: ChatMessageType;
   recipientId?: string;
   gameId?: string;
-  page?: number;
   limit?: number;
+  before?: string;
 }
 
 /**

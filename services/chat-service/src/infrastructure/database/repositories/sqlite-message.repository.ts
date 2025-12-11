@@ -1,6 +1,7 @@
 import { Database } from 'sqlite3';
 import { Message } from '../../../domain/entities/message.entity';
 import { IMessageRepository } from 'src/domain/repositories/message.respository';
+import { MessageType } from '../../../domain/value-objects/messageType';
 
 export class SQLiteMessageRepository implements IMessageRepository {
   constructor(private db: Database) {}
@@ -73,7 +74,7 @@ export class SQLiteMessageRepository implements IMessageRepository {
   async findLatestByConversationId(conversationId: string): Promise<Message | null> {
     return new Promise((resolve, reject) => {
       const query = `
-        SELECT * FROM messages 
+        SELECT * FROM messages
         WHERE conversation_id = ?
         ORDER BY created_at DESC
         LIMIT 1

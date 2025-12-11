@@ -1,7 +1,7 @@
 import { Socket, Server as SocketIOServer } from 'socket.io';
 import { SendMessageUseCase } from '../../../application/use-cases/sendMessageUseCase';
-import { MessageType } from '../../../domain/value-objects/messageType';
 import { logger } from '../../config';
+import { MessageType } from '../../../domain/value-objects/messageType';
 
 export class SendMessageHandler {
     private io: SocketIOServer | null = null;
@@ -17,8 +17,7 @@ export class SendMessageHandler {
             try {
                 const userId = socket.data.userId;
                 const username = socket.data.username;
-                const typeStr = String(data.type).toUpperCase();
-                const type = typeStr === 'DIRECT' ? MessageType.DIRECT : MessageType.GAME;
+                const type = String(data.type).toUpperCase() as MessageType;
 
                 const result = await this.sendMessageUseCase.execute({
                     senderId: userId,

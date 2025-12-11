@@ -16,6 +16,7 @@ export class ChatWebSocketService {
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
   private readonly reconnectDelays = [1000, 2000, 4000, 8000, 16000]; // exponential backoff
+  private lastTypingSentAt = 0;
 
   /**
    * Connect to chat WebSocket
@@ -32,12 +33,13 @@ export class ChatWebSocketService {
     
     console.log('[ChatWS] Connecting to:', wsUrl);
     
-    // Path includes /socket.io since gateway proxy forwards the full path
+    // Gateway proxy uses /api/chat/ws -> service /socket.io
     this.socket = createGameSocket(wsUrl, token, '/api/chat/ws/socket.io');
     
     // Setup connection event handlers
     this.socket.on('connect', () => {
       console.log('[ChatWS] Connected');
+      this.lastTypingSentAt = 0;
       this.reconnectAttempts = 0;
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
@@ -72,6 +74,7 @@ export class ChatWebSocketService {
       this.socket = null;
     }
     
+    this.lastTypingSentAt = 0;
     this.reconnectAttempts = 0;
     console.log('[ChatWS] Disconnected');
   }
@@ -146,6 +149,13 @@ export class ChatWebSocketService {
     if (!this.socket?.connected) {
       return;
     }
+
+    const now = Date.now();
+    // throttle typing emits to avoid flooding (one every 500ms)
+    if (now - this.lastTypingSentAt < 500) {
+      return;
+    }
+    this.lastTypingSentAt = now;
 
     const payload: { recipientId?: string; gameId?: string } = {};
     

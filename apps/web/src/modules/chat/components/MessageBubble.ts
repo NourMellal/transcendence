@@ -77,7 +77,7 @@ export default class MessageBubble extends Component<MessageBubbleProps, Message
    */
   private getAvatarUrl(): string {
     const avatar = (this.props.message as any).senderAvatar;
-    return avatar || '/assets/default-avatar.png';
+    return avatar || '/assets/images/ape.png';
   }
 
   render(): string {

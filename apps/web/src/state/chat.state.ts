@@ -75,7 +75,15 @@ export const chatStateHelpers = {
   upsertConversation(conversation: Conversation) {
     const state = getChatState();
     const existingIndex = state.conversations.findIndex(
-      (c: Conversation) => c.conversationId === conversation.conversationId
+      (c: Conversation) =>
+        c.conversationId === conversation.conversationId ||
+        (conversation.type === 'DIRECT' &&
+          c.type === 'DIRECT' &&
+          c.recipientId === conversation.recipientId) ||
+        (conversation.type === 'GAME' &&
+          c.type === 'GAME' &&
+          c.gameId &&
+          c.gameId === conversation.gameId)
     );
 
     const newConversations = [...state.conversations];
@@ -110,11 +118,16 @@ export const chatStateHelpers = {
    */
   setMessages(conversationId: string, messages: ChatMessage[]) {
     const state = getChatState();
+    const sorted = [...messages].sort((a, b) => {
+      const aTime = new Date((a as any).createdAt || (a as any).timestamp || (a as any).sentAt).getTime();
+      const bTime = new Date((b as any).createdAt || (b as any).timestamp || (b as any).sentAt).getTime();
+      return aTime - bTime;
+    });
     setChatState({
       ...state,
       messages: {
         ...state.messages,
-        [conversationId]: messages,
+        [conversationId]: sorted,
       },
       isLoadingMessages: false,
     });
@@ -133,7 +146,11 @@ export const chatStateHelpers = {
       return;
     }
 
-    const newMessages = [...existingMessages, message];
+    const newMessages = [...existingMessages, message].sort((a, b) => {
+      const aTime = new Date((a as any).createdAt || (a as any).timestamp || (a as any).sentAt).getTime();
+      const bTime = new Date((b as any).createdAt || (b as any).timestamp || (b as any).sentAt).getTime();
+      return aTime - bTime;
+    });
 
     // Update conversation's lastMessage and unreadCount
     const updatedConversations = state.conversations.map((conv: Conversation) => {

@@ -43,7 +43,7 @@ export default class ConversationItem extends Component<ConversationItemProps, C
    * Get avatar URL or placeholder
    */
   private getAvatarUrl(): string {
-    return this.props.conversation.recipientAvatar || '/assets/default-avatar.png';
+    return this.props.conversation.recipientAvatar || '/assets/images/ape.png';
   }
 
   /**

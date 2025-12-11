@@ -28,6 +28,8 @@ type State = {
 export default class ChatPage extends Component<Record<string, never>, State> {
   private unsubscribers: Array<() => void> = [];
   private typingTimeouts: Map<string, number> = new Map();
+  private scrollSchedule?: number;
+  private lastTypingReceived: Map<string, number> = new Map();
 
   constructor(props: Record<string, never> = {}) {
     super(props);
@@ -53,6 +55,7 @@ export default class ChatPage extends Component<Record<string, never>, State> {
 
   async onMount(): Promise<void> {
     console.log('[ChatPage] Mounting');
+    const friendIdFromQuery = this.getFriendIdFromQuery();
 
     // Subscribe to chat state changes
     this.unsubscribers.push(
@@ -102,17 +105,8 @@ export default class ChatPage extends Component<Record<string, never>, State> {
       chatStateHelpers.setError('Authentication required');
     }
 
-    // Load conversations
-    await this.loadConversations();
-
-    // Check for friendId query parameter for deep linking
-    const friendId = this.getFriendIdFromQuery();
-    if (friendId) {
-      // Wait a bit for conversations to be set in state
-      setTimeout(() => {
-        this.selectConversationByRecipient(friendId);
-      }, 100);
-    }
+    // Load conversations (and deep-link selection if needed)
+    await this.loadConversations(friendIdFromQuery);
 
     // Setup typing indicator cleanup interval
     const typingCleanupInterval = setInterval(() => {
@@ -139,6 +133,12 @@ export default class ChatPage extends Component<Record<string, never>, State> {
     // Clear typing timeouts
     this.typingTimeouts.forEach((timeout) => clearTimeout(timeout));
     this.typingTimeouts.clear();
+    this.lastTypingReceived.clear();
+
+    if (this.scrollSchedule) {
+      cancelAnimationFrame(this.scrollSchedule);
+      this.scrollSchedule = undefined;
+    }
 
     // Disconnect WebSocket
     chatWebSocketService.disconnect();
@@ -175,10 +175,8 @@ export default class ChatPage extends Component<Record<string, never>, State> {
         console.log('[ChatPage] newChatRecipientId:', this.state.newChatRecipientId);
 
         if (message.conversationId) {
-          // Mark as own if sent by current user
+          // Mark as own if sent by current user and attach avatar
           const isOwn = message.senderId === this.state.currentUserId;
-          const messageWithOwn = { ...message, isOwn } as ChatMessage;
-          console.log('[ChatPage] Adding message to conversation:', message.conversationId, 'isOwn:', isOwn);
           
           // Check if this is a new conversation (not in our list yet)
           let conversation = this.state.conversations.find(
@@ -195,6 +193,7 @@ export default class ChatPage extends Component<Record<string, never>, State> {
             const recipientUsername = isOwn 
               ? (this.state.newChatRecipientName || 'Friend') 
               : message.senderUsername;
+            const recipientAvatar = !isOwn ? (message as any).senderAvatar : undefined;
             
             // Create a new conversation object
             const newConversation: Conversation = {
@@ -202,15 +201,18 @@ export default class ChatPage extends Component<Record<string, never>, State> {
               recipientId: recipientId || '',
               recipientUsername: recipientUsername || 'Unknown',
               type: (message as any).type || 'DIRECT',
-              lastMessage: message,
+              lastMessage: this.withDisplayMeta(message, conversation || undefined),
               unreadCount: 0,
               isOnline: false,
+              recipientAvatar,
             };
             
             console.log('[ChatPage] Created new conversation:', newConversation);
             chatStateHelpers.upsertConversation(newConversation);
             conversation = newConversation;
           }
+          
+          const messageWithMeta = this.withDisplayMeta(message, conversation);
           
           // If we were starting a new chat and this is our own message, set this as active conversation
           if (this.state.newChatRecipientId && isOwn) {
@@ -223,7 +225,7 @@ export default class ChatPage extends Component<Record<string, never>, State> {
             });
           }
           
-          chatStateHelpers.addMessage(message.conversationId, messageWithOwn);
+          chatStateHelpers.addMessage(message.conversationId, messageWithMeta);
           console.log('[ChatPage] Message added to state');
           console.log('[ChatPage] Global state messages:', chatState.get().messages[message.conversationId]?.length || 0);
 
@@ -231,7 +233,8 @@ export default class ChatPage extends Component<Record<string, never>, State> {
           if (conversation) {
             chatStateHelpers.upsertConversation({
               ...conversation,
-              lastMessage: message,
+              recipientAvatar: conversation.recipientAvatar || (!isOwn ? (messageWithMeta as any).senderAvatar : undefined),
+              lastMessage: messageWithMeta,
               unreadCount:
                 this.state.selectedConversationId !== message.conversationId && !isOwn
                   ? (conversation.unreadCount || 0) + 1
@@ -246,6 +249,14 @@ export default class ChatPage extends Component<Record<string, never>, State> {
     this.unsubscribers.push(
       chatWebSocketService.onTyping((data: { userId: string; username: string }) => {
         console.log('[ChatPage] User typing:', data);
+        const now = Date.now();
+        const last = this.lastTypingReceived.get(data.userId) || 0;
+        // Ignore rapid duplicates (socket reconnections or multiple transports)
+        if (now - last < 250) {
+          return;
+        }
+        this.lastTypingReceived.set(data.userId, now);
+
         chatStateHelpers.setTyping(data.userId, data.username, true);
 
         // Clear typing indicator after 3 seconds
@@ -290,24 +301,164 @@ export default class ChatPage extends Component<Record<string, never>, State> {
   private getFriendIdFromQuery(): string | undefined {
     try {
       const params = new URL(window.location.href).searchParams;
-      return params.get('friendId') ?? undefined;
+      return params.get('friendId') ?? params.get('user') ?? undefined;
     } catch (_error) {
       return undefined;
     }
   }
 
-  private async loadConversations(): Promise<void> {
+  private scrollMessagesToBottom(): void {
+    if (this.scrollSchedule) {
+      cancelAnimationFrame(this.scrollSchedule);
+    }
+
+    this.scrollSchedule = requestAnimationFrame(() => {
+      const root = this.element;
+      if (!root) return;
+
+      const scrollers: HTMLElement[] = [];
+      const inner = root.querySelector('.message-list__messages') as HTMLElement | null;
+      const outer = root.querySelector('.message-list-container') as HTMLElement | null;
+      if (inner) scrollers.push(inner);
+      if (outer) scrollers.push(outer);
+
+      scrollers.forEach((el) => {
+        const distanceFromBottom = el.scrollHeight - el.clientHeight - el.scrollTop;
+        const shouldStickToBottom = distanceFromBottom < 120 || el.scrollTop === 0;
+        if (shouldStickToBottom) {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+    });
+  }
+
+  private resolveAvatarForMessage(message: ChatMessage, conversation?: Conversation): string {
+    const authUser = appState.auth.get().user;
+    if (message.senderId === authUser?.id) {
+      return authUser.avatar || '/assets/images/ape.png';
+    }
+
+    if (conversation?.type === 'DIRECT') {
+      return conversation.recipientAvatar || (message as any).senderAvatar || '/assets/images/ape.png';
+    }
+
+    return (message as any).senderAvatar || conversation?.recipientAvatar || '/assets/images/ape.png';
+  }
+
+  private withDisplayMeta(message: ChatMessage, conversation?: Conversation): ChatMessage {
+    const avatar = this.resolveAvatarForMessage(message, conversation);
+    return {
+      ...message,
+      senderAvatar: avatar,
+      isOwn: message.senderId === this.state.currentUserId,
+    };
+  }
+
+  private normalizeConversations(raw: any[]): Conversation[] {
+    const currentUserId = this.state.currentUserId;
+    const unique = new Map<string, Conversation>();
+
+    raw.forEach((conv) => {
+      const otherUserId =
+        conv.otherUserId ||
+        (Array.isArray(conv.participants)
+          ? conv.participants.find((id: string) => id !== currentUserId)
+          : conv.recipientId);
+      if (!otherUserId) {
+        return;
+      }
+
+      const key = conv.type === 'GAME' && conv.gameId ? `G-${conv.gameId}` : `D-${otherUserId}`;
+
+      // Normalize lastMessage timestamps
+      const lastMessage = conv.lastMessage
+        ? {
+            ...conv.lastMessage,
+            timestamp:
+              conv.lastMessage.createdAt ||
+              conv.lastMessage.timestamp ||
+              conv.lastMessage.sentAt,
+          }
+        : undefined;
+      const avatarFromLast =
+        lastMessage && lastMessage.senderId !== currentUserId
+          ? (lastMessage as any).senderAvatar
+          : undefined;
+
+      unique.set(key, {
+        conversationId: conv.conversationId || conv.id,
+        type: conv.type || 'DIRECT',
+        recipientId: conv.type === 'DIRECT' ? otherUserId : undefined,
+        recipientUsername: conv.otherUsername || conv.recipientUsername || conv.lastMessage?.senderUsername || 'Friend',
+        recipientHandle: conv.recipientUsername || conv.otherUsername || conv.lastMessage?.senderUsername,
+        recipientAvatar: conv.recipientAvatar || (conv as any).otherAvatar || avatarFromLast,
+        gameId: conv.gameId,
+        isOnline: conv.isOnline ?? false,
+        lastMessage,
+        unreadCount: conv.unreadCount ?? 0,
+      });
+    });
+
+    return Array.from(unique.values());
+  }
+
+  private async enrichDirectRecipients(conversations: Conversation[]): Promise<Conversation[]> {
+    const missingIds = new Set<string>();
+    conversations.forEach((c) => {
+      if (c.type === 'DIRECT' && c.recipientId && (!c.recipientUsername || !c.recipientAvatar)) {
+        missingIds.add(c.recipientId);
+      }
+    });
+
+    if (missingIds.size === 0) {
+      return conversations;
+    }
+
+    const profiles = await Promise.all(
+      Array.from(missingIds).map(async (id) => {
+        try {
+          const info = await userService.getUserInfo(id);
+          return { id, info };
+        } catch (error) {
+          console.warn('[ChatPage] Failed to fetch user info for chat participant', id, error);
+          return { id, info: null };
+        }
+      })
+    );
+
+    const profileMap = new Map<string, any>();
+    profiles.forEach(({ id, info }) => {
+      if (info) profileMap.set(id, info);
+    });
+
+    return conversations.map((c) => {
+      if (c.type !== 'DIRECT' || !c.recipientId) return c;
+      const info = profileMap.get(c.recipientId);
+      if (!info) return c;
+      return {
+        ...c,
+        recipientUsername: info.displayName || info.username || c.recipientUsername,
+        recipientHandle: info.username || c.recipientHandle,
+        recipientAvatar: info.avatar || c.recipientAvatar,
+      };
+    });
+  }
+
+  private async loadConversations(friendIdToSelect?: string): Promise<void> {
     chatStateHelpers.setLoadingConversations(true);
     chatStateHelpers.clearError();
 
     try {
       const conversations = await chatService.getConversations();
       console.log('[ChatPage] Loaded conversations:', conversations);
-      chatStateHelpers.setConversations(conversations);
+      const normalized = await this.enrichDirectRecipients(this.normalizeConversations(conversations));
+      chatStateHelpers.setConversations(normalized);
 
       // Auto-select first conversation if none selected
-      if (!this.state.selectedConversationId && conversations.length > 0) {
-        await this.selectConversation(conversations[0].conversationId);
+      if (friendIdToSelect) {
+        await this.selectConversationByRecipient(friendIdToSelect);
+      } else if (!this.state.selectedConversationId && normalized.length > 0) {
+        await this.selectConversation(normalized[0].conversationId);
       }
     } catch (error) {
       console.error('[ChatPage] Failed to load conversations:', error);
@@ -341,8 +492,7 @@ export default class ChatPage extends Component<Record<string, never>, State> {
 
       // Mark messages as own/other
       const messages = response.messages.map((msg: ChatMessage) => ({
-        ...msg,
-        isOwn: msg.senderId === this.state.currentUserId,
+        ...this.withDisplayMeta(msg, conversation),
       }));
 
       chatStateHelpers.setMessages(conversationId, messages);
@@ -376,22 +526,35 @@ export default class ChatPage extends Component<Record<string, never>, State> {
       
       // Fetch recipient info to get their username
       let recipientName = 'Friend';
+      let recipientAvatar: string | undefined;
       try {
         const userInfo = await userService.getUserInfo(recipientId);
         recipientName = userInfo.displayName || userInfo.username || 'Friend';
+        recipientAvatar = userInfo.avatar;
         console.log('[ChatPage] Fetched recipient name:', recipientName);
       } catch (error) {
         console.warn('[ChatPage] Failed to fetch recipient info:', error);
       }
       
-      // Store recipient ID for new conversation
+      // Store recipient ID for new conversation (placeholder in list)
+      const draftConversation: Conversation = {
+        conversationId: `draft-${recipientId}`,
+        type: 'DIRECT',
+        recipientId,
+        recipientUsername: recipientName,
+        recipientAvatar: recipientAvatar,
+        unreadCount: 0,
+      };
+
+      chatStateHelpers.upsertConversation(draftConversation);
       this.setState({ 
         newChatRecipientId: recipientId,
-        selectedConversationId: undefined,
+        selectedConversationId: draftConversation.conversationId,
         messages: [],
         newChatRecipientName: recipientName
       });
-      
+
+      chatStateHelpers.setActiveConversation(draftConversation.conversationId);
       chatStateHelpers.setError(undefined);
     }
   }
@@ -552,10 +715,9 @@ export default class ChatPage extends Component<Record<string, never>, State> {
       } else {
         // Use recipientUsername or otherUsername depending on backend response format
         displayName = selectedConv?.recipientUsername || (selectedConv as any)?.otherUsername || 'Unknown';
-        username = displayName ? `@${displayName}` : '';
-        // Generate avatar from username since backend doesn't provide it
-        const avatarSeed = selectedConv?.recipientId || (selectedConv as any)?.otherUserId || 'default';
-        avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${avatarSeed}`;
+        const handle = (selectedConv as any)?.recipientHandle || (selectedConv as any)?.otherUserId;
+        username = handle ? `@${handle}` : '';
+        avatarUrl = selectedConv?.recipientAvatar || '/assets/images/ape.png';
         if (selectedConv?.type === 'DIRECT' && selectedConv?.isOnline) {
           onlineStatus = '<span class="chat-page__online-badge"></span>';
         }
@@ -599,6 +761,9 @@ export default class ChatPage extends Component<Record<string, never>, State> {
       const inputContainer = document.createElement('div');
       messageInput.mount(inputContainer);
       messagesPanel.appendChild(inputContainer);
+
+      // Keep the viewport pinned to the latest messages when appropriate
+      this.scrollMessagesToBottom();
     }
 
     chatContainer.appendChild(messagesPanel);

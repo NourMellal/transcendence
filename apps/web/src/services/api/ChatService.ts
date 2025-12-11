@@ -22,22 +22,28 @@ export class ChatService {
    * GET /api/chat/messages?type=DIRECT|GAME&recipientId=X or &gameId=Y
    */
   async getMessages(params: GetMessagesParams): Promise<MessagesResponse> {
-    const { type, recipientId, gameId, page = 1, limit = 50 } = params;
-    
-    let queryParams = `type=${type}&page=${page}&limit=${limit}`;
-    
-    if (recipientId) {
-      queryParams += `&recipientId=${recipientId}`;
-    }
-    
-    if (gameId) {
-      queryParams += `&gameId=${gameId}`;
-    }
-    
-    const response = await httpClient.get<MessagesResponse>(
-      `${API_PREFIX}/messages?${queryParams}`
-    );
-    return response.data!;
+    const { type, recipientId, gameId, limit = 50, before } = params;
+
+    const search = new URLSearchParams();
+    search.set('type', type);
+    search.set('limit', String(limit));
+    if (recipientId) search.set('recipientId', recipientId);
+    if (gameId) search.set('gameId', gameId);
+    if (before) search.set('before', before);
+
+    const response = await httpClient.get<{
+      messages: ChatMessage[];
+      hasMore: boolean;
+      nextCursor?: string;
+    }>(`${API_PREFIX}/messages?${search.toString()}`);
+
+    const data = response.data!;
+    return {
+      messages: data.messages ?? [],
+      hasMore: data.hasMore ?? false,
+      total: data.messages?.length ?? 0,
+      nextCursor: data.nextCursor,
+    } as unknown as MessagesResponse;
   }
 
   /**
@@ -45,10 +51,12 @@ export class ChatService {
    * GET /api/chat/conversations
    */
   async getConversations(): Promise<Conversation[]> {
-    const response = await httpClient.get<Conversation[]>(`${API_PREFIX}/conversations`);
-    // Handle both array response and object with data property
+    const response = await httpClient.get<{ conversations: Conversation[] }>(`${API_PREFIX}/conversations`);
     const data = response.data;
-    return Array.isArray(data) ? data : [];
+    if (Array.isArray((data as any)?.conversations)) {
+      return (data as any).conversations;
+    }
+    return Array.isArray(data) ? (data as any) : [];
   }
 
   /**
@@ -56,7 +64,7 @@ export class ChatService {
    * POST /api/chat/send
    */
   async sendMessage(params: SendMessageParams): Promise<ChatMessage> {
-    const response = await httpClient.post<ChatMessage>(`${API_PREFIX}/send`, params);
+    const response = await httpClient.post<ChatMessage>(`${API_PREFIX}/messages`, params);
     return response.data!;
   }
 

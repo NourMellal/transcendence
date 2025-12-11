@@ -39,10 +39,11 @@ export default class Router {
    * Returns true if navigation should proceed, false if redirected.
    */
   private checkAuthGuards(path: string): boolean {
+    const pathname = new URL(path, window.location.origin).pathname;
     const isAuthenticated = appState.auth.get().isAuthenticated;
     
     // Redirect logged-in users away from guest-only pages (login/signup)
-    if (GUEST_ONLY_ROUTES.some(route => path.startsWith(route))) {
+    if (GUEST_ONLY_ROUTES.some(route => pathname.startsWith(route))) {
       if (isAuthenticated) {
         // Use setTimeout to avoid navigation during navigation
         setTimeout(() => this.navigate('/dashboard'), 0);
@@ -51,7 +52,7 @@ export default class Router {
     }
     
     // Redirect unauthenticated users away from protected pages
-    if (PROTECTED_ROUTES.some(route => path.startsWith(route))) {
+    if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
       if (!isAuthenticated) {
         setTimeout(() => this.navigate('/auth/login'), 0);
         return false;
@@ -63,15 +64,17 @@ export default class Router {
 
 navigate(path: string): void  { 
      if (!path) return;
-     if (path === this._location) return;
+     const url = new URL(path, window.location.origin);
+     const targetPath = url.pathname;
+     if (targetPath === this._location) return;
      
      // Check auth guards before proceeding
      if (!this.checkAuthGuards(path)) {
        return;
      }
      
-     history.pushState(null, '', path); 
-     this.handleNavigation(path);
+     history.pushState(null, '', url.toString()); 
+     this.handleNavigation(targetPath);
   };
   start(): void  
    {    
@@ -92,7 +95,7 @@ navigate(path: string): void  {
      } catch (e) {}
   }
 
-   private onPopState(): void {
+private onPopState(): void {
       const path = window.location.pathname;
       if (path === this._location) return;
       
@@ -112,7 +115,7 @@ navigate(path: string): void  {
 private match(path: string): Route | null {
     const normalize = (p: string) => {
         if (!p) return '/';
-        const cleaned = p.replace(/\/+$/, '');
+        const cleaned = p.replace(/\?.*$/, '').replace(/\/+$/, '');
         return cleaned === '' ? '/' : cleaned;
     };
 
