@@ -72,6 +72,7 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
         }
 
         const jwtConfig = await this.jwtProvider.getJWTConfig();
+        await this.ensureNoActiveSessions(user.id.toString());
         const accessToken = jwt.sign(
             {
                 sub: user.id.toString(),
@@ -139,5 +140,14 @@ export class OAuth42CallbackUseCaseImpl implements IOAuth42CallbackUseCase {
         });
 
         return refreshToken;
+    }
+
+    private async ensureNoActiveSessions(userId: string): Promise<void> {
+        const sessions = await this.sessionRepository.findByUserId(userId);
+        const now = Date.now();
+        const hasActiveSession = sessions.some((session) => session.expiresAt.getTime() > now);
+        if (hasActiveSession) {
+            throw new Error('User already logged in from another device');
+        }
     }
 }

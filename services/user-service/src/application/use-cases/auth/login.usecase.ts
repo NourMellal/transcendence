@@ -63,6 +63,8 @@ export class LoginUseCase implements ILoginUseCase {
             }
         }
 
+        await this.ensureNoActiveSessions(user.id.toString());
+
         // Generate JWT and refresh token
         const accessToken = await this.generateToken(user);
         const { refreshToken } = await this.createRefreshSession(user.id.toString());
@@ -122,5 +124,14 @@ export class LoginUseCase implements ILoginUseCase {
         });
 
         return { refreshToken, expiresAt };
+    }
+
+    private async ensureNoActiveSessions(userId: string): Promise<void> {
+        const sessions = await this.sessionRepository.findByUserId(userId);
+        const now = Date.now();
+        const hasActiveSession = sessions.some((session) => session.expiresAt.getTime() > now);
+        if (hasActiveSession) {
+            throw new Error('User already logged in from another device');
+        }
     }
 }
