@@ -74,4 +74,8 @@ export class GameWebSocketServer implements IGameStateBroadcaster {
     broadcastPaddleUpdate(gameId: string, payload: unknown): void {
         this.io.to(gameId).emit('paddle_update', payload);
     }
+
+    broadcastGameFinished(gameId: string, payload: unknown): void {
+        this.io.to(gameId).emit('game:finished', payload);
+    }
 }

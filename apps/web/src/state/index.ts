@@ -16,6 +16,14 @@ export interface AuthStateData {
   oauthInProgress?: boolean;
 }
 
+// Guest session state – tracks temporary alias play when no account is used
+export interface GuestSessionState {
+  alias: string | null;
+  status: 'idle' | 'alias_selected';
+  createdAt: string | null;
+  lastUsedAt: string | null;
+}
+
 // UI state interface
 export interface UIState {
   twoFAModalVisible: boolean;
@@ -42,8 +50,16 @@ const createInitialAuthState = (): AuthStateData => ({
   oauthInProgress: false,
 });
 
+export const createInitialGuestState = (): GuestSessionState => ({
+  alias: null,
+  status: 'idle',
+  createdAt: null,
+  lastUsedAt: null,
+});
+
 export const appState = {
   auth: new Signal<AuthStateData>(createInitialAuthState()),
+  guest: new Signal<GuestSessionState>(createInitialGuestState()),
   ui: new Signal<UIState>({
     twoFAModalVisible: false,
     twoFAError: undefined,

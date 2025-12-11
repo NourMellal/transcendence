@@ -1,19 +1,31 @@
 import Component from '../../../core/Component';
 import { navigate } from '../../../routes';
 import { GameCanvas } from '../components/GameCanvas';
+import { appState } from '../../../state';
 
 /**
  * LocalGamePage - Full local two-player game mode.
  * Includes the actual game canvas for playable local matches.
  */
-export default class LocalGamePage extends Component<Record<string, never>, Record<string, never>> {
-  private gameCanvas: GameCanvas | null = null;
+type LocalGameState = {
+  guestAlias: string | null;
+};
 
-  getInitialState(): Record<string, never> {
-    return {};
+export default class LocalGamePage extends Component<Record<string, never>, LocalGameState> {
+  private gameCanvas: GameCanvas | null = null;
+  private guestUnsubscribe: (() => void) | null = null;
+
+  getInitialState(): LocalGameState {
+    return {
+      guestAlias: appState.guest.get().alias,
+    };
   }
 
   render(): string {
+    const aliasLabel = this.state.guestAlias
+      ? `Playing as <span class="font-semibold">${this.state.guestAlias}</span>`
+      : 'Set an alias from the home screen for a personalized scoreboard.';
+
     return `
       <div class="relative min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:py-12 safe-area-inset" style="background: var(--color-bg-dark);">
         <div class="absolute inset-0 bg-gradient-to-br from-[var(--color-bg-dark)] via-[var(--color-bg-darker)] to-[#050b1a]">
@@ -44,6 +56,9 @@ export default class LocalGamePage extends Component<Record<string, never>, Reco
             <p class="text-sm sm:text-base mt-2" style="color: var(--color-text-secondary);">
               Two players, one keyboard. First to 11 wins!
             </p>
+            <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
+              ${aliasLabel}
+            </p>
             <p class="text-xs mt-1" style="color: rgba(255,255,255,0.4);">
               Player 1: W/S keys • Player 2: ↑/↓ arrows
             </p>
@@ -64,9 +79,23 @@ export default class LocalGamePage extends Component<Record<string, never>, Reco
     if (container) {
       // Mount game canvas in local mode (no gameId = local play)
       // GameCanvas handles its own score display, so no callback needed
-      this.gameCanvas = new GameCanvas({});
+      const leftLabel = this.state.guestAlias ?? 'Player 1';
+      this.gameCanvas = new GameCanvas({
+        playerLabels: {
+          left: leftLabel,
+          right: 'Player 2',
+        },
+      });
       this.gameCanvas.mount(container);
     }
+
+    this.guestUnsubscribe = appState.guest.subscribe(() => {
+      const guest = appState.guest.get();
+      this.setState({ guestAlias: guest.alias });
+      if (this.gameCanvas) {
+        this.gameCanvas.setPlayerLabels({ left: guest.alias ?? 'Player 1' });
+      }
+    });
   }
 
   protected attachEventListeners(): void {
@@ -94,6 +123,10 @@ export default class LocalGamePage extends Component<Record<string, never>, Reco
     if (this.gameCanvas) {
       this.gameCanvas.unmount();
       this.gameCanvas = null;
+    }
+    if (this.guestUnsubscribe) {
+      this.guestUnsubscribe();
+      this.guestUnsubscribe = null;
     }
   }
 }

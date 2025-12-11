@@ -1,6 +1,7 @@
 export * from './GameWebSocketServer';
 export * from './GameRoomManager';
 export * from './GameLoop';
+export * from './PublicGameLobbyNotifier';
 export * from './handlers/ConnectionHandler';
 export * from './handlers/PaddleMoveHandler';
 export * from './handlers/DisconnectHandler';
