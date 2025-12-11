@@ -1,0 +1,5 @@
+/* Tailwind will be loaded via CDN in index.html. Local file kept as placeholder. */
+/* Remove this file if you prefer not to keep it. */
+
+html, body { height: 100%; }
+

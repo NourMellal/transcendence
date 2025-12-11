@@ -1,0 +1,84 @@
+Friendship:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "f2c1cb8b-5e3e-4f45-8b2b-0f6ed3918cf1"
+    userId:
+      type: string
+      format: uuid
+      description: ID of the user who initiated the friendship
+    friendId:
+      type: string
+      format: uuid
+      description: ID of the user who received the request
+    status:
+      type: string
+      enum: [pending, accepted, rejected, blocked]
+      example: pending
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+  required: [id, userId, friendId, status, createdAt, updatedAt]
+
+Friend:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    username:
+      type: string
+    displayName:
+      type: string
+      nullable: true
+    avatar:
+      type: string
+      format: uri
+      nullable: true
+    isOnline:
+      type: boolean
+      description: Realtime presence indicator
+    friendshipStatus:
+      type: string
+      enum: [pending, accepted, rejected, blocked]
+    friendshipId:
+      type: string
+      format: uuid
+    isRequester:
+      type: boolean
+      description: Whether the authenticated user initiated the request
+  required: [id, username, isOnline, friendshipStatus]
+
+FriendListResponse:
+  type: object
+  properties:
+    friends:
+      type: array
+      items:
+        $ref: './friend.yaml#/Friend'
+    totalCount:
+      type: integer
+      minimum: 0
+  required: [friends, totalCount]
+
+SendFriendRequest:
+  type: object
+  properties:
+    friendId:
+      type: string
+      format: uuid
+      description: ID of the user to be added
+  required: [friendId]
+
+RespondFriendRequest:
+  type: object
+  properties:
+    status:
+      type: string
+      enum: [accepted, rejected]
+  required: [status]

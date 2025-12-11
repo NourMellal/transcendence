@@ -1,0 +1,28 @@
+{
+  "name": "@transcendence/web",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frontend SPA for Transcendence",
+  "scripts": {
+    "dev": "vite",
+    "generate:component": "node ./scripts/create-component.cjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "echo 'Linting skipped - no eslint config for web app yet'"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.1",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "msw": "^2.4.0",
+    "sass": "^1.94.0",
+    "sass-embedded": "^1.93.3",
+    "vite": "^5.4.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}

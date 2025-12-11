@@ -1,0 +1,32 @@
+{
+    "name": "@transcendence/game-service",
+    "version": "1.0.0",
+    "description": "Game management and real-time gameplay service",
+    "main": "dist/index.js",
+    "scripts": {
+        "dev": "tsc && node dist/index.js",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "test": "vitest"
+    },
+    "dependencies": {
+        "@transcendence/shared-messaging": "workspace:*",
+        "@transcendence/shared-utils": "workspace:*",
+        "@transcendence/shared-validation": "workspace:*",
+        "amqplib": "^0.10.3",
+        "dotenv": "^16.3.1",
+        "fastify": "^4.26.0",
+        "jsonwebtoken": "^9.0.2",
+        "socket.io": "^4.7.5",
+        "sqlite": "^5.1.1",
+        "sqlite3": "^5.1.6"
+    },
+    "devDependencies": {
+        "@types/amqplib": "^0.10.1",
+        "@types/jsonwebtoken": "^9.0.5",
+        "@types/node": "^20.10.0",
+        "tsx": "^4.20.5",
+        "typescript": "^5.3.3",
+        "vitest": "^3.2.4"
+    }
+}

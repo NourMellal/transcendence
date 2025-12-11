@@ -1,0 +1,131 @@
+Game:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "game-123e4567"
+    mode:
+      type: string
+      enum: [CLASSIC, TOURNAMENT]
+      example: CLASSIC
+    player1:
+      type: string
+      format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    player2:
+      type: string
+      format: uuid
+      nullable: true
+      example: "123e4567-e89b-12d3-a456-426614174001"
+    status:
+      type: string
+      enum: [WAITING, PLAYING, FINISHED, CANCELLED]
+      example: WAITING
+    score:
+      type: object
+      properties:
+        player1:
+          type: integer
+          example: 5
+        player2:
+          type: integer
+          example: 3
+    settings:
+      type: object
+      description: Game physics and arena configuration used when the match was created.
+      properties:
+        arenaWidth:
+          type: integer
+          example: 800
+        arenaHeight:
+          type: integer
+          example: 600
+        scoreLimit:
+          type: integer
+          example: 11
+        paddleSpeed:
+          type: integer
+          example: 8
+        ballSpeed:
+          type: integer
+          example: 5
+    winner:
+      type: string
+      format: uuid
+      nullable: true
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    createdAt:
+      type: string
+      format: date-time
+      example: "2025-10-22T10:00:00Z"
+    finishedAt:
+      type: string
+      format: date-time
+      nullable: true
+      example: "2025-10-22T10:15:00Z"
+  required: [id, mode, player1, status, score, createdAt]
+
+CreateGameRequest:
+  type: object
+  properties:
+    gameMode:
+      type: string
+      enum: [CLASSIC, TOURNAMENT]
+      example: CLASSIC
+    isPrivate:
+      type: boolean
+      description: Whether the game should be hidden from public lobbies.
+      example: false
+    opponentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Optional specific opponent to invite for private games.
+      example: "123e4567-e89b-12d3-a456-426614174003"
+    settings:
+      type: object
+      description: Optional overrides for the game physics and arena.
+      properties:
+        arenaWidth:
+          type: integer
+          example: 800
+        arenaHeight:
+          type: integer
+          example: 600
+        scoreLimit:
+          type: integer
+          minimum: 1
+          example: 11
+        paddleSpeed:
+          type: integer
+          minimum: 1
+          example: 8
+        ballSpeed:
+          type: integer
+          minimum: 1
+          example: 5
+      additionalProperties: false
+  required: [gameMode]
+  additionalProperties: false
+
+JoinGameRequest:
+  type: object
+  properties:
+    gameId:
+      type: string
+      format: uuid
+      example: "game-123e4567"
+
+GameMove:
+  type: object
+  properties:
+    playerId:
+      type: string
+      format: uuid
+    direction:
+      type: string
+      enum: [UP, DOWN, STOP]
+    timestamp:
+      type: string
+      format: date-time

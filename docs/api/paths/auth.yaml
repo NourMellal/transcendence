@@ -1,0 +1,194 @@
+/auth/42/login:
+  get:
+    tags: [Auth]
+    operationId: Auth_start42Login
+    summary: Initiate 42 OAuth2 login
+    security: []
+    responses:
+      '302':
+        description: Redirect to 42 authorization page
+        headers:
+          Location:
+            schema:
+              type: string
+
+/auth/42/callback:
+  get:
+    tags: [Auth]
+    operationId: Auth_handle42Callback
+    summary: 42 OAuth2 callback
+    security: []
+    parameters:
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+    responses:
+      '302':
+        description: Redirect to the frontend after creating a session
+        headers:
+          Location:
+            schema:
+              type: string
+      '401':
+        description: Invalid authorization code
+
+/auth/signup:
+  post:
+    tags: [Auth]
+    operationId: Auth_signup
+    summary: Register a new user account
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/SignUpRequest'
+    responses:
+      '201':
+        description: User created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '400':
+        description: Invalid input or username/email already exists
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '409':
+        description: Username or email already exists
+
+/auth/login:
+  post:
+    tags: [Auth]
+    operationId: Auth_login
+    summary: Login with email and password
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/LoginRequest'
+    responses:
+      '200':
+        description: Login successful, session created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/auth.yaml#/LoginResponse'
+      '401':
+        description: Invalid credentials
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '400':
+        description: Invalid input
+
+/auth/refresh:
+  post:
+    tags: [Auth]
+    operationId: Auth_refresh
+    summary: Exchange a refresh token for a new access token
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/RefreshTokenRequest'
+    responses:
+      '200':
+        description: Access token refreshed
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/auth.yaml#/RefreshTokenResponse'
+      '401':
+        description: Invalid or expired refresh token
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+
+/auth/status:
+  get:
+    tags: [Auth]
+    operationId: Auth_getStatus
+    summary: Get current authentication status
+    responses:
+      '200':
+        description: Authenticated user
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/User'
+      '401':
+        description: Not authenticated
+
+/auth/logout:
+  post:
+    tags: [Auth]
+    operationId: Auth_logout
+    summary: Log out current user
+    responses:
+      '200':
+        description: Logged out successfully
+
+/auth/2fa/generate:
+  post:
+    tags: [TwoFA]
+    operationId: Auth_generate2FA
+    summary: Generate 2FA secret & QR code
+    responses:
+      '200':
+        description: Generated 2FA secret
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/auth.yaml#/TwoFactorSecret'
+      '401':
+        description: Not authenticated
+
+/auth/2fa/enable:
+  post:
+    tags: [TwoFA]
+    operationId: Auth_enable2FA
+    summary: Enable 2FA for current user
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/Enable2FARequest'
+    responses:
+      '200':
+        description: 2FA enabled successfully
+      '400':
+        description: Invalid TOTP code
+      '401':
+        description: Not authenticated
+
+/auth/2fa/disable:
+  post:
+    tags: [TwoFA]
+    operationId: Auth_disable2FA
+    summary: Disable 2FA for current user
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.yaml#/Enable2FARequest'
+    responses:
+      '200':
+        description: 2FA disabled successfully
+      '400':
+        description: Invalid TOTP code or 2FA not enabled
+      '401':
+        description: Not authenticated

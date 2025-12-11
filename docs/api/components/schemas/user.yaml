@@ -1,0 +1,74 @@
+User:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    username:
+      type: string
+      example: "great_ponger"
+    displayName:
+      type: string
+      nullable: true
+      example: "Great Ponger"
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+    avatar:
+      type: string
+      format: uri
+      nullable: true
+      example: "https://example.com/avatars/user1.png"
+    is2FAEnabled:
+      type: boolean
+      example: false
+    status:
+      type: string
+      enum: [ONLINE, OFFLINE, INGAME]
+      example: ONLINE
+  required: [id, username, email, is2FAEnabled]
+
+UpdateUserRequest:
+  type: object
+  properties:
+    username:
+      type: string
+      example: "new_username"
+    avatar:
+      type: string
+      format: binary
+      description: Image file to upload
+    displayName:
+      type: string
+      example: "Player One"
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+      format: password
+
+PresenceUpdateRequest:
+  type: object
+  required: [status]
+  properties:
+    status:
+      type: string
+      enum: [ONLINE, OFFLINE, INGAME]
+      example: "ONLINE"
+
+UserPresence:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+    status:
+      type: string
+      enum: [ONLINE, OFFLINE, INGAME]
+    lastSeenAt:
+      type: string
+      format: date-time
+  required: [userId, status, lastSeenAt]

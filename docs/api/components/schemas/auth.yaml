@@ -1,0 +1,93 @@
+SignUpRequest:
+  type: object
+  properties:
+    username:
+      type: string
+      minLength: 3
+      maxLength: 20
+      pattern: '^[a-zA-Z0-9_-]+$'
+      example: "coolplayer123"
+      description: Unique username (alphanumeric, underscore, hyphen only)
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+      description: Valid email address
+    password:
+      type: string
+      minLength: 8
+      maxLength: 100
+      example: "SecurePass123!"
+      description: Password (minimum 8 characters)
+    displayName:
+      type: string
+      maxLength: 100
+      example: "Cool Player"
+      description: Optional display name
+  required: [username, email, password]
+
+LoginRequest:
+  type: object
+  properties:
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+      description: User email or username
+    password:
+      type: string
+      example: "SecurePass123!"
+      description: User password
+    totpCode:
+      type: string
+      example: "123456"
+      description: Optional TOTP code when 2FA is enabled
+  required: [email, password]
+
+LoginResponse:
+  type: object
+  properties:
+    user:
+      $ref: './user.yaml#/User'
+    accessToken:
+      type: string
+      description: Short-lived JWT used for authenticated requests
+    refreshToken:
+      type: string
+      description: Long-lived token used to obtain new access tokens
+    message:
+      type: string
+      example: "Login successful"
+  required: [user, accessToken, refreshToken]
+
+RefreshTokenRequest:
+  type: object
+  properties:
+    refreshToken:
+      type: string
+      description: Refresh token issued during login
+      example: "1a2b3c4d5e6f..."
+  required: [refreshToken]
+
+RefreshTokenResponse:
+  $ref: '#/LoginResponse'
+
+TwoFactorSecret:
+  type: object
+  properties:
+    secret:
+      type: string
+      example: "JBSWY3DPEHPK3PXP"
+    qrCode:
+      type: string
+      example: "data:image/png;base64,..."
+  required: [secret, qrCode]
+
+Enable2FARequest:
+  type: object
+  properties:
+    code:
+      type: string
+      example: "123456"
+      description: TOTP code
+  required: [code]

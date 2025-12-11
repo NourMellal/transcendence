@@ -1,0 +1,222 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+body {  
+     background-color:#030712 ; 
+     min-height: 100vh ;     
+      #root { 
+            height:  100% ;
+      #app-view {
+            display: flex ;
+            justify-content: center;  
+      
+      .login-container {  
+            width: 90% ;   
+            display:  flex ;  
+            justify-content: center;   
+            height: 80%;   
+            .left-login {  
+                  width: 35% ;   
+                  min-height: 90vh ;
+                  background-image: url("../../public/ef9c7552-7843-4f6d-b216-a273f225e524.png");
+                  background-size: cover;  
+             } 
+             .right-login {  
+                  width:  45%;  
+                  border-top-right-radius: 8px;
+                  border-bottom-right-radius: 8px;
+                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08); 
+                  padding: 16px;
+                  transition: box-shadow 0.3s ease, transform 0.2s ease;  
+                  display: flex ; 
+                  flex-direction: column ; 
+                  background: rgba(66, 218, 235, 0.03);
+                  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                  backdrop-filter: blur(6.7px);
+                  -webkit-backdrop-filter: blur(6.7px);
+                  border: 1px solid rgba(66, 218, 235, 0.3);    
+                        #form-header { 
+                              color: white ;   
+                              font-family: "Inter", sans-serif;
+                              font-optical-sizing: auto;
+                              font-weight:500;
+                              font-style: normal;
+                              margin-left: 10%;
+                        }
+              }
+      }   
+     
+   
+} 
+}
+}  
+   
+.profileContainer { 
+             display: flex  ; 
+             width: 100%  ;
+             height: 100vh ;     
+             background-color: #171848;
+             #navBar {  
+                  width: 85% ;  
+                  nav { 
+                         background-color: #38396f ;  
+                         #sideInner { 
+                              padding-left :  1rem  ;      
+                              padding-right :  2rem  ;      
+                        }
+
+                  }    
+                  #notif-msg { 
+                        display: flex ;  
+                        gap: 1rem ;    
+                  button {  
+                        border: solid 0.7px  #6f70a1  ; 
+                        padding: 5px ;  
+                        width: 36px;
+                        height: 34px;
+                        border-radius: 20% ;
+                        svg {  
+                              color:  #6f70a1 ;   
+                              border:  1px black ;
+                        }
+                         
+                  }
+                  }    
+                  .right-ele {  
+                        gap: 1.5rem ;
+                  }
+                  .avatar-block { 
+                        display: flex ;  
+                        height: 100% ;  
+                        gap: 1.5rem ;   
+                        #avatar-infos { 
+                              display: flex; 
+                              flex-direction: column ;      
+                              padding-top: 5px ;  
+                              span {  
+                                    font-family: 'Inter' ;  
+                              }
+                              span:nth-of-type(1) { 
+                                    font-size: 15px ;  
+                                    font-weight: 500 ;
+                              }   
+                              #games-streak { 
+                                     display: flex;  
+                                     font-size: 9px ;   
+                                    align-items: center ;  
+                                    gap: 5px ;
+                                     span {  
+                                          font-size: 12px ;  
+                                     }  
+                                     svg { 
+                                          color: rgb(51 255 0);
+                                     }
+                              }                 
+                        }
+                        .avatar {  
+                              height:  3rem;  
+                              border-radius: 11px 11px 0px 0px;
+                        }
+                  }
+             }  
+  #sideBar {  
+    width: 15%; 
+    height: 100vh;
+    background: #26264f;
+    padding: 20px;
+    color: #d0d4f7;
+    display: flex;
+    flex-direction: column;
+
+    .logo {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 25px;
+    }
+
+    .status {
+        font-size: 14px;
+        line-height: 1.4;
+        margin-bottom: 25px;
+
+        .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+
+            &.online {
+                background: #28e79a;
+            }
+        }
+    }
+
+    .section {
+        margin-bottom: 24px;
+
+        .section-title {
+            color: #8c92c9;
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .item {
+            display: block;
+            padding: 10px 12px;
+            background: transparent;
+            border-radius: 8px;
+            color: #e2e5ff;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 6px;
+            transition: 0.2s;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            &.create {
+                color: #7cabff;
+                font-weight: 600;
+            }
+
+            .tag {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                display: inline-block;
+                margin-left: 6px;
+
+                &.gold { background: #ffc700; }
+                &.silver { background: #c9d1d9; }
+                &.blue { background: #0098ff; }
+            }
+        }
+    }
+
+    .solana-box {
+        margin-top: auto;
+        background: #0e1533;
+        padding: 15px;
+        border-radius: 12px;
+        color: #fff;
+
+        .price {
+            font-size: 16px;
+            font-weight: 600;
+
+            .green {
+                color: #00ff9b;
+                font-size: 13px;
+            }
+        }
+
+        .tx {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+    }
+}
+                  
+            }

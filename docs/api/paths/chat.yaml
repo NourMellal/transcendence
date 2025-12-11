@@ -1,0 +1,135 @@
+/chat/messages:
+  get:
+    tags: [Chat]
+    operationId: Chat_getMessages
+    summary: Get chat messages (direct or game)
+    description: Retrieve message history. For DIRECT messages, recipientId is required. For GAME messages, gameId is required.
+    parameters:
+      - name: type
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [DIRECT, GAME]
+        description: Message type - DIRECT for private messages, GAME for game room messages
+      - name: recipientId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Required for DIRECT message type
+      - name: gameId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Required for GAME message type
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      - name: before
+        in: query
+        schema:
+          type: string
+          format: date-time
+        description: Get messages before this timestamp
+    responses:
+      '200':
+        description: Chat messages retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/chat.yaml#/ChatMessage'
+      '400':
+        description: Missing required parameters
+      '401':
+        description: Unauthorized - authentication required
+
+  post:
+    tags: [Chat]
+    operationId: Chat_sendMessage
+    summary: Send a new chat message
+    description: Send a direct message or game room message. For DIRECT type, recipientId is required. For GAME type, gameId is required.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/SendMessageRequest'
+    responses:
+      '201':
+        description: Message sent successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatMessage'
+      '400':
+        description: Invalid message content or missing required fields
+      '401':
+        description: Unauthorized - authentication required
+
+/chat/conversations:
+  get:
+    tags: [Chat]
+    operationId: Chat_getConversations
+    summary: Get user's conversations
+    description: Retrieve all active conversations (direct messages and game chats) for the authenticated user
+    responses:
+      '200':
+        description: List of conversations retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conversations:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/chat.yaml#/Conversation'
+      '401':
+        description: Unauthorized - authentication required
+
+/chat/ws:
+  get:
+    tags: [Chat, WebSocket]
+    operationId: Chat_websocketConnection
+    summary: WebSocket connection for real-time chat
+    description: |
+      Establish WebSocket connection for real-time messaging.
+      
+      **Authentication:** JWT token required via query parameter `?token=<jwt>`
+      
+      **Client → Server Messages:**
+      - `{ "type": "send_message", "content": "text", "recipientId": "uuid" }` - Send private message
+      - `{ "type": "send_message", "content": "text", "gameId": "uuid" }` - Send game chat message
+      - `{ "type": "typing", "recipientId": "uuid" }` - Typing indicator
+      
+      **Server → Client Messages:**
+      - `{ "type": "new_message", "message": {...} }` - New message received
+      - `{ "type": "user_typing", "userId": "uuid", "username": "..." }` - User typing
+      - `{ "type": "user_online", "userId": "uuid" }` - User came online
+      - `{ "type": "user_offline", "userId": "uuid" }` - User went offline
+      - `{ "type": "error", "message": "..." }`
+    parameters:
+      - name: token
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JWT authentication token
+    responses:
+      '101':
+        description: Switching Protocols - WebSocket connection established
+      '401':
+        description: Unauthorized - Invalid or missing token
+      '426':
+        description: Upgrade Required

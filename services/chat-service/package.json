@@ -1,0 +1,33 @@
+{
+    "name": "@transcendence/chat-service",
+    "version": "1.0.0",
+    "description": "Real-time chat service",
+    "main": "dist/server.js",
+    "scripts": {
+        "dev": "tsx src/server.ts",
+        "build": "tsc",
+        "start": "node dist/server.js",
+        "test": "vitest"
+    },
+    "dependencies": {
+        "@fastify/cors": "^8.5.0",
+        "@fastify/websocket": "^10.0.1",
+        "@transcendence/shared-messaging": "workspace:*",
+        "@transcendence/shared-utils": "workspace:*",
+        "@transcendence/shared-validation": "workspace:*",
+        "dotenv": "^16.6.1",
+        "fastify": "^4.29.1",
+        "jsonwebtoken": "^9.0.3",
+        "socket.io": "^4.8.1",
+        "socket.io-client": "^4.8.1",
+        "sqlite": "^5.1.1",
+        "sqlite3": "^5.1.7"
+    },
+    "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^20.19.26",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
+        "vitest": "^3.2.4"
+    }
+}

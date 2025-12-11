@@ -1,2 +1,7 @@
+gitBranchLockfile: true
 packages:
-  - "."
+  - "services/*"
+  - "packages/*"
+  - "infrastructure/*"
+  - "apps/*"
+

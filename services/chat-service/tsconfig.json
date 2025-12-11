@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@transcendence/shared-utils": ["../../packages/shared-utils/src"],
+      "@transcendence/shared-validation": ["../../packages/shared-validation/src"],
+      "@transcendence/shared-messaging": ["../../packages/shared-messaging/src"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../../packages/shared-utils" },
+    { "path": "../../packages/shared-validation" },
+    { "path": "../../packages/shared-messaging" }
+  ]
+}

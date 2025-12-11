@@ -1,0 +1,19 @@
+{
+    "name": "@transcendence/shared-validation",
+    "version": "1.0.0",
+    "description": "Shared validation schemas for Transcendence microservices",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest"
+    },
+    "dependencies": {
+        "zod": "^3.25.76"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3",
+        "vitest": "^3.2.4"
+    }
+}

@@ -1,0 +1,117 @@
+ChatMessage:
+  type: object
+  description: A chat message in the system
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique message identifier
+      example: "msg-123e4567"
+    senderId:
+      type: string
+      format: uuid
+      description: ID of the message sender
+      example: "123e4567-e89b-12d3-a456-426614174000"
+    senderUsername:
+      type: string
+      description: Username of the message sender
+      example: "great_ponger"
+    content:
+      type: string
+      description: Message text content
+      example: "Great game!"
+      maxLength: 500
+    type:
+      type: string
+      enum: [DIRECT, GAME]
+      description: Type of message - DIRECT for private DMs, GAME for game room chat
+      example: DIRECT
+    recipientId:
+      type: string
+      format: uuid
+      description: Recipient user ID (for DIRECT messages)
+      nullable: true
+      example: "123e4567-e89b-12d3-a456-426614174001"
+    gameId:
+      type: string
+      format: uuid
+      description: Game ID (for GAME messages)
+      nullable: true
+      example: "game-789abc"
+    conversationId:
+      type: string
+      format: uuid
+      description: ID of the conversation this message belongs to
+      example: "conv-abc123"
+    createdAt:
+      type: string
+      format: date-time
+      description: Message creation timestamp
+      example: "2025-12-07T20:00:00Z"
+  required: [id, senderId, senderUsername, content, type, conversationId, createdAt]
+
+SendMessageRequest:
+  type: object
+  description: Request payload to send a new message
+  properties:
+    content:
+      type: string
+      description: Message text content (required)
+      example: "Great game!"
+      minLength: 1
+      maxLength: 500
+    type:
+      type: string
+      enum: [DIRECT, GAME]
+      description: Message type - DIRECT for private message to a user, GAME for game room message
+      example: DIRECT
+    recipientId:
+      type: string
+      format: uuid
+      description: Recipient user ID (required for DIRECT messages)
+      nullable: true
+      example: "123e4567-e89b-12d3-a456-426614174001"
+    gameId:
+      type: string
+      format: uuid
+      description: Game ID (required for GAME messages)
+      nullable: true
+      example: "game-789abc"
+  required: [content, type]
+
+Conversation:
+  type: object
+  description: A conversation between users or in a game
+  properties:
+    conversationId:
+      type: string
+      format: uuid
+      description: Unique conversation identifier
+      example: "conv-abc123"
+    type:
+      type: string
+      enum: [DIRECT, GAME]
+      description: Conversation type
+      example: DIRECT
+    participants:
+      type: array
+      description: List of participant user IDs
+      items:
+        type: string
+        format: uuid
+      example: ["user-1", "user-2"]
+    gameId:
+      type: string
+      format: uuid
+      description: Game ID (for GAME type conversations)
+      nullable: true
+      example: "game-789abc"
+    lastMessage:
+      $ref: '#/ChatMessage'
+      description: The most recent message in this conversation
+    unreadCount:
+      type: integer
+      description: Number of unread messages for the current user
+      minimum: 0
+      example: 2
+  required: [conversationId, type, participants]
