@@ -2,26 +2,28 @@
   get:
     tags: [Chat]
     operationId: Chat_getMessages
-    summary: Get chat messages
+    summary: Get chat messages (direct or game)
+    description: Retrieve message history. For DIRECT messages, recipientId is required. For GAME messages, gameId is required.
     parameters:
       - name: type
         in: query
+        required: true
         schema:
           type: string
-          enum: [GLOBAL, PRIVATE, GAME]
-          default: GLOBAL
+          enum: [DIRECT, GAME]
+        description: Message type - DIRECT for private messages, GAME for game room messages
       - name: recipientId
         in: query
         schema:
           type: string
           format: uuid
-        description: Required for PRIVATE messages
+        description: Required for DIRECT message type
       - name: gameId
         in: query
         schema:
           type: string
           format: uuid
-        description: Required for GAME messages
+        description: Required for GAME message type
       - name: limit
         in: query
         schema:
@@ -37,7 +39,7 @@
         description: Get messages before this timestamp
     responses:
       '200':
-        description: Chat messages
+        description: Chat messages retrieved successfully
         content:
           application/json:
             schema:
@@ -47,15 +49,16 @@
                   type: array
                   items:
                     $ref: '../components/schemas/chat.yaml#/ChatMessage'
-                hasMore:
-                  type: boolean
+      '400':
+        description: Missing required parameters
       '401':
-        description: Not authenticated
+        description: Unauthorized - authentication required
 
   post:
     tags: [Chat]
     operationId: Chat_sendMessage
-    summary: Send a chat message
+    summary: Send a new chat message
+    description: Send a direct message or game room message. For DIRECT type, recipientId is required. For GAME type, gameId is required.
     requestBody:
       required: true
       content:
@@ -70,36 +73,30 @@
             schema:
               $ref: '../components/schemas/chat.yaml#/ChatMessage'
       '400':
-        description: Invalid message content or recipient
+        description: Invalid message content or missing required fields
       '401':
-        description: Not authenticated
+        description: Unauthorized - authentication required
 
 /chat/conversations:
   get:
     tags: [Chat]
     operationId: Chat_getConversations
-    summary: Get user's private conversations
+    summary: Get user's conversations
+    description: Retrieve all active conversations (direct messages and game chats) for the authenticated user
     responses:
       '200':
-        description: List of conversations
+        description: List of conversations retrieved successfully
         content:
           application/json:
             schema:
-              type: array
-              items:
-                type: object
-                properties:
-                  recipientId:
-                    type: string
-                    format: uuid
-                  recipientUsername:
-                    type: string
-                  lastMessage:
-                    $ref: '../components/schemas/chat.yaml#/ChatMessage'
-                  unreadCount:
-                    type: integer
+              type: object
+              properties:
+                conversations:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/chat.yaml#/Conversation'
       '401':
-        description: Not authenticated
+        description: Unauthorized - authentication required
 
 /chat/ws:
   get:

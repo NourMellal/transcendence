@@ -1,0 +1,38 @@
+/**
+ * Input DTO - Request to get user's conversations
+ */
+export interface GetConversationsRequestDTO {
+  userId: string;              // Current user requesting their conversations
+}
+
+/**
+ * Single conversation in response
+ */
+export interface ConversationDTO {
+  conversationId: string;
+  type: 'DIRECT' | 'GAME';
+  participants: [string, string];
+  otherUserId: string;         // The other person in the conversation
+  otherUsername?: string;      // Display name (optional, can be fetched from User Service)
+  gameId?: string;
+  lastMessageAt: string;       // ISO 8601 format
+  lastMessage?: {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    senderUsername: string;
+    content: string;
+    type: 'DIRECT' | 'GAME';
+    recipientId?: string;
+    gameId?: string;
+    createdAt: string;
+  };
+  unreadCount?: number;        // Number of unread messages (optional for MVP)
+}
+
+/**
+ * Output DTO - List of conversations
+ */
+export interface GetConversationsResponseDTO {
+  conversations: ConversationDTO[];
+}

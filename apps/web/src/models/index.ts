@@ -10,6 +10,7 @@ export * from './Game';
 export * from './Tournament';
 export * from './Common';
 export * from './Dashboard';
+export * from './Chat';
 
 // Type aliases for convenience
 export type { User, UserProfile, UserStats, Friend } from './User';
@@ -28,3 +29,11 @@ export type {
   DashboardLeaderboardEntry,
   DashboardSnapshot,
 } from './Dashboard';
+export type {
+  Conversation,
+  ChatMessageType,
+  TypingIndicator,
+  GetMessagesParams,
+  SendMessageParams,
+  MessagesResponse,
+} from './Chat';

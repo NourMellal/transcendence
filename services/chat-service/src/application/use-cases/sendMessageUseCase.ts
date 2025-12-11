@@ -1,0 +1,130 @@
+import { Message } from '../../domain/entities/message.entity';
+import { Conversation } from '../../domain/entities/conversation.entity';
+import { IMessageRepository } from 'src/domain/repositories/message.respository';
+import { MessageType } from 'src/domain/value-objects/messageType';
+import { SendMessageRequestDTO, SendMessageResponseDTO } from '../dto/send-message.dto';
+import { IconversationRepository } from 'src/domain/repositories/conversation-repository';
+
+export interface IFriendshipPolicy {
+  ensureCanDirectMessage(senderId: string, recipientId: string): Promise<void>;
+}
+
+export interface IGameChatPolicy {
+  ensureCanChatInGame(gameId: string, userId: string): Promise<{ participants: [string, string] }>;
+}
+
+export interface ISendMessageUseCase {
+  execute(dto: SendMessageRequestDTO): Promise<SendMessageResponseDTO>;
+}
+
+export class SendMessageUseCase implements ISendMessageUseCase {
+  constructor(
+    private readonly messageRepository: IMessageRepository,
+    private readonly conversationRepository: IconversationRepository,
+    private readonly friendshipPolicy: IFriendshipPolicy,
+    private readonly gameChatPolicy: IGameChatPolicy
+  ) {}
+
+  async execute(dto: SendMessageRequestDTO): Promise<SendMessageResponseDTO> {
+    const type = this.normalizeType(dto.type);
+
+    if (type === MessageType.DIRECT) {
+      if (!dto.recipientId) {
+        throw new Error('recipientId is required for DIRECT messages');
+      }
+      await this.friendshipPolicy.ensureCanDirectMessage(dto.senderId, dto.recipientId);
+    }
+
+    let gameParticipants: [string, string] | undefined;
+
+    if (type === MessageType.GAME) {
+      if (!dto.gameId) {
+        throw new Error('gameId is required for GAME messages');
+      }
+      const { participants } = await this.gameChatPolicy.ensureCanChatInGame(dto.gameId, dto.senderId);
+      gameParticipants = participants;
+
+      // Ensure game conversation exists before saving message
+      await this.ensureGameConversation(dto.gameId, participants[0], participants[1]);
+    }
+
+    const conversation = await this.resolveConversation(dto, type, gameParticipants);
+
+    const message = Message.create({
+      conversationId: conversation.id.toString(),
+      senderId: dto.senderId,
+      senderUsername: dto.senderUsername,
+      content: dto.content,
+      type,
+      recipientId: dto.recipientId,
+      gameId: dto.gameId
+    });
+
+    await this.messageRepository.save(message);
+
+    conversation.updateLastMessageTime();
+    await this.conversationRepository.save(conversation);
+
+    return this.toResponseDTO(message);
+  }
+
+  private normalizeType(raw: MessageType | string): MessageType {
+    const upper = String(raw).toUpperCase();
+    if (!MessageType.isValid(upper)) {
+      throw new Error(`Invalid message type: ${raw}`);
+    }
+    return upper as MessageType;
+  }
+
+  private async resolveConversation(
+    dto: SendMessageRequestDTO,
+    type: MessageType,
+    gameParticipants?: [string, string]
+  ): Promise<Conversation> {
+    if (type === MessageType.DIRECT) {
+      const existing = await this.conversationRepository.findByParticipants(
+        dto.senderId,
+        dto.recipientId!,
+        MessageType.DIRECT
+      );
+      if (existing) {
+        return existing;
+      }
+      return Conversation.createDirect(dto.senderId, dto.recipientId!);
+    }
+
+    // GAME
+    const existing = await this.conversationRepository.findByGameId(dto.gameId!);
+    if (existing) {
+      return existing;
+    }
+    if (!gameParticipants) {
+      const ensured = await this.gameChatPolicy.ensureCanChatInGame(dto.gameId!, dto.senderId);
+      gameParticipants = ensured.participants;
+    }
+    return Conversation.createGame(dto.gameId!, gameParticipants[0], gameParticipants[1]);
+  }
+
+  private async ensureGameConversation(gameId: string, player1: string, player2: string): Promise<void> {
+    const existing = await this.conversationRepository.findByGameId(gameId);
+    if (existing) {
+      return;
+    }
+    const conversation = Conversation.createGame(gameId, player1, player2);
+    await this.conversationRepository.save(conversation);
+  }
+
+  private toResponseDTO(message: Message): SendMessageResponseDTO {
+    return {
+      id: message.id.toString(),
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+      senderUsername: message.senderUsername,
+      content: message.content.getValue(),
+      type: message.type,
+      recipientId: message.recipientId,
+      gameId: message.gameId,
+      createdAt: message.createdAt.toISOString()
+    };
+  }
+}

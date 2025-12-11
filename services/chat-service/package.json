@@ -10,21 +10,24 @@
         "test": "vitest"
     },
     "dependencies": {
+        "@fastify/cors": "^8.5.0",
+        "@fastify/websocket": "^10.0.1",
         "@transcendence/shared-messaging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
-        "amqplib": "^0.10.3",
-        "dotenv": "^16.3.1",
-        "fastify": "^4.26.0",
-        "socket.io": "^4.7.5",
+        "dotenv": "^16.6.1",
+        "fastify": "^4.29.1",
+        "jsonwebtoken": "^9.0.3",
+        "socket.io": "^4.8.1",
+        "socket.io-client": "^4.8.1",
         "sqlite": "^5.1.1",
-        "sqlite3": "^5.1.6"
+        "sqlite3": "^5.1.7"
     },
     "devDependencies": {
-        "@types/amqplib": "^0.10.1",
-        "@types/node": "^20.10.0",
-        "tsx": "^4.20.5",
-        "typescript": "^5.3.3",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^20.19.26",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
         "vitest": "^3.2.4"
     }
 }
