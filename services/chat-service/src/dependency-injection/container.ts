@@ -123,7 +123,7 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     const connectionHandler = new ConnectionHandler(roomManager, gameChatPolicy);
     const sendMessageHandler = new SendMessageHandler(sendMessageUseCase);
     const disconnectHandler = new DisconnectHandler(roomManager);
-    const typingHandler = new TypingHandler();
+    const typingHandler = new TypingHandler(gameChatPolicy, roomManager);
 
     logger.info('🔧 Dependency injection container created');
 

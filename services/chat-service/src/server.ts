@@ -7,6 +7,7 @@ import { registerErrorHandler } from './infrastructure/http/middlewares/errorHan
 import { registerRequestLogger } from './infrastructure/http/middlewares/requestLogger';
 import { registerRoutes , HttpRoutesDeps } from './infrastructure/http/routes';
 import { createInternalApiMiddleware } from './infrastructure/http/middlewares/internalApi.middleware';
+import { createMessagingConfig, EventSerializer, GameEventHandler, RabbitMQConnection } from './infrastructure/messaging';
 interface CreateHttpServerOptions {
     readonly routes: HttpRoutesDeps;
     readonly internalApiKey?: string;
@@ -32,6 +33,8 @@ export async function startChatService(): Promise<void> {
         logger.info('🚀 Starting Chat Service...');
         const config = await loadChatServiceConfig();
         const container = await createContainer(config); 
+        const messagingConfig = createMessagingConfig();
+        let messagingConnection: RabbitMQConnection | undefined;
 
         // Create HTTP server for both Fastify and Socket.IO
         const app = await createHttpServer({
@@ -61,8 +64,34 @@ export async function startChatService(): Promise<void> {
 
         logger.info('✅ WebSocket server initialized');
 
+        const startMessaging = async () => {
+            try {
+                messagingConnection = new RabbitMQConnection({
+                    uri: messagingConfig.uri,
+                    exchange: messagingConfig.exchange
+                });
+                const channel = await messagingConnection.getChannel();
+                const serializer = new EventSerializer();
+                const gameEventHandler = new GameEventHandler(
+                    channel,
+                    serializer,
+                    container.repositories.conversationRepository,
+                    container.repositories.messageRepository
+                );
+
+                const queue = `${messagingConfig.queuePrefix}.game-events`;
+                await gameEventHandler.start(queue, messagingConfig.exchange);
+                logger.info('📨 Chat messaging consumer started', { queue });
+            } catch (error) {
+                logger.warn('⚠️  Messaging not started. Game chat cleanup on game.finished will be disabled.', error);
+            }
+        };
+
+        await startMessaging();
+
         const shutdown = async () => {
             logger.info('🛑 Shutting down Chat Service...');
+            await messagingConnection?.close();
             await app.close();
             httpServer.close();
             process.exit(0);
