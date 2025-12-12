@@ -10,6 +10,16 @@ import type { LoginUseCaseInputDTO, LoginUseCaseOutputDTO } from '../../dto/auth
 import { Email } from '../../../domain/value-objects';
 import { AuthMapper } from '../../mappers/auth.mapper';
 
+const DEFAULT_PRESENCE_STALE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
+
+function resolvePresenceStaleThreshold(): number {
+    const raw = Number(process.env.PRESENCE_STALE_THRESHOLD_MS);
+    if (Number.isFinite(raw) && raw > 0) {
+        return raw;
+    }
+    return DEFAULT_PRESENCE_STALE_THRESHOLD_MS;
+}
+
 export interface JWTService {
     getJWTConfig(): Promise<JWTConfig>;
 }
@@ -129,9 +139,44 @@ export class LoginUseCase implements ILoginUseCase {
     private async ensureNoActiveSessions(userId: string): Promise<void> {
         const sessions = await this.sessionRepository.findByUserId(userId);
         const now = Date.now();
-        const hasActiveSession = sessions.some((session) => session.expiresAt.getTime() > now);
-        if (hasActiveSession) {
-            throw new Error('User already logged in from another device');
+        const activeSessions = sessions.filter((session) => session.expiresAt.getTime() > now);
+
+        if (!activeSessions.length) {
+            return;
         }
+
+        const shouldForceLogout = await this.shouldForceLogout(userId, now);
+        if (shouldForceLogout) {
+            await this.sessionRepository.deleteAllForUser(userId);
+            return;
+        }
+
+        throw new Error('User already logged in from another device');
+    }
+
+    private async shouldForceLogout(userId: string, now: number): Promise<boolean> {
+        if (!this.presenceRepository) {
+            return false;
+        }
+
+        const presence = await this.presenceRepository.findByUserId(userId);
+        if (!presence) {
+            return true;
+        }
+
+        if (presence.status === PresenceStatus.OFFLINE) {
+            return true;
+        }
+
+        const lastSeen = presence.lastSeenAt.getTime();
+        const thresholdMs = resolvePresenceStaleThreshold();
+        const isStale = now - lastSeen > thresholdMs;
+
+        if (isStale) {
+            await this.presenceRepository.markOffline(userId, new Date(now));
+            return true;
+        }
+
+        return false;
     }
 }
