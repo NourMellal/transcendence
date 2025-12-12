@@ -1,6 +1,7 @@
 import { mountRoot } from "./core/utils";
 import { initRouter } from "./routes";
 import "./styles/main.css";
+import "./modules/chat/styles/chat.css";
 import { authService } from "./services/auth/AuthService";
 import { presenceManager } from "./services/presence/presence-manager";
 import { guestSessionService } from "./services/guest/GuestSessionService";

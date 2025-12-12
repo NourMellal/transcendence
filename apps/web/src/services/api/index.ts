@@ -12,6 +12,7 @@ export { httpClient } from './client';
 export { UserService, userService } from './UserService';
 export { TournamentService, tournamentService } from './TournamentService';
 export { ChatService, chatService } from './ChatService';
+export { ChatWebSocketService, chatWebSocketService } from './ChatWebSocketService';
 
 // Export types
 export type { ApiResponse, RequestConfig } from '../../modules/shared/services/HttpClient';

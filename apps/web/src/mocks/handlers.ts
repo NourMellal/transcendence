@@ -227,4 +227,155 @@ export const handlers = [
 
     return HttpResponse.json(response, { status: 200 });
   }),
+
+  // ==================== CHAT SERVICE ENDPOINTS ====================
+  
+  // POST /messages - Send a message
+  http.post(`${API_BASE}/messages`, async ({ request }) => {
+    if (!getIsAuthenticated() || !getCurrentUser()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    try {
+      const body = await request.json() as {
+        content: string;
+        type: 'DIRECT' | 'GAME';
+        recipientId?: string;
+        gameId?: string;
+      };
+
+      if (!body.content || body.content.trim().length === 0) {
+        return HttpResponse.json(
+          { error: 'Message content is required' },
+          { status: 400 }
+        );
+      }
+
+      if (body.type === 'DIRECT' && !body.recipientId) {
+        return HttpResponse.json(
+          { error: 'recipientId is required for direct messages' },
+          { status: 400 }
+        );
+      }
+
+      if (body.type === 'GAME' && !body.gameId) {
+        return HttpResponse.json(
+          { error: 'gameId is required for game messages' },
+          { status: 400 }
+        );
+      }
+
+      const currentUser = getCurrentUser()!;
+      const message = {
+        id: crypto.randomUUID(),
+        senderId: currentUser.id,
+        senderUsername: currentUser.username,
+        content: body.content,
+        type: body.type,
+        recipientId: body.recipientId,
+        gameId: body.gameId,
+        conversationId: body.type === 'DIRECT' 
+          ? `conv-${[currentUser.id, body.recipientId].sort().join('-')}`
+          : `game-${body.gameId}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      return HttpResponse.json(message, { status: 201 });
+    } catch (error) {
+      return HttpResponse.json(
+        { error: 'Invalid request data' },
+        { status: 400 }
+      );
+    }
+  }),
+
+  // GET /messages - Get messages
+  http.get(`${API_BASE}/messages`, ({ request }) => {
+    if (!getIsAuthenticated() || !getCurrentUser()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const type = url.searchParams.get('type');
+    const recipientId = url.searchParams.get('recipientId');
+    const gameId = url.searchParams.get('gameId');
+    const limit = parseInt(url.searchParams.get('limit') || '50');
+
+    if (!type) {
+      return HttpResponse.json(
+        { error: 'type query parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    if (type === 'DIRECT' && !recipientId) {
+      return HttpResponse.json(
+        { error: 'recipientId is required for DIRECT messages' },
+        { status: 400 }
+      );
+    }
+
+    if (type === 'GAME' && !gameId) {
+      return HttpResponse.json(
+        { error: 'gameId is required for GAME messages' },
+        { status: 400 }
+      );
+    }
+
+    const currentUser = getCurrentUser()!;
+    
+    // Mock messages
+    const mockMessages = Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
+      id: crypto.randomUUID(),
+      senderId: i % 2 === 0 ? currentUser.id : (recipientId || 'other-user'),
+      senderUsername: i % 2 === 0 ? currentUser.username : 'Other User',
+      content: `Mock message ${i + 1}`,
+      type,
+      recipientId: type === 'DIRECT' ? recipientId : undefined,
+      gameId: type === 'GAME' ? gameId : undefined,
+      conversationId: type === 'DIRECT'
+        ? `conv-${[currentUser.id, recipientId].sort().join('-')}`
+        : `game-${gameId}`,
+      createdAt: new Date(Date.now() - i * 60000).toISOString(),
+    }));
+
+    return HttpResponse.json({ messages: mockMessages.reverse() }, { status: 200 });
+  }),
+
+  // GET /conversations - Get user conversations
+  http.get(`${API_BASE}/conversations`, () => {
+    if (!getIsAuthenticated() || !getCurrentUser()) {
+      return new HttpResponse(null, { status: 401 });
+    }
+
+    const currentUser = getCurrentUser()!;
+    
+    // Mock conversations
+    const mockConversations = [
+      {
+        conversationId: `conv-${currentUser.id}-user2`,
+        type: 'DIRECT',
+        participants: [currentUser.id, 'user2'],
+        lastMessage: {
+          content: 'Hey, how are you?',
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
+          senderUsername: 'Friend1',
+        },
+        unreadCount: 2,
+      },
+      {
+        conversationId: `game-123`,
+        type: 'GAME',
+        gameId: 'game-123',
+        lastMessage: {
+          content: 'Good game!',
+          createdAt: new Date(Date.now() - 7200000).toISOString(),
+          senderUsername: 'Opponent',
+        },
+        unreadCount: 0,
+      },
+    ];
+
+    return HttpResponse.json({ conversations: mockConversations }, { status: 200 });
+  }),
 ];

@@ -1,6 +1,10 @@
 import Signal from '../core/signal';
 import type { GameStateOutput } from '../modules/game/types/game.types';
 
+// Export chat state
+export { chatState, chatStateHelpers } from './chat.state';
+export type { ChatState } from './chat.state';
+
 // Auth state data interface (used by the Signal)
 export interface AuthStateData {
   user: any | null;
