@@ -427,7 +427,7 @@ await httpClient.get('/users/me');
 ```typescript
 // Manual logout
 localStorage.removeItem('token');
-navigate('/login');
+navigate('/auth/login');
 ```
 
 **After:**

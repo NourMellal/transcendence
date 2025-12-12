@@ -8,6 +8,7 @@ import { IGameRepository } from '../../../application/ports/repositories/IGameRe
 import { EventSerializer } from '../serialization/EventSerializer';
 import { GameStatus } from '../../../domain/value-objects';
 import { logger } from '../../config/logger';
+import { PublicGameLobbyNotifier } from '../../websocket';
 
 export interface GameRoomNotifier {
     emitToGame(gameId: string, event: string, payload: unknown): void;
@@ -18,7 +19,8 @@ export class UserEventHandler {
         private readonly channel: Channel,
         private readonly serializer: EventSerializer,
         private readonly gameRepository: IGameRepository,
-        private readonly notifier?: GameRoomNotifier
+        private readonly notifier?: GameRoomNotifier,
+        private readonly lobbyNotifier?: PublicGameLobbyNotifier
     ) {}
 
     async start(queue: string, exchange: string): Promise<void> {
@@ -110,5 +112,7 @@ export class UserEventHandler {
                 userId: deletedPlayerId,
             });
         }
+
+        await this.lobbyNotifier?.broadcastSnapshot();
     }
 }

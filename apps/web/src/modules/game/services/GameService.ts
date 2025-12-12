@@ -125,11 +125,24 @@ class GameService {
    * List available games (optional - for lobby list view)
    * GET /api/games
    */
-  async listGames(): Promise<GameStateOutput[]> {
+  async listGames(params?: { status?: GameStateOutput['status']; limit?: number; offset?: number }): Promise<GameStateOutput[]> {
     try {
       console.log('[GameService] Fetching available games');
 
-      const response = await httpClient.get<{ games: GameStateOutput[]; total: number }>(this.basePath);
+      const query = new URLSearchParams();
+      if (params?.status) {
+        query.set('status', params.status);
+      }
+      if (typeof params?.limit === 'number') {
+        query.set('limit', String(params.limit));
+      }
+      if (typeof params?.offset === 'number') {
+        query.set('offset', String(params.offset));
+      }
+
+      const endpoint = query.toString() ? `${this.basePath}?${query.toString()}` : this.basePath;
+
+      const response = await httpClient.get<{ games: GameStateOutput[]; total: number }>(endpoint);
 
       console.log('[GameService] ✅ Fetched', response.data?.games?.length ?? 0, 'games');
       return response.data!.games;

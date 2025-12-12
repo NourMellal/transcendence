@@ -6,6 +6,11 @@ const routes = [
     component: HomePage,
     props: {},
   },
+  {
+    path: '/home',
+    component: HomePage,
+    props: {},
+  },
 ];
 
 export default routes;

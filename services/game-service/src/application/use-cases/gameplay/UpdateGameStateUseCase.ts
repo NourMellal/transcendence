@@ -4,6 +4,7 @@ import { GameStatus } from '../../../domain/value-objects';
 import { GameNotFoundError } from '../../../domain/errors';
 import { IGameEventPublisher } from '../../ports/messaging/IGameEventPublisher';
 import { IGameStateBroadcaster } from '../../ports/broadcasting/IGameStateBroadcaster';
+import { IUserServiceClient } from '../../ports/external';
 import type { GameSnapshot } from '../../../domain/entities/Game';
 import { Ball, Paddle } from '../../../domain/entities';
 import { Position, Velocity } from '../../../domain/value-objects';
@@ -29,6 +30,7 @@ export class UpdateGameStateUseCase {
         private readonly gamePhysics: GamePhysics,
         private readonly eventPublisher: IGameEventPublisher,
         private gameStateBroadcaster?: IGameStateBroadcaster,
+        private readonly userServiceClient?: IUserServiceClient,
         persistEveryNTicks = 10
     ) {
         this.persistEveryNTicks = Math.max(1, persistEveryNTicks);
@@ -71,11 +73,11 @@ export class UpdateGameStateUseCase {
         const finishedDuringTick = this.gamePhysics.advance(game, deltaTime);
         entry.ticksSincePersist += 1;
 
+        const snapshot = game.toSnapshot();
         if (finishedDuringTick && game.status === GameStatus.FINISHED) {
             await this.eventPublisher.publishGameFinished(game);
+            await this.broadcastGameFinished(gameId, snapshot);
         }
-
-        const snapshot = game.toSnapshot();
         const scoreChanged =
             snapshot.score.player1 !== entry.lastScore.p1 || snapshot.score.player2 !== entry.lastScore.p2;
         const statusChanged = snapshot.status !== entry.lastStatus;
@@ -104,6 +106,47 @@ export class UpdateGameStateUseCase {
         }
 
         return { status: game.status };
+    }
+
+    private async broadcastGameFinished(gameId: string, snapshot: GameSnapshot): Promise<void> {
+        if (!this.gameStateBroadcaster?.broadcastGameFinished) {
+            return;
+        }
+
+        const winnerId = this.resolveWinnerId(snapshot);
+        let winnerUsername: string | undefined;
+
+        if (winnerId && this.userServiceClient) {
+            try {
+                const summary = await this.userServiceClient.getUserSummary(winnerId);
+                winnerUsername = summary?.username;
+            } catch (error) {
+                console.warn('[UpdateGameStateUseCase] Failed to fetch winner username', error);
+            }
+        }
+
+        const payload = {
+            gameId,
+            winnerId,
+            winnerUsername,
+            finalScore: {
+                left: snapshot.score.player1,
+                right: snapshot.score.player2
+            },
+            finishedAt: snapshot.finishedAt ?? new Date().toISOString()
+        };
+
+        this.gameStateBroadcaster.broadcastGameFinished(gameId, payload);
+    }
+
+    private resolveWinnerId(snapshot: GameSnapshot): string | null {
+        if (snapshot.score.player1 === snapshot.score.player2) {
+            return null;
+        }
+
+        return snapshot.score.player1 > snapshot.score.player2
+            ? snapshot.players[0]?.id ?? null
+            : snapshot.players[1]?.id ?? null;
     }
 
     private async loadCachedGame(gameId: string) {

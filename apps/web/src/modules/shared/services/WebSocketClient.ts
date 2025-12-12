@@ -276,4 +276,11 @@ const defaultWsHost =
 const defaultWsPath =
   import.meta.env.VITE_WS_GAME_PATH || '/api/games/ws/socket.io';
 
+export function createGameWebSocketClient(
+  url: string = defaultWsHost,
+  path: string = defaultWsPath
+): WebSocketClient {
+  return new WebSocketClient(url, path);
+}
+
 export const gameWS = new WebSocketClient(defaultWsHost, defaultWsPath);

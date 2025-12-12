@@ -10,6 +10,9 @@ import {
 import { userService } from '@/services/api/UserService';
 import { authManager } from '@/utils/auth';
 import { showSuccess, showError } from '@/utils/errors';
+import { gameService } from '@/modules/game/services/GameService';
+import type { PublicGameSummary, GameLobbyUpdatedEvent, GameStateOutput } from '@/modules/game/types/game.types';
+import { createGameWebSocketClient } from '@/modules/shared/services/WebSocketClient';
 import type { SuggestedFriend } from '../../data/suggestions';
 
 type InviteStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -36,6 +39,10 @@ type State = {
   userSearchQuery: string;
   userSearchResult: SuggestedFriend | null;
   userSearchStatus: 'idle' | 'loading' | 'error' | 'not-found';
+  publicGames: PublicGameSummary[];
+  publicGamesLoading: boolean;
+  publicGamesError?: string;
+  joiningGameId?: string;
 };
 
 export default class DashboardPage extends Component<Record<string, never>, State> {
@@ -43,6 +50,8 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   private authUnsubscribe?: () => void;
   private feedbackTimeout?: number;
   private friendRequestFeedbackTimeout?: number;
+  private lobbySocket = createGameWebSocketClient();
+  private lobbyUnsubscribes: Array<() => void> = [];
 
   constructor(props: Record<string, never> = {}) {
     super(props);
@@ -64,6 +73,10 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       userSearchQuery: '',
       userSearchResult: null,
       userSearchStatus: 'idle',
+      publicGames: [],
+      publicGamesLoading: false,
+      publicGamesError: undefined,
+      joiningGameId: undefined,
     };
   }
 
@@ -82,6 +95,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
     void this.loadDashboardData();
     this.startLeaderboardPolling();
+    void this.initializePublicGamesFeed();
   }
 
   onUnmount(): void {
@@ -98,6 +112,9 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       clearTimeout(this.friendRequestFeedbackTimeout);
       this.friendRequestFeedbackTimeout = undefined;
     }
+    this.lobbyUnsubscribes.forEach((unsub) => unsub());
+    this.lobbyUnsubscribes = [];
+    this.lobbySocket.disconnect();
   }
 
   private startLeaderboardPolling(): void {
@@ -107,6 +124,67 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     this.leaderboardInterval = window.setInterval(() => {
       void this.refreshLeaderboard();
     }, 30_000);
+  }
+
+  private async initializePublicGamesFeed(): Promise<void> {
+    this.setState({ publicGamesLoading: true, publicGamesError: undefined });
+
+    try {
+      const games = await gameService.listGames({ status: 'WAITING', limit: 10 });
+      const summaries = await this.mapGamesToSummaries(games);
+      this.setState({ publicGames: summaries, publicGamesLoading: false });
+    } catch (error) {
+      console.warn('[DashboardPage] Failed to load public games snapshot', error);
+      this.setState({ publicGamesLoading: false, publicGamesError: 'Unable to load public games.' });
+    }
+
+    this.subscribeToLobbyUpdates();
+  }
+
+  private async mapGamesToSummaries(games: GameStateOutput[]): Promise<PublicGameSummary[]> {
+    const waitingGames = games.filter((game) => (game.players?.length ?? 0) < 2);
+    return Promise.all(waitingGames.map(async (game) => {
+      const creatorId = game.players?.[0]?.id;
+      const creatorProfile = creatorId ? await userService.getUserInfo(creatorId).catch(() => null) : null;
+
+      return {
+        gameId: game.id,
+        creatorId,
+        creatorUsername: creatorProfile?.username ?? 'Unknown',
+        gameType: game.mode ?? 'CLASSIC',
+        createdAt: typeof game.createdAt === 'string' ? game.createdAt : game.createdAt.toString(),
+        playersWaiting: game.players?.length ?? 0,
+      } satisfies PublicGameSummary;
+    }));
+  }
+
+  private subscribeToLobbyUpdates(): void {
+    this.lobbyUnsubscribes.forEach((unsub) => unsub());
+    this.lobbyUnsubscribes = [];
+
+    const unsubscribe = this.lobbySocket.on<GameLobbyUpdatedEvent>('game:lobby:updated', (payload) => {
+      this.handleLobbyUpdate(payload);
+    });
+
+    this.lobbyUnsubscribes.push(unsubscribe);
+
+    this.lobbySocket.connect().catch((error) => {
+      console.warn('[DashboardPage] Failed to connect lobby socket', error);
+    });
+  }
+
+  private handleLobbyUpdate(event: GameLobbyUpdatedEvent | unknown): void {
+    if (!event || typeof event !== 'object' || !Array.isArray((event as GameLobbyUpdatedEvent).games)) {
+      return;
+    }
+
+    const games = [...(event as GameLobbyUpdatedEvent).games];
+    games.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    this.state.publicGames = games;
+    this.state.publicGamesLoading = false;
+    this.state.publicGamesError = undefined;
+    this.update({});
   }
 
   private async refreshLeaderboard(): Promise<void> {
@@ -632,6 +710,90 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     `;
   }
 
+  private async handleJoinPublicGame(gameId: string): Promise<void> {
+    if (!gameId || this.state.joiningGameId === gameId) {
+      return;
+    }
+
+    this.setState({ joiningGameId: gameId });
+
+    try {
+      const game = await gameService.joinGame(gameId);
+      showSuccess('Joined lobby!');
+      navigate(`/game/lobby/${game.id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to join game.';
+      showError(message);
+      this.setState({ joiningGameId: undefined });
+    }
+  }
+
+  private renderPublicGamesWidget(): string {
+    const { publicGames, publicGamesLoading, publicGamesError, joiningGameId } = this.state;
+
+    let body = '';
+
+    if (publicGamesError) {
+      body = `<p class="text-sm" style="color: var(--color-error);">${publicGamesError}</p>`;
+    } else if (publicGamesLoading && publicGames.length === 0) {
+      body = '<p class="text-sm text-white/60">Loading public games...</p>';
+    } else if (!publicGamesLoading && publicGames.length === 0) {
+      body = '<p class="text-sm text-white/60">No public games are waiting right now.</p>';
+    } else {
+      body = `
+        <div class="space-y-3">
+          ${publicGames
+            .slice(0, 5)
+            .map((game) => `
+              <div class="rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);">
+                <div class="flex-1">
+                  <p class="text-xs font-mono text-white/40">
+                    ${game.gameId}
+                  </p>
+                  <p class="text-lg font-semibold">${game.creatorUsername ?? 'Unknown player'}</p>
+                  <p class="text-xs text-white/50 mt-1">
+                    ${game.gameType} • Created ${this.formatGameTime(game.createdAt)}
+                  </p>
+                </div>
+                <button
+                  data-action="join-public-game"
+                  data-game-id="${game.gameId}"
+                  class="btn-touch px-4 py-2 rounded-xl text-sm touch-feedback"
+                  style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white; ${joiningGameId === game.gameId ? 'opacity: 0.7;' : ''}"
+                  ${joiningGameId === game.gameId ? 'disabled' : ''}
+                >
+                  ${joiningGameId === game.gameId ? 'Joining…' : 'Join'}
+                </button>
+              </div>
+            `)
+            .join('')}
+        </div>
+      `;
+    }
+
+    return `
+      <section class="glass-panel rounded-2xl p-5 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs uppercase tracking-widest text-white/50">Public Games</p>
+            <h3 class="text-xl font-semibold">Waiting Lobby</h3>
+          </div>
+          <span class="text-xs text-white/60">${publicGamesLoading ? 'Syncing…' : 'Live'}</span>
+        </div>
+        ${body}
+      </section>
+    `;
+  }
+
+  private formatGameTime(timestamp: string): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return 'just now';
+    }
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
   private renderPendingRequestsWidget(): string {
     const incoming = this.getIncomingRequests();
     const outgoing = this.getOutgoingRequests();
@@ -1101,6 +1263,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
               <div class="glass-panel p-6 text-sm text-white/60">Loading dashboard data...</div>
             ` : ''}
             ${this.renderQuickActions()}
+            ${this.renderPublicGamesWidget()}
             ${this.renderPendingRequestsWidget()}
             ${this.renderSuggestedFriend()}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1144,6 +1307,13 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     bindClick('[data-action="quick-action"]', (el) => {
       const path = el.getAttribute('data-target');
       if (path) navigate(path);
+    });
+
+    bindClick('[data-action="join-public-game"]', (el) => {
+      const gameId = el.getAttribute('data-game-id');
+      if (gameId) {
+        void this.handleJoinPublicGame(gameId);
+      }
     });
 
     bindClick('[data-action="view-matches"]', () => {

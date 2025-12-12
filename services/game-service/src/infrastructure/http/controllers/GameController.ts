@@ -10,8 +10,7 @@ import {
 import {GameStatus} from '../../../domain/value-objects';
 import {GameStateOutput} from '../../../application/dto';
 import { createGameValidator } from '../validators/createGameValidator';
-import { GameLoop } from '../../websocket';
-import { GameRoomManager } from '../../websocket';
+import { GameLoop, GameRoomManager, PublicGameLobbyNotifier } from '../../websocket';
 
 interface GameControllerDeps {
     readonly createGameUseCase: CreateGameUseCase;
@@ -22,6 +21,7 @@ interface GameControllerDeps {
   readonly readyUpUseCase: ReadyUpUseCase;
   readonly gameLoop: GameLoop;
   readonly roomManager: GameRoomManager;
+  readonly lobbyNotifier: PublicGameLobbyNotifier;
 }
 
 export class GameController {
@@ -29,10 +29,11 @@ export class GameController {
 
     register(app: FastifyInstance): void {
       app.get('/games', async (request, reply) => {
-        const {status, limit, offset} = request.query as Partial<{
+        const {status, limit, offset, playerId} = request.query as Partial<{
           status: string;
           limit: string;
           offset: string;
+          playerId: string;
         }>;
 
         const parsedLimit = parseNumber(limit);
@@ -43,6 +44,7 @@ export class GameController {
 
         const listResult = await this.deps.listGamesUseCase.execute({
           status: mapQueryStatus(status),
+          playerId: playerId?.trim() || undefined,
           limit: limitValue,
           offset: offsetValue
         });
@@ -63,6 +65,7 @@ export class GameController {
         const userId = getUserId(request.headers['x-user-id']);
         const payload = createGameValidator(request.body, userId);
             const game = await this.deps.createGameUseCase.execute(payload);
+        void this.deps.lobbyNotifier.broadcastSnapshot();
         return reply.code(201).send(toApiGame(game));
       });
 
@@ -71,6 +74,7 @@ export class GameController {
         const userId = getUserId(request.headers['x-user-id']);
         await this.deps.joinGameUseCase.execute(gameId, userId);
         const game = await this.deps.getGameUseCase.execute(gameId);
+        void this.deps.lobbyNotifier.broadcastSnapshot();
         return reply.send(toApiGame(game));
         });
 
@@ -82,6 +86,7 @@ export class GameController {
         if (started) {
           this.deps.gameLoop.start(gameId);
           this.deps.roomManager.emitToGame(gameId, 'game_start', { gameId });
+          void this.deps.lobbyNotifier.broadcastSnapshot();
         }
         return reply.code(204).send();
       });
@@ -92,6 +97,7 @@ export class GameController {
         await this.deps.leaveGameUseCase.execute(gameId, userId);
         // Broadcast presence change to room listeners
         this.deps.roomManager.leave(gameId, userId);
+        void this.deps.lobbyNotifier.broadcastSnapshot();
             return reply.code(204).send();
         });
 
@@ -148,6 +154,7 @@ function toApiGame(game: GameStateOutput) {
 
   return {
     id: game.id,
+    mode: game.mode,
     player1: game.players[0]?.id ?? null,
     player2: game.players[1]?.id ?? null,
     status: toApiStatus(game.status),

@@ -17,7 +17,7 @@ import {
 } from '../application/use-cases';
 import { GameController, HealthController } from '../infrastructure/http/controllers';
 import { GamePhysics, CollisionDetector } from '../domain/services';
-import { GameLoop, GameRoomManager, ConnectionHandler, PaddleMoveHandler, DisconnectHandler } from '../infrastructure/websocket';
+import { GameLoop, GameRoomManager, ConnectionHandler, PaddleMoveHandler, DisconnectHandler, PublicGameLobbyNotifier } from '../infrastructure/websocket';
 import { PaddleSetHandler } from '../infrastructure/websocket/handlers/PaddleSetHandler';
 import { GameAuthService } from '../infrastructure/auth';
 
@@ -78,11 +78,12 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const leaveGame = new LeaveGameUseCase(repository);
     const readyUp = new ReadyUpUseCase(repository, eventPublisher);
     const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics, eventPublisher);
-    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics, eventPublisher);
+    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics, eventPublisher, undefined, userServiceClient);
     const disconnectPlayer = new DisconnectPlayerUseCase(repository);
 
     const gameLoop = new GameLoop(updateGameState);
     const roomManager = new GameRoomManager();
+    const lobbyNotifier = new PublicGameLobbyNotifier(roomManager, repository, userServiceClient);
     const authService = new GameAuthService();
     const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, readyUp, repository, disconnectPlayer);
     const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove, repository, roomManager);
@@ -90,7 +91,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager, gameLoop);
 
     const userEventsChannel = await messagingConnection.getChannel();
-    const userEventsHandler = new UserEventHandler(userEventsChannel, serializer, repository, roomManager);
+    const userEventsHandler = new UserEventHandler(userEventsChannel, serializer, repository, roomManager, lobbyNotifier);
 
     const gameController = new GameController({
         createGameUseCase: createGame,
@@ -101,6 +102,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         readyUpUseCase: readyUp,
         gameLoop,
         roomManager,
+        lobbyNotifier,
     });
     const healthController = new HealthController();
 
