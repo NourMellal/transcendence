@@ -10,4 +10,5 @@ export interface IMessageRepository {
         }
     ): Promise<Message[]>;
     findLatestByConversationId(conversationId: string): Promise<Message | null>;
+    deleteByConversationId(conversationId: string): Promise<void>;
 }

@@ -7,4 +7,5 @@ export interface IconversationRepository {
     getUnreadCount(userId: string, recipientId: string): Promise<number> ;    
     findByParticipants(userId1:string ,  userId2:string , type: MessageType):Promise<Conversation | null>  ;   
     findByGameId(gameId: string): Promise<Conversation | null>;
+    deleteByGameId(gameId: string): Promise<void>;
 }
