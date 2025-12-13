@@ -7,10 +7,11 @@ import { registerRoutes, HttpRoutesDeps } from './routes';
 interface CreateHttpServerOptions {
     readonly routes: HttpRoutesDeps;
     readonly internalApiKey?: string;
+    readonly logger?: unknown;
 }
 
 export function createHttpServer(options: CreateHttpServerOptions): FastifyInstance {
-    const app = fastify({ logger: { level: 'info' } });
+    const app = fastify({ logger: options.logger ?? { level: 'info' } });
 
     registerRequestLogger(app);
     registerErrorHandler(app);

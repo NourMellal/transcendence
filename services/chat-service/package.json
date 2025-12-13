@@ -12,6 +12,7 @@
     "dependencies": {
         "@fastify/cors": "^8.5.0",
         "@fastify/websocket": "^10.0.1",
+        "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-messaging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
@@ -24,6 +25,7 @@
         "sqlite3": "^5.1.7"
     },
     "devDependencies": {
+        "@types/amqplib": "^0.10.1",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^20.19.26",
         "tsx": "^4.21.0",

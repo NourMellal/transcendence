@@ -5,12 +5,14 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "paths": {
+      "@transcendence/shared-logging": ["../../packages/shared-logging/src"],
       "@transcendence/shared-utils": ["../../packages/shared-utils/src"],
     }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
   "references": [
+    { "path": "../../packages/shared-logging" },
     { "path": "../../packages/shared-utils" },
   ]
 }

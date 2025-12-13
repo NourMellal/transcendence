@@ -4,12 +4,13 @@
     "description": "Tournament organization and management service",
     "main": "dist/server.js",
     "scripts": {
-        "dev": "tsx src/server.ts",
+        "dev": "pnpm build && node dist/server.js",
         "build": "tsc",
         "start": "node dist/server.js",
         "test": "vitest"
     },
     "dependencies": {
+        "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-messaging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",

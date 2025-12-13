@@ -1,6 +1,5 @@
-export const logger = {
-    info: (...args: unknown[]) => console.log(...args),
-    warn: (...args: unknown[]) => console.warn(...args),
-    error: (...args: unknown[]) => console.error(...args),
-    debug: (...args: unknown[]) => console.debug(...args)
-};
+import { createLogger } from '@transcendence/shared-logging';
+
+export const logger: ReturnType<typeof createLogger> = createLogger('chat-service', {
+    pretty: process.env.LOG_PRETTY === 'true'
+});

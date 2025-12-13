@@ -1,3 +1,4 @@
+version: "3.9"
 
 services:
   # API Gateway
@@ -6,18 +7,22 @@ services:
       context: .
       dockerfile: infrastructure/api-gateway/Dockerfile
     ports:
-      - "3000:3000"
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
     environment:
-      - GATEWAY_PORT=3000
-      - USER_SERVICE_URL=http://user-service:3001
-      - GAME_SERVICE_URL=http://game-service:3002
-      - CHAT_SERVICE_URL=http://chat-service:3003
-      - TOURNAMENT_SERVICE_URL=http://tournament-service:3004
-      - RATE_LIMIT_MAX=100
-      - RATE_LIMIT_WINDOW=1 minute
-      # Vault configuration
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_SKIP_VERIFY=true
+      - LOG_DIR=/var/log/transcendence
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_PRETTY=${LOG_PRETTY}
+      - GATEWAY_PORT=${GATEWAY_PORT}
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+      - GAME_SERVICE_URL=${GAME_SERVICE_URL}
+      - CHAT_SERVICE_URL=${CHAT_SERVICE_URL}
+      - TOURNAMENT_SERVICE_URL=${TOURNAMENT_SERVICE_URL}
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX}
+      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
+    volumes:
+      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
     depends_on:
       - user-service
       - game-service
@@ -33,20 +38,21 @@ services:
       context: .
       dockerfile: services/user-service/Dockerfile
     ports:
-      - "3001:3001"
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
     environment:
-      - USER_SERVICE_PORT=3001
-      - USER_SERVICE_DB_PATH=/app/data/user-service.db
-      - UPLOAD_DIR=/app/uploads
-      - LOG_LEVEL=info
-      # Vault configuration
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_SKIP_VERIFY=true
-      # RabbitMQ configuration
-      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+      - LOG_DIR=/var/log/transcendence
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_PRETTY=${LOG_PRETTY}
+      - USER_SERVICE_PORT=${USER_SERVICE_PORT}
+      - DB_PATH=${USER_SERVICE_DB_PATH}
+      - UPLOAD_DIR=${USER_SERVICE_UPLOAD_DIR}
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - user-data:/app/data
       - user-uploads:/app/uploads
+      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
     depends_on:
       - vault
       - rabbitmq
@@ -59,15 +65,17 @@ services:
       context: .
       dockerfile: services/game-service/Dockerfile
     ports:
-      - "3002:3002"
+      - "${GAME_SERVICE_PORT}:${GAME_SERVICE_PORT}"
     environment:
-      - GAME_SERVICE_PORT=3002
-      - GAME_SERVICE_DB_PATH=/app/data/game-service.db
-      - LOG_LEVEL=info
-      # RabbitMQ configuration
-      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+      - LOG_DIR=/var/log/transcendence
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_PRETTY=${LOG_PRETTY}
+      - GAME_SERVICE_PORT=${GAME_SERVICE_PORT}
+      - GAME_SERVICE_DB_PATH=${GAME_SERVICE_DB_PATH}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - game-data:/app/data
+      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
     depends_on:
       - rabbitmq
     networks:
@@ -79,15 +87,17 @@ services:
       context: .
       dockerfile: services/chat-service/Dockerfile
     ports:
-      - "3003:3003"
+      - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
     environment:
-      - CHAT_SERVICE_PORT=3003
-      - CHAT_SERVICE_DB_PATH=/app/data/chat-service.db
-      - LOG_LEVEL=info
-      # RabbitMQ configuration
-      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+      - LOG_DIR=/var/log/transcendence
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_PRETTY=${LOG_PRETTY}
+      - CHAT_SERVICE_PORT=${CHAT_SERVICE_PORT}
+      - CHAT_SERVICE_DB_PATH=${CHAT_SERVICE_DB_PATH}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - chat-data:/app/data
+      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
     depends_on:
       - rabbitmq
     networks:
@@ -99,15 +109,17 @@ services:
       context: .
       dockerfile: services/tournament-service/Dockerfile
     ports:
-      - "3004:3004"
+      - "${TOURNAMENT_SERVICE_PORT}:${TOURNAMENT_SERVICE_PORT}"
     environment:
-      - TOURNAMENT_SERVICE_PORT=3004
-      - TOURNAMENT_SERVICE_DB_PATH=/app/data/tournament-service.db
-      - LOG_LEVEL=info
-      # RabbitMQ configuration
-      - RABBITMQ_URL=amqp://transcendence:transcendence_dev@rabbitmq:5672
+      - LOG_DIR=/var/log/transcendence
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_PRETTY=${LOG_PRETTY}
+      - TOURNAMENT_SERVICE_PORT=${TOURNAMENT_SERVICE_PORT}
+      - TOURNAMENT_DB_PATH=${TOURNAMENT_DB_PATH}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - tournament-data:/app/data
+      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
     depends_on:
       - rabbitmq
     networks:
@@ -121,8 +133,8 @@ services:
       - "5672:5672"    # AMQP port
       - "15672:15672"  # Management UI
     environment:
-      - RABBITMQ_DEFAULT_USER=transcendence
-      - RABBITMQ_DEFAULT_PASS=transcendence_dev
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
@@ -149,8 +161,8 @@ services:
       dockerfile: docker/Dockerfile
     container_name: transcendence-vault
     environment:
-      - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
-      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_DEV_ROOT_TOKEN_ID=${VAULT_DEV_ROOT_TOKEN_ID}
+      - VAULT_DEV_LISTEN_ADDRESS=${VAULT_DEV_LISTEN_ADDRESS}
     ports:
       - "8200:8200"
     cap_add:
@@ -162,18 +174,76 @@ services:
       - transcendence-network
     restart: unless-stopped
 
-
   # Grafana for dashboards
   grafana:
     image: grafana/grafana:latest
     ports:
       - "3300:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     volumes:
       - grafana-data:/var/lib/grafana
     networks:
       - transcendence-network
+
+  # Elasticsearch for log storage
+  elasticsearch:
+    image: ${ELASTICSEARCH_IMAGE}
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=${ELASTICSEARCH_SECURITY_ENABLED}
+      - "ES_JAVA_OPTS=-Xms${ELASTICSEARCH_HEAP} -Xmx${ELASTICSEARCH_HEAP}"
+    ports:
+      - "${ELASTICSEARCH_PORT}:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - transcendence-network
+
+  # Logstash for log processing
+  logstash:
+    image: ${LOGSTASH_IMAGE}
+    ports:
+      - "${LOGSTASH_BEATS_PORT}:${LOGSTASH_BEATS_PORT}"
+    environment:
+      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
+      - ELASTICSEARCH_INDEX_PREFIX=${ELASTICSEARCH_INDEX_PREFIX}
+      - LOGSTASH_BEATS_PORT=${LOGSTASH_BEATS_PORT}
+    volumes:
+      - ./infrastructure/elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    depends_on:
+      - elasticsearch
+    networks:
+      - transcendence-network
+
+  # Kibana for log exploration
+  kibana:
+    image: ${KIBANA_IMAGE}
+    environment:
+      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOST}
+    ports:
+      - "${KIBANA_PORT}:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - transcendence-network
+
+  # Filebeat to ship service logs into Logstash
+  filebeat:
+    image: ${FILEBEAT_IMAGE}
+    user: root
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    environment:
+      - FILEBEAT_LOG_DIR=${FILEBEAT_LOG_DIR}
+      - LOGSTASH_HOST=${LOGSTASH_HOST}
+    volumes:
+      - ./infrastructure/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ${HOST_LOG_DIR}:${FILEBEAT_LOG_DIR}:ro
+    depends_on:
+      - logstash
+    networks:
+      - transcendence-network
+
 
 volumes:
   user-data:
@@ -188,6 +258,7 @@ volumes:
   postgres-data:
   prometheus-data:
   grafana-data:
+  es-data:
 
 networks:
   transcendence-network:

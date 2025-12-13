@@ -133,6 +133,9 @@ importers:
       '@fastify/websocket':
         specifier: ^10.0.1
         version: 10.0.1
+      '@transcendence/shared-logging':
+        specifier: workspace:*
+        version: link:../../packages/shared-logging
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -176,6 +179,19 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.9.2
+
+  packages/shared-logging:
+    dependencies:
+      pino:
+        specifier: ^9.14.0
+        version: 9.14.0
+      pino-pretty:
+        specifier: ^10.3.1
+        version: 10.3.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
 
   packages/shared-messaging:
     devDependencies:
@@ -223,6 +239,9 @@ importers:
       '@fastify/websocket':
         specifier: ^10.0.1
         version: 10.0.1
+      '@transcendence/shared-logging':
+        specifier: workspace:*
+        version: link:../../packages/shared-logging
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
@@ -232,6 +251,9 @@ importers:
       '@transcendence/shared-validation':
         specifier: workspace:*
         version: link:../../packages/shared-validation
+      amqplib:
+        specifier: ^0.10.3
+        version: 0.10.9
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -254,6 +276,9 @@ importers:
         specifier: ^5.1.7
         version: 5.1.7
     devDependencies:
+      '@types/amqplib':
+        specifier: ^0.10.1
+        version: 0.10.8
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
@@ -272,6 +297,9 @@ importers:
 
   services/game-service:
     dependencies:
+      '@transcendence/shared-logging':
+        specifier: workspace:*
+        version: link:../../packages/shared-logging
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
@@ -324,6 +352,9 @@ importers:
 
   services/tournament-service:
     dependencies:
+      '@transcendence/shared-logging':
+        specifier: workspace:*
+        version: link:../../packages/shared-logging
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
@@ -376,6 +407,9 @@ importers:
       '@fastify/multipart':
         specifier: ^8.0.0
         version: 8.3.1
+      '@transcendence/shared-logging':
+        specifier: workspace:*
+        version: link:../../packages/shared-logging
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
@@ -6555,7 +6589,7 @@ snapshots:
 
   '@types/amqplib@0.10.8':
     dependencies:
-      '@types/node': 20.19.17
+      '@types/node': 20.19.26
 
   '@types/chai@5.2.2':
     dependencies:

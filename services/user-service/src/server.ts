@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import { join } from 'path';
 
-// Load .env from project root BEFORE any other imports
-dotenv.config({ path: join(__dirname, '../../../.env') });
+// Load the service-local .env (do not rely on repo-root .env to avoid leaking settings across services)
+dotenv.config({ path: join(__dirname, '../.env') });
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
@@ -52,12 +52,17 @@ import { createMessagingConfig } from './infrastructure/messaging/config/messagi
 import { RabbitMQConnection } from './infrastructure/messaging/RabbitMQConnection';
 import { EventSerializer } from './infrastructure/messaging/serialization/EventSerializer';
 import { RabbitMQUserEventsPublisher } from './infrastructure/messaging/RabbitMQPublisher';
+import { createLogger } from '@transcendence/shared-logging';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
 const DB_PATH = process.env.DB_PATH || join(__dirname, '../data/users.db');
 
 async function main() {
+    const logger = createLogger('user-service', {
+        pretty: process.env.LOG_PRETTY === 'true'
+    });
+
     // Initialize Vault JWT Service
     const jwtService = await initializeJWTService();
     const oauth42Service = createOAuth42Service();
@@ -169,16 +174,7 @@ async function main() {
 
     // Initialize Fastify
     const fastify = Fastify({
-        logger: {
-            level: process.env.LOG_LEVEL || 'info',
-            transport: {
-                target: 'pino-pretty',
-                options: {
-                    translateTime: 'HH:MM:ss Z',
-                    ignore: 'pid,hostname',
-                }
-            }
-        }
+        logger: logger as any
     });
 
     // Register plugins

@@ -1,10 +1,4 @@
-// Inline ApiResponse type (removed shared-types dependency)
-export interface ApiResponse<T = unknown> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    message?: string;
-}
+import type { ApiResponse } from '@transcendence/shared-types';
 
 // Export constants
 export * from './constants';
