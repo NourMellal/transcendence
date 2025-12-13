@@ -16,7 +16,8 @@ export async function startGameService(): Promise<void> {
                 gameController: container.controllers.gameController,
                 healthController: container.controllers.healthController
             },
-            internalApiKey: config.internalApiKey
+            internalApiKey: config.internalApiKey,
+            logger
         });
 
         const websocketServer = new GameWebSocketServer(app.server, {

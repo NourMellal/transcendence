@@ -22,6 +22,7 @@
         "@fastify/swagger": "^8.15.0",
         "@fastify/swagger-ui": "^4.1.0",
         "@fastify/websocket": "^10.0.1",
+        "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
         "dotenv": "^16.3.1",
