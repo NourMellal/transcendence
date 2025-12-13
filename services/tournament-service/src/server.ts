@@ -2,18 +2,17 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-// Load .env from project root
-
-dotenv.config({ path: join(__dirname, '../../../.env') });
+// Load only the tournament-service .env (avoid pulling repo-root defaults here)
+dotenv.config({ path: join(__dirname, '../.env') });
 
 import fastify from 'fastify';
 import { getEnvVarAsNumber, createTournamentServiceVault } from '@transcendence/shared-utils';
+import { createLogger } from '@transcendence/shared-logging';
 
 // Load configuration with Vault integration
 async function loadConfiguration() {
-    const vault = createTournamentServiceVault();
-
     try {
+        const vault = createTournamentServiceVault();
         await vault.initialize();
 
         // Get tournament-specific configuration from Vault
@@ -25,6 +24,7 @@ async function loadConfiguration() {
 
         return {
             PORT: getEnvVarAsNumber('TOURNAMENT_SERVICE_PORT', 3004),
+            HOST: process.env.TOURNAMENT_SERVICE_HOST || '0.0.0.0',
             // Tournament configuration from Vault
             MAX_TOURNAMENT_SIZE: tournamentConfig.maxTournamentSize || 32,
             TOURNAMENT_TIMEOUT_HOURS: tournamentConfig.timeoutHours || 24,
@@ -52,6 +52,7 @@ async function loadConfiguration() {
             EMAIL_NOTIFICATIONS: process.env.EMAIL_NOTIFICATIONS === 'true',
             DB_PATH: process.env.TOURNAMENT_DB_PATH || './tournament-service.db',
             DB_TYPE: 'sqlite',
+            HOST: process.env.TOURNAMENT_SERVICE_HOST || '0.0.0.0',
             vault: null
         };
     }
@@ -61,8 +62,12 @@ async function createApp() {
     // Load configuration with Vault integration
     const config = await loadConfiguration();
 
+    const logger = createLogger('tournament-service', {
+        pretty: process.env.LOG_PRETTY === 'true'
+    });
+
     const app = fastify({
-        logger: { level: 'info' }
+        logger
     });
 
     // Log configuration status
@@ -95,11 +100,25 @@ async function createApp() {
 }
 
 async function start() {
+    if (process.env.TOURNAMENT_SERVICE_DISABLED === 'true') {
+        console.log('🏁 Tournament Service disabled via TOURNAMENT_SERVICE_DISABLED=true (skip listen)');
+        return;
+    }
+
     try {
         const { app, config } = await createApp();
-        await app.listen({ port: config.PORT, host: '0.0.0.0' });
+        await app.listen({ port: config.PORT, host: (config as any).HOST || '0.0.0.0' });
         console.log(`🏆 Tournament Service running on port ${config.PORT}`);
     } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err?.code === 'EACCES' || err?.code === 'EPERM') {
+            console.warn(
+                '⚠️  Tournament Service could not bind to the requested port/host (permission denied). ' +
+                'If you are in a restricted environment, set TOURNAMENT_SERVICE_DISABLED=true to skip starting it, ' +
+                'or run the stack via Docker where the service can bind normally.'
+            );
+            return;
+        }
         console.error('Failed to start Tournament Service:', error);
         process.exit(1);
     }

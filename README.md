@@ -61,12 +61,20 @@ bash setup.sh
 powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
+**Debian/Ubuntu quick prep (env + dirs + deps):**
+```bash
+bash scripts/setup-service.sh
+```
+Copies `.env.example` to `.env` if missing, prepares log/data folders, and runs `pnpm install`.
+
 This will:
 - ✅ Install all dependencies
 - ✅ Set up HashiCorp Vault with secrets
 - ✅ Start RabbitMQ, Redis, and Vault
 - ✅ Configure environment variables
 - ✅ Validate everything works
+
+Copy `.env.example` to `.env` and adjust paths/ports/secrets before running Docker services or the ELK stack.
 
 ### Start All Services
 
@@ -279,6 +287,14 @@ Monitor:
 - Queue lengths
 - Consumer status
 - Exchange bindings
+
+### Logs & ELK (optional)
+
+- Copy `.env.example` to `.env` and adjust `LOG_DIR/HOST_LOG_DIR`, `RABBITMQ_*`, and ELK image/ports to match your setup.
+- Services emit JSON logs to `${HOST_LOG_DIR}` (default `data/logs`); `LOG_PRETTY=true` keeps console human-friendly while files stay JSON for shipping.
+- Start ELK when needed: `docker-compose up -d elasticsearch logstash kibana filebeat` (reads the same `.env` source of truth).
+- Kibana: http://localhost:5601 (create index pattern `transcendence-*`).
+- Filebeat tails `${HOST_LOG_DIR}/*.log` and ships to Logstash → Elasticsearch.
 
 ---
 

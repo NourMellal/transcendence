@@ -15,6 +15,7 @@
         "@fastify/cookie": "^9.3.1",
         "@fastify/cors": "^8.5.0",
         "@fastify/multipart": "^8.0.0",
+        "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-messaging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",

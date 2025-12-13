@@ -21,7 +21,7 @@ export class GameEventHandler {
     await this.channel.assertQueue(queue, { durable: true });
     await this.channel.bindQueue(queue, exchange, 'game.finished');
     await this.channel.consume(queue, (message) => this.handle(message), { noAck: false });
-    logger.info('[GameEventHandler] Listening for game.finished events', { queue, exchange });
+    logger.info({ queue, exchange }, '[GameEventHandler] Listening for game.finished events');
   }
 
   private async handle(message: ConsumeMessage | null): Promise<void> {
@@ -47,7 +47,7 @@ export class GameEventHandler {
       await this.deleteConversationForGame(parsed.payload.gameId);
       this.channel.ack(message);
     } catch (error) {
-      logger.error('[GameEventHandler] Failed to handle game.finished', error as Error);
+      logger.error({ err: error }, '[GameEventHandler] Failed to handle game.finished');
       this.channel.nack(message, false, true);
     }
   }
@@ -74,15 +74,18 @@ export class GameEventHandler {
   private async deleteConversationForGame(gameId: string): Promise<void> {
     const conversation = await this.conversationRepository.findByGameId(gameId);
     if (!conversation) {
-      logger.debug('[GameEventHandler] No conversation to delete for game', { gameId });
+      logger.debug({ gameId }, '[GameEventHandler] No conversation to delete for game');
       return;
     }
 
     await this.messageRepository.deleteByConversationId(conversation.id.toString());
     await this.conversationRepository.deleteByGameId(gameId);
-    logger.info('[GameEventHandler] Deleted game conversation after game.finished', {
-      gameId,
-      conversationId: conversation.id.toString()
-    });
+    logger.info(
+      {
+        gameId,
+        conversationId: conversation.id.toString()
+      },
+      '[GameEventHandler] Deleted game conversation after game.finished'
+    );
   }
 }

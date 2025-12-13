@@ -37,6 +37,7 @@ services/tournament-service/*.db*
 # Logs
 logs/
 *.log
+data/logs/
 
 # TypeScript build output
 dist/

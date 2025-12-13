@@ -14,6 +14,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { readFileSync } from 'fs';
 import { initializeVaultJWTService } from './utils/vault-jwt.service';
 import { loadGatewayConfig } from './config/gateway-config';
+import { createLogger } from '@transcendence/shared-logging';
 
 // Import route handlers
 import { registerAuthRoutes } from './routes/auth.routes';
@@ -36,30 +37,33 @@ async function createGateway() {
     // Initialize Vault JWT Service
     await initializeVaultJWTService();
 
-    const app = fastify({
-        logger: {
-            level: 'info',
-            serializers: {
-                req(req) {
-                    return {
-                        method: req.method,
-                        url: req.url,
-                        headers: {
-                            host: req.headers.host,
-                            'user-agent': req.headers['user-agent'],
-                            'content-type': req.headers['content-type']
-                        },
-                        remoteAddress: req.ip,
-                        remotePort: req.socket?.remotePort
-                    };
-                },
-                res(res) {
-                    return {
-                        statusCode: res.statusCode
-                    };
-                }
+    const logger = createLogger('api-gateway', {
+        pretty: process.env.LOG_PRETTY === 'true',
+        serializers: {
+            req(req) {
+                return {
+                    method: req.method,
+                    url: req.url,
+                    headers: {
+                        host: req.headers.host,
+                        'user-agent': req.headers['user-agent'],
+                        'content-type': req.headers['content-type']
+                    },
+                    remoteAddress: req.ip,
+                    remotePort: req.socket?.remotePort
+                };
+            },
+            res(res) {
+                return {
+                    statusCode: res.statusCode
+                };
             }
-        },
+        }
+    });
+
+    const app = fastify({
+        // Pino logger from shared-logging; cast to satisfy Fastify's base logger type
+        logger: logger as any,
         requestIdLogLabel: 'reqId',
         disableRequestLogging: false,
         requestIdHeader: 'x-request-id'

@@ -38,7 +38,7 @@
     "vitest": "^3.2.4"
   },
   "scripts": {
-    "predev:all": " bash scripts/setup-service.sh",
+    "predev:all": "./scripts/setup-service.sh",
     "dev:user": "pnpm --filter @transcendence/user-service dev",
     "dev:game": "pnpm --filter @transcendence/game-service dev",
     "dev:chat": "pnpm --filter @transcendence/chat-service dev",

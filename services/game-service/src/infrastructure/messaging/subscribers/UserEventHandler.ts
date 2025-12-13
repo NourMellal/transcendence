@@ -36,10 +36,10 @@ export class UserEventHandler {
             const event = this.serializer.deserialize<IntegrationEvent<unknown>>(message.content);
 
             if (event.metadata.eventType === EventType.USER_DELETED) {
-                logger.info('[UserEventHandler] Received user.deleted event', {
+                logger.info({
                     eventId: event.metadata.eventId,
                     userId: (event.payload as any)?.userId,
-                });
+                }, '[UserEventHandler] Received user.deleted event');
                 const parsed = this.parseUserDeletedEvent(event.payload);
                 if (!parsed) {
                     this.channel.nack(message, false, false);
@@ -52,7 +52,7 @@ export class UserEventHandler {
             this.channel.ack(message);
         } catch (error) {
             this.channel.nack(message, false, false);
-            logger.error('[UserEventHandler] Failed to handle user event', error);
+            logger.error({ err: error }, '[UserEventHandler] Failed to handle user event');
         }
     }
 
@@ -81,10 +81,10 @@ export class UserEventHandler {
 
     private async cleanUpUserGames(event: UserDeletedIntegrationEvent): Promise<void> {
         const games = await this.gameRepository.list({ playerId: event.payload.userId });
-        logger.info('[UserEventHandler] Cancelling active games for deleted user', {
+        logger.info({
             userId: event.payload.userId,
             totalGames: games.length,
-        });
+        }, '[UserEventHandler] Cancelling active games for deleted user');
 
         const deletedPlayerId = event.payload.userId;
 
@@ -105,10 +105,10 @@ export class UserEventHandler {
                     message: 'Opponent account was deleted. This match has been cancelled.',
                 });
             }
-            logger.info('[UserEventHandler] Cancelled game due to user deletion', {
+            logger.info({
                 gameId: game.id,
                 userId: deletedPlayerId,
-            });
+            }, '[UserEventHandler] Cancelled game due to user deletion');
         }
     }
 }

@@ -11,10 +11,11 @@ import { createMessagingConfig, EventSerializer, GameEventHandler, RabbitMQConne
 interface CreateHttpServerOptions {
     readonly routes: HttpRoutesDeps;
     readonly internalApiKey?: string;
+    readonly logger?: unknown;
 }
 
 export async function createHttpServer(options: CreateHttpServerOptions): Promise<FastifyInstance> {
-    const app = fastify({ logger: { level: 'info' } });
+    const app = fastify({ logger: options.logger ?? { level: 'info' } });
 
     registerRequestLogger(app);
     registerErrorHandler(app);
@@ -42,7 +43,8 @@ export async function startChatService(): Promise<void> {
                 chatController: container.controllers.chatController,
                 healthController: container.controllers.healthController
             },
-            internalApiKey: config.internalApiKey
+            internalApiKey: config.internalApiKey,
+            logger
         });
 
         // Get the underlying HTTP server from Fastify
@@ -81,9 +83,12 @@ export async function startChatService(): Promise<void> {
 
                 const queue = `${messagingConfig.queuePrefix}.game-events`;
                 await gameEventHandler.start(queue, messagingConfig.exchange);
-                logger.info('📨 Chat messaging consumer started', { queue });
+                logger.info({ queue }, '📨 Chat messaging consumer started');
             } catch (error) {
-                logger.warn('⚠️  Messaging not started. Game chat cleanup on game.finished will be disabled.', error);
+                logger.warn(
+                    { err: error },
+                    '⚠️  Messaging not started. Game chat cleanup on game.finished will be disabled.'
+                );
             }
         };
 
