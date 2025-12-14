@@ -38,13 +38,3 @@ export interface UpdateProfileInputDTO extends UpdateProfileRequestDTO {
 export interface GetUserInputDTO {
     readonly userId: string;
 }
-
-export interface DeleteUserInputDTO {
-    readonly userId: string;
-    readonly reason?: string;
-    readonly initiatedBy: string;
-}
-
-export interface DeleteUserResponseDTO {
-    readonly success: boolean;
-}
