@@ -125,6 +125,21 @@ export class SQLiteConversationRepository implements IconversationRepository {
       });
     });
   }
+
+  async deleteByGameId(gameId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const query = 'DELETE FROM conversations WHERE game_id = ?';
+
+      this.db.run(query, [gameId], (err) => {
+        if (err) {
+          reject(new Error(`Failed to delete conversation: ${err.message}`));
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
   private mapRowToConversation(row: any): Conversation {
     return Conversation.reconstitute({
       id: row.id,
