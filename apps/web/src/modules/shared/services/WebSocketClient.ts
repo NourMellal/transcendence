@@ -30,6 +30,10 @@ export class WebSocketClient {
     private url: string,
     private readonly wsPath?: string
   ) {
+    // Initialize token from current auth state immediately
+    this.token = appState.auth.get().token ?? null;
+    
+    // Subscribe to auth changes for future updates
     appState.auth.subscribe((auth) => {
       this.token = auth.token ?? null;
       if (this.socket) {

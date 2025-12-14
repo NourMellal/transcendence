@@ -22,7 +22,14 @@ export class GameWebSocketServer implements IGameStateBroadcaster {
     private readonly deps: GameWebSocketServerDeps;
 
     constructor(httpServer: HttpServer, deps: GameWebSocketServerDeps) {
-        this.io = new SocketIOServer(httpServer, { cors: { origin: '*' } });
+        this.io = new SocketIOServer(httpServer, {
+            cors: { origin: '*' },
+            transports: ['websocket'], // WebSocket only - no polling fallback
+            pingInterval: 10000, // Ping every 10s (default 25s)
+            pingTimeout: 5000, // Timeout after 5s (default 20s)
+            upgradeTimeout: 5000, // Faster upgrade timeout
+            allowEIO3: false, // Disable Engine.IO v3 compatibility
+        });
         this.deps = deps;
         deps.roomManager.attachServer(this.io);
         this.configure();
