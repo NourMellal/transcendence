@@ -7,13 +7,15 @@ import { registerErrorHandler } from './infrastructure/http/middlewares/errorHan
 import { registerRequestLogger } from './infrastructure/http/middlewares/requestLogger';
 import { registerRoutes , HttpRoutesDeps } from './infrastructure/http/routes';
 import { createInternalApiMiddleware } from './infrastructure/http/middlewares/internalApi.middleware';
+import { createMessagingConfig, EventSerializer, GameEventHandler, RabbitMQConnection } from './infrastructure/messaging';
 interface CreateHttpServerOptions {
     readonly routes: HttpRoutesDeps;
     readonly internalApiKey?: string;
+    readonly logger?: unknown;
 }
 
 export async function createHttpServer(options: CreateHttpServerOptions): Promise<FastifyInstance> {
-    const app = fastify({ logger: { level: 'info' } });
+    const app = fastify({ logger: options.logger ?? { level: 'info' } });
 
     registerRequestLogger(app);
     registerErrorHandler(app);
@@ -27,11 +29,13 @@ export async function createHttpServer(options: CreateHttpServerOptions): Promis
     return app;
 }
 
-export async function startChatService(): Promise<void> {    
+export async function startChatService(): Promise<void> {
     try {
         logger.info('🚀 Starting Chat Service...');
         const config = await loadChatServiceConfig();
-        const container = await createContainer(config); 
+        const container = await createContainer(config);
+        const messagingConfig = createMessagingConfig();
+        let messagingConnection: RabbitMQConnection | undefined;
 
         // Create HTTP server for both Fastify and Socket.IO
         const app = await createHttpServer({
@@ -39,7 +43,8 @@ export async function startChatService(): Promise<void> {
                 chatController: container.controllers.chatController,
                 healthController: container.controllers.healthController
             },
-            internalApiKey: config.internalApiKey
+            internalApiKey: config.internalApiKey,
+            logger
         });
 
         // Get the underlying HTTP server from Fastify
@@ -61,8 +66,37 @@ export async function startChatService(): Promise<void> {
 
         logger.info('✅ WebSocket server initialized');
 
+        const startMessaging = async () => {
+            try {
+                messagingConnection = new RabbitMQConnection({
+                    uri: messagingConfig.uri,
+                    exchange: messagingConfig.exchange
+                });
+                const channel = await messagingConnection.getChannel();
+                const serializer = new EventSerializer();
+                const gameEventHandler = new GameEventHandler(
+                    channel,
+                    serializer,
+                    container.repositories.conversationRepository,
+                    container.repositories.messageRepository
+                );
+
+                const queue = `${messagingConfig.queuePrefix}.game-events`;
+                await gameEventHandler.start(queue, messagingConfig.exchange);
+                logger.info({ queue }, '📨 Chat messaging consumer started');
+            } catch (error) {
+                logger.warn(
+                    { err: error },
+                    '⚠️  Messaging not started. Game chat cleanup on game.finished will be disabled.'
+                );
+            }
+        };
+
+        await startMessaging();
+
         const shutdown = async () => {
             logger.info('🛑 Shutting down Chat Service...');
+            await messagingConnection?.close();
             await app.close();
             httpServer.close();
             process.exit(0);
@@ -89,4 +123,4 @@ export async function startChatService(): Promise<void> {
     }
 }
 
-startChatService();   
+startChatService();
