@@ -19,7 +19,6 @@ import { RefreshTokenUseCase } from './application/use-cases/auth/refresh-token.
 import { UpdateProfileUseCase } from './application/use-cases/users/update-profile.usecase';
 import { GetUserUseCase } from './application/use-cases/users/get-user.usecase';
 import { GetUserByUsernameUseCase } from './application/use-cases/users/get-user-by-username.usecase';
-import { DeleteUserUseCase } from './application/use-cases/users/delete-user.usecase';
 import { Generate2FAUseCaseImpl } from './application/use-cases/two-fa/generate-2fa.usecase';
 import { Enable2FAUseCaseImpl } from './application/use-cases/two-fa/enable-2fa.usecase';
 import { Disable2FAUseCaseImpl } from './application/use-cases/two-fa/disable-2fa.usecase';
@@ -51,7 +50,6 @@ import { PasswordHasherAdapter } from './infrastructure/adapters/security/passwo
 import { createMessagingConfig } from './infrastructure/messaging/config/messaging.config';
 import { RabbitMQConnection } from './infrastructure/messaging/RabbitMQConnection';
 import { EventSerializer } from './infrastructure/messaging/serialization/EventSerializer';
-import { RabbitMQUserEventsPublisher } from './infrastructure/messaging/RabbitMQPublisher';
 import { createLogger } from '@transcendence/shared-logging';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
@@ -76,11 +74,6 @@ async function main() {
         exchange: messagingConfig.exchange,
     });
     const eventSerializer = new EventSerializer();
-    const userEventsPublisher = new RabbitMQUserEventsPublisher(
-        messagingConnection,
-        eventSerializer,
-        messagingConfig.exchange
-    );
 
     // Initialize shared database connection
     const db = await open({
@@ -113,14 +106,6 @@ async function main() {
     const updateProfileUseCase = new UpdateProfileUseCase(userRepository, passwordHasher);
     const getUserUseCase = new GetUserUseCase(userRepository, presenceRepository);
     const getUserByUsernameUseCase = new GetUserByUsernameUseCase(userRepository, presenceRepository);
-    const deleteUserUseCase = new DeleteUserUseCase(
-        userRepository,
-        sessionRepository,
-        friendshipRepository,
-        presenceRepository,
-        unitOfWork,
-        userEventsPublisher
-    );
     const generate2FAUseCase = new Generate2FAUseCaseImpl(userRepository, twoFAService);
     const enable2FAUseCase = new Enable2FAUseCaseImpl(userRepository, twoFAService);
     const disable2FAUseCase = new Disable2FAUseCaseImpl(userRepository, twoFAService);
@@ -160,7 +145,7 @@ async function main() {
         enable2FAUseCase,
         disable2FAUseCase
     );
-    const userController = new UserController(updateProfileUseCase, getUserUseCase, deleteUserUseCase, getUserByUsernameUseCase);
+    const userController = new UserController(updateProfileUseCase, getUserUseCase, getUserByUsernameUseCase);
     const friendController = new FriendController(
         sendFriendRequestUseCase,
         respondFriendRequestUseCase,

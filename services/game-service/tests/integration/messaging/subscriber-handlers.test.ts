@@ -2,11 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Channel, ConsumeMessage } from 'amqplib';
 import {
     createTournamentStartedEvent,
-    createUserDeletedEvent,
     EventType,
     IntegrationEvent,
 } from '@transcendence/shared-messaging';
-import { UserEventHandler } from '../../../src/infrastructure/messaging/subscribers/UserEventHandler';
 import { TournamentEventHandler } from '../../../src/infrastructure/messaging/subscribers/TournamentEventHandler';
 import { EventSerializer } from '../../../src/infrastructure/messaging/serialization/EventSerializer';
 import { IGameRepository, ListGamesParams } from '../../../src/application/ports/repositories/IGameRepository';
@@ -84,61 +82,6 @@ function buildMessage(serializer: EventSerializer, event: IntegrationEvent<any>)
         properties: {} as any,
     } as ConsumeMessage;
 }
-
-describe('UserEventHandler', () => {
-    const serializer = new EventSerializer();
-    let channel: InMemoryChannel;
-    let repository: InMemoryGameRepository;
-    let notifier: { emitToGame: ReturnType<typeof vi.fn> };
-
-    beforeEach(() => {
-        channel = new InMemoryChannel();
-        repository = new InMemoryGameRepository();
-        notifier = {
-            emitToGame: vi.fn(),
-        };
-    });
-
-    it('cancels active games for deleted users and acknowledges the message', async () => {
-        const game = Game.create({ playerId: 'user-1', opponentId: 'user-2', mode: 'CLASSIC', config: {} });
-        repository.games.push(game);
-
-        const handler = new UserEventHandler(channel as Channel, serializer, repository, notifier);
-        const event = createUserDeletedEvent({ userId: 'user-1', deletedAt: new Date('2024-01-01T00:00:00Z') });
-        const message = buildMessage(serializer, event);
-
-        // @ts-expect-error accessing private handler for test coverage
-        await handler.handle(message);
-
-        expect(repository.games[0].status).toBe(GameStatus.CANCELLED);
-        expect(notifier.emitToGame).toHaveBeenCalledWith(game.id, 'game:cancelled', expect.any(Object));
-        expect(channel.ack).toHaveBeenCalledWith(message);
-        expect(channel.nack).not.toHaveBeenCalled();
-    });
-
-    it('nacks when the payload does not validate', async () => {
-        const handler = new UserEventHandler(channel as Channel, serializer, repository, notifier);
-        const invalidEvent = {
-            metadata: {
-                eventId: '1',
-                eventType: EventType.USER_DELETED,
-                version: '1.0.0',
-                timestamp: new Date(),
-                source: 'test-suite',
-            },
-            payload: {
-                deletedAt: 'not-a-date',
-            },
-        } as IntegrationEvent<any>;
-        const message = buildMessage(serializer, invalidEvent);
-
-        // @ts-expect-error accessing private handler for test coverage
-        await handler.handle(message);
-
-        expect(channel.nack).toHaveBeenCalledWith(message, false, false);
-        expect(channel.ack).not.toHaveBeenCalled();
-    });
-});
 
 describe('TournamentEventHandler', () => {
     const serializer = new EventSerializer();

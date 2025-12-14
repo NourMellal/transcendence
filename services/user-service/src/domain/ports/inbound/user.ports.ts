@@ -1,6 +1,4 @@
 import type {
-    DeleteUserInputDTO,
-    DeleteUserResponseDTO,
     GetUserInputDTO,
     UpdateProfileInputDTO,
     UpdateProfileResponseDTO,
@@ -13,8 +11,4 @@ export interface IGetUserUseCase {
 
 export interface IUpdateProfileUseCase {
     execute(input: UpdateProfileInputDTO): Promise<UpdateProfileResponseDTO>;
-}
-
-export interface IDeleteUserUseCase {
-    execute(input: DeleteUserInputDTO): Promise<DeleteUserResponseDTO>;
 }
