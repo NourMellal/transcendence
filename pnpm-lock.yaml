@@ -251,9 +251,6 @@ importers:
       '@transcendence/shared-validation':
         specifier: workspace:*
         version: link:../../packages/shared-validation
-      amqplib:
-        specifier: ^0.10.3
-        version: 0.10.9
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
