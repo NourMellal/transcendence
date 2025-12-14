@@ -75,7 +75,7 @@ This ensures only one page is mounted at a time and page lifecycle is respected.
 ```ts
 // example route
 {
-  path: '/login',
+  path: '/auth/login',
   component: LoginPage // can be a constructor or an instance
 }
 ```
@@ -122,4 +122,3 @@ If you'd like, I can also:
 - Add a short `apps/web/README.md` linking to this doc and showing the exact commands to run locally.
 - Create a small example page that demonstrates composing child components (login page with left/right panels) using the `Component` API.
 - Remove the untracked/garbage files — I have a list ready; I will only delete after you confirm which of the candidates to remove.
-

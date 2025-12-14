@@ -14,6 +14,7 @@ import type { WSConnectionState } from '@/modules/shared/types/websocket.types';
 import { isOnlineMode } from '../utils/featureFlags';
 import { gameService } from '../services/GameService';
 import { appState } from '@/state';
+import { navigate } from '@/routes';
 
 interface GameCanvasProps {
   gameId?: string; // Optional: for online mode
@@ -26,6 +27,9 @@ interface GameCanvasState {
   isGameRunning: boolean;
   connectionStatus?: ConnectionStatus;
   mySide?: 'left' | 'right';
+  showEndModal: boolean;
+  winnerName?: string;
+  winnerId?: string;
 }
 
 export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
@@ -64,6 +68,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private pointerMoveHandler?: (e: PointerEvent) => void;
   private startStopBtn?: HTMLButtonElement | null;
   private restartBtn?: HTMLButtonElement | null;
+  private returnHomeBtn?: HTMLButtonElement | null;
+  private returnHomeHandler?: (event: Event) => void;
   private readonly player2Controls = { up: 'ArrowUp', down: 'ArrowDown' };
   private readonly player1Controls = { up: 'w', down: 's' };
   private handleButtonClick = (e: Event): void => {
@@ -86,6 +92,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     return {
       isGameRunning: false,
       connectionStatus: 'disconnected',
+      showEndModal: false,
     };
   }
 
@@ -121,7 +128,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   render(): string {
     return `
-      <div class="game-canvas-wrapper space-y-4 sm:space-y-6">
+      <div class="game-canvas-wrapper space-y-4 sm:space-y-6 relative">
+        ${this.renderEndModal()}
         <!-- Canvas Container -->
         <div class="glass-panel-mobile sm:glass-panel relative rounded-xl sm:rounded-2xl overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1);">
           <div class="game-area rounded-lg sm:rounded-xl overflow-hidden" style="background: var(--color-bg-dark); aspect-ratio: 4 / 3;">
@@ -177,6 +185,57 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     `;
   }
 
+  private renderEndModal(): string {
+    if (!this.state.showEndModal) {
+      return '';
+    }
+
+    const winnerLabel = this.state.winnerName ?? 'Winner';
+
+    return `
+      <div class="absolute inset-0 z-20 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-md rounded-2xl"></div>
+        <div class="relative w-full max-w-md mx-4 glass-panel rounded-2xl p-6 text-center" style="border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(6, 8, 20, 0.95);">
+          <p class="text-sm uppercase tracking-widest text-white/60">Match Finished</p>
+          <h3 class="text-3xl sm:text-4xl font-bold mt-3 mb-6" style="color: var(--color-brand-primary);">🏆 ${winnerLabel}</h3>
+          <button
+            data-action="return-home"
+            class="btn-touch px-6 py-3 rounded-xl font-semibold touch-feedback"
+            style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  private showGameEndModal(winnerId?: string, winnerName?: string): void {
+    if (this.state.showEndModal) {
+      return;
+    }
+
+    const label = winnerName ?? this.deriveWinnerLabel(winnerId);
+    this.setState({ showEndModal: true, winnerName: label, winnerId });
+  }
+
+  private deriveWinnerLabel(winnerId?: string): string {
+    if (!winnerId) {
+      return 'Winner';
+    }
+
+    const currentUserId = (appState.auth.get().user as { id?: string } | undefined)?.id;
+    if (currentUserId && currentUserId === winnerId) {
+      return 'You Win';
+    }
+
+    return 'Opponent Wins';
+  }
+
+  private handleReturnHome(): void {
+    navigate('/home');
+  }
+
   onMount(): void {
     this.canvas = this.element!.querySelector('#game-canvas') as HTMLCanvasElement;
     this.renderer = new GameRenderer(this.canvas);
@@ -221,6 +280,18 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     this.registerPointerHandlers();
     this.registerKeyboardHandlers();
+
+    if (this.returnHomeBtn && this.returnHomeHandler) {
+      this.returnHomeBtn.removeEventListener('click', this.returnHomeHandler);
+    }
+    this.returnHomeBtn = this.element.querySelector('[data-action="return-home"]') as HTMLButtonElement | null;
+    if (this.returnHomeBtn) {
+      this.returnHomeHandler = (event: Event) => {
+        event.preventDefault();
+        this.handleReturnHome();
+      };
+      this.returnHomeBtn.addEventListener('click', this.returnHomeHandler);
+    }
   }
 
   private observeCanvasResize(): void {
@@ -369,7 +440,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       gameWS.on('game_state', (event: GameStateUpdateEvent) => this.applyGameStateUpdate(event)),
       gameWS.on('ball_state', (event: BallStateEvent) => this.applyBallStateUpdate(event)),
       gameWS.on('paddle_update', (event: PaddleUpdateEvent) => this.applyPaddleUpdate(event)),
-      gameWS.on('game_end', (event: GameEndEvent) => this.handleGameEnd(event)),
+      gameWS.on('game:finished', (event: GameEndEvent) => this.handleGameEnd(event)),
       gameWS.on('error', (data: unknown) => {
         console.error('[GameCanvas] Game error:', data);
       })
@@ -435,6 +506,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     this.stopLoop();
     this.renderer.render(this.ball, this.player1, this.player2);
+    this.showGameEndModal(event.winnerId, event.winnerUsername);
   }
 
   private applyGameStateUpdate(payload: GameStateUpdateEvent): void {
@@ -720,6 +792,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       this.startStopBtn.textContent = `🏆 ${winner} Wins!`;
       this.startStopBtn.disabled = true;
     }
+    this.showGameEndModal(undefined, winner);
   }
 
   onUnmount(): void {
@@ -748,6 +821,12 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       document.removeEventListener('keyup', this.keyUpHandler);
       this.keyUpHandler = undefined;
     }
+
+    if (this.returnHomeBtn && this.returnHomeHandler) {
+      this.returnHomeBtn.removeEventListener('click', this.returnHomeHandler);
+    }
+    this.returnHomeBtn = null;
+    this.returnHomeHandler = undefined;
 
     this.startStopBtn = null;
     this.restartBtn = null;

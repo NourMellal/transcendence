@@ -4,6 +4,7 @@ import "./styles/main.css";
 import "./modules/chat/styles/chat.css";
 import { authService } from "./services/auth/AuthService";
 import { presenceManager } from "./services/presence/presence-manager";
+import { guestSessionService } from "./services/guest/GuestSessionService";
 
 console.log('🚀 Transcendence - Cyberpunk Edition');
 console.log('🎨 Design system loaded');
@@ -13,7 +14,8 @@ console.log('🎨 Design system loaded');
   const app = document.querySelector<HTMLDivElement>('#app');
 
   if (app) {
-    // Hydrate session before rendering
+    // Hydrate guest + auth session before rendering
+    guestSessionService.hydrateFromStorage();
     await authService.hydrateFromStorage();
     presenceManager.initialize();
 
