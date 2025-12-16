@@ -27,6 +27,11 @@ export class GameServiceClient {
       throw new Error('You must be in this game to chat');
     }
 
+    // Allow lone player to chat in lobby with a placeholder opponent.
+    if (playerIds.length === 1) {
+      return [playerIds[0], `pending:${gameId}`];
+    }
+
     if (playerIds.length < 2) {
       throw new Error('Game lobby is incomplete');
     }

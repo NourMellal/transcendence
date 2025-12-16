@@ -3,6 +3,7 @@ import {
   Tournament,
   TournamentDTOs,
   TournamentMatch,
+  TournamentLeaderboard
 } from '../../models';
 
 const API_PREFIX = '';
@@ -71,8 +72,7 @@ export class TournamentService {
    */
   async startTournament(tournamentId: string): Promise<TournamentDTOs.StartTournamentResponse> {
     const response = await httpClient.post<TournamentDTOs.StartTournamentResponse>(
-      `${API_PREFIX}/tournaments/${tournamentId}/start`,
-      {}
+      `${API_PREFIX}/tournaments/${tournamentId}/start`
     );
     return response.data!;
   }
