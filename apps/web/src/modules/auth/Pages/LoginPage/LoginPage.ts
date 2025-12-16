@@ -248,10 +248,11 @@ export default class LoginPage extends Component<Props, State> {
 
     try {
       const response = await authService.login({ email, password, twoFACode: twoFA || undefined });
+      const currentAuth = appState.auth.get();
       appState.auth.set({
-        ...appState.auth.get(),
-        user: response.user ?? null,
-        isAuthenticated: Boolean(response.user),
+        ...currentAuth,
+        user: response.user ?? currentAuth.user ?? null,
+        isAuthenticated: true,
         isLoading: false,
       });
       navigate('/dashboard');
@@ -261,6 +262,8 @@ export default class LoginPage extends Component<Props, State> {
       if (error instanceof ApiError) {
         if (error.status === 401) {
           message = 'Invalid email or password.';
+        } else if (error.status === 409) {
+          message = error.message || 'You are already logged in on another device.';
         } else if (error.status >= 500) {
           message = 'Service is temporarily unavailable. Please try later.';
         }

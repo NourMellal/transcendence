@@ -123,4 +123,4 @@ export async function startChatService(): Promise<void> {
     }
 }
 
-startChatService();   
+startChatService();
