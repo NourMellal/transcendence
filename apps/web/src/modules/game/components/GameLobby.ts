@@ -504,14 +504,9 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       }),
       gameWS.on('game_start', (data: any) => {
         console.log('[GameLobby] Game started:', data);
-        if (this.state.game && data.gameId === this.state.game.id) {
-          this.state.game.status = 'IN_PROGRESS';
-          this.update({});
-          this.teardownLobbyChat();
-          setTimeout(() => {
-            this.navigateTo(`/game/play/${data.gameId}`);
-          }, 500);
-        }
+        const targetGameId = data?.gameId ?? this.props.gameId;
+        if (!targetGameId) return;
+        this.handleGameStart(targetGameId);
       }),
       gameWS.on('error', (data: any) => {
         console.error('[GameLobby] Game error:', data);
@@ -635,6 +630,34 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       error: null,
     });
     this.update({});
+  }
+
+  private handleGameStart(gameId: string): void {
+    // Keep local and global state in sync before navigation
+    if (this.state.game) {
+      this.state.game = { ...this.state.game, status: 'IN_PROGRESS' };
+      appState.game.set({
+        current: this.state.game,
+        isLoading: false,
+        error: null,
+      });
+      this.update({});
+    } else {
+      const current = appState.game.get().current;
+      appState.game.set({
+        current: current ? { ...current, id: current.id ?? gameId, status: 'IN_PROGRESS' } : null,
+        isLoading: false,
+        error: null,
+      });
+    }
+
+    this.teardownLobbyChat();
+
+    // Navigate immediately; Router will unmount this component
+    const targetPath = `/game/play/${gameId}`;
+    if (window.location.pathname !== targetPath) {
+      this.navigateTo(targetPath);
+    }
   }
 
   private navigateTo(path: string): void {
