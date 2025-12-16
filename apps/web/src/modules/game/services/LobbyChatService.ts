@@ -38,26 +38,27 @@ class LobbyChatService {
     const wsUrl = this.getWebSocketUrl();
     this.socket = createGameSocket(wsUrl, token, '/api/chat/ws/socket.io');
 
-    this.unsubscribes.push(
-      this.socket.on('connect', () => {
-        lobbyChatHelpers.setConnected(true);
-        this.joinGameRoom();
-        this.loadHistory();
-      }),
-      this.socket.on('disconnect', () => {
-        lobbyChatHelpers.setConnected(false);
-      }),
-      this.socket.on('connect_error', (err: unknown) => {
-        console.error('[LobbyChat] connect_error', err);
-        lobbyChatHelpers.setError('Unable to connect to chat');
-      }),
-      this.socket.on('new_message', (payload: any) => this.handleIncomingMessage(payload)),
-      this.socket.on('user_typing', (payload: any) => this.handleTyping(payload)),
-      this.socket.on('message_error', (payload: any) => {
-        const msg = typeof payload === 'object' && payload?.error ? payload.error : 'Chat error';
-        lobbyChatHelpers.setError(msg as string);
-      })
-    );
+    this.addSocketListener('connect', () => {
+      lobbyChatHelpers.setConnected(true);
+      this.joinGameRoom();
+      this.loadHistory();
+    });
+
+    this.addSocketListener('disconnect', () => {
+      lobbyChatHelpers.setConnected(false);
+    });
+
+    this.addSocketListener('connect_error', (err: unknown) => {
+      console.error('[LobbyChat] connect_error', err);
+      lobbyChatHelpers.setError('Unable to connect to chat');
+    });
+
+    this.addSocketListener('new_message', (payload: any) => this.handleIncomingMessage(payload));
+    this.addSocketListener('user_typing', (payload: any) => this.handleTyping(payload));
+    this.addSocketListener('message_error', (payload: any) => {
+      const msg = typeof payload === 'object' && (payload as any)?.error ? (payload as any).error : 'Chat error';
+      lobbyChatHelpers.setError(msg as string);
+    });
 
     this.socket.connect();
   }
@@ -161,6 +162,18 @@ class LobbyChatService {
   private joinGameRoom(): void {
     if (!this.socket?.connected || !this.gameId) return;
     this.socket.emit('join_game_chat', { gameId: this.gameId });
+  }
+
+  private addSocketListener(event: string, handler: (payload: any) => void): void {
+    if (!this.socket) return;
+    this.socket.on(event, handler);
+    this.unsubscribes.push(() => {
+      try {
+        this.socket?.off(event, handler);
+      } catch {
+        // ignore
+      }
+    });
   }
 
   private getWebSocketUrl(): string {
