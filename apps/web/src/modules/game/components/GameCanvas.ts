@@ -146,37 +146,50 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
           <button
             id="start-stop-btn"
             data-action="start-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
-            style="background: white; color: var(--color-bg-dark);"
-            onmouseover="this.style.background='var(--color-brand-secondary)'; this.style.color='white';"
-            onmouseout="this.style.background='white'; this.style.color='var(--color-bg-dark)';"
+            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback hover:scale-105 flex items-center justify-center gap-2"
+            style="background: linear-gradient(135deg, #00b3d9 0%, #0095b8 100%); color: white; box-shadow: 0 4px 16px rgba(0, 179, 217, 0.25); border: 1px solid rgba(255, 255, 255, 0.1);"
           >
-            ▶️ Start Game
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><g data-name="play circle"><path d="M12 0a12 12 0 1 0 12 12A12 12 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10 10 0 0 1-10 10z"/><path d="M17.49 11.13c-9.58-5.32-9.31-5.4-10-5S7 6.41 7 17a1 1 0 0 0 1 1c.37 0-.29.3 9.49-5.13a1 1 0 0 0 0-1.74zM9 15.3V8.7l5.94 3.3z"/></g></svg>
+            Start Game
           </button>
 
           <button
             id="restart-btn"
             data-action="restart-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
-            style="border: 2px solid rgba(255, 255, 255, 0.2); color: white; background: rgba(255, 255, 255, 0.05);"
+            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback hover:scale-105 flex items-center justify-center gap-2"
+            style="border: 1.5px solid rgba(255, 255, 255, 0.15); color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px);"
           >
-            🔄 Restart
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><g data-name="repeat circle"><path d="M12 0a12 12 0 1 0 12 12A12 12 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10 10 0 0 1-10 10z"/><path d="M18 10a1 1 0 0 0-1 1 5 5 0 0 1-5 5h-1.59l.3-.29a1 1 0 0 0-1.42-1.42c-2.08 2.09-2.1 2.06-2.21 2.33a1 1 0 0 0 .21 1.09C9.47 19.89 9.46 20 10 20a1 1 0 0 0 .71-1.71l-.3-.29H12c6.4 0 8.51-8 6-8zM12 8h1.59l-.3.29A1 1 0 0 0 14 10c.54 0 .56-.15 2.71-2.29a1 1 0 0 0 .21-1.09c-.1-.26-.05-.17-2.21-2.33a1 1 0 0 0-1.42 1.42l.3.29H12c-6.4 0-8.51 8-6 8a1 1 0 0 0 1-1 5 5 0 0 1 5-5z"/></g></svg>
+            Restart
           </button>
         </div>
 
         <!-- Score Display -->
-        <div class="glass-panel-mobile sm:glass-panel px-4 sm:px-8 py-4 sm:py-6 rounded-xl sm:rounded-2xl" style="border: 1px solid rgba(255, 255, 255, 0.1);">
-          <div class="grid grid-cols-2 gap-4 sm:gap-8 text-center">
-            <div class="space-y-2">
-              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 1</div>
-              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-primary);">
-                <span id="player1-score">0</span>
+        <div class="relative overflow-hidden rounded-xl sm:rounded-2xl" style="background: linear-gradient(135deg, rgba(13, 17, 23, 0.95) 0%, rgba(27, 31, 35, 0.95) 100%); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+          <!-- Subtle animated background accent -->
+          <div class="absolute inset-0 opacity-5" style="background: radial-gradient(circle at 30% 50%, var(--color-brand-primary), transparent 70%), radial-gradient(circle at 70% 50%, var(--color-brand-secondary), transparent 70%);"></div>
+          
+          <div class="relative grid grid-cols-2 gap-6 sm:gap-12 text-center px-6 sm:px-12 py-5 sm:py-8">
+            <!-- Player 1 Score -->
+            <div class="space-y-1 sm:space-y-2">
+              <div class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider" style="color: rgba(255, 255, 255, 0.4); letter-spacing: 0.1em;">Player 1</div>
+              <div class="relative">
+                <div class="text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums transition-all duration-300" style="color: #ffffff; text-shadow: 0 2px 8px rgba(0, 179, 217, 0.3), 0 0 20px rgba(0, 179, 217, 0.1);">
+                  <span id="player1-score">0</span>
+                </div>
               </div>
             </div>
-            <div class="space-y-2">
-              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 2</div>
-              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-secondary);">
-                <span id="player2-score">0</span>
+
+            <!-- Center Divider -->
+            <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-px h-12 sm:h-16" style="background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1), transparent);"></div>
+
+            <!-- Player 2 Score -->
+            <div class="space-y-1 sm:space-y-2">
+              <div class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider" style="color: rgba(255, 255, 255, 0.4); letter-spacing: 0.1em;">Player 2</div>
+              <div class="relative">
+                <div class="text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums transition-all duration-300" style="color: #ffffff; text-shadow: 0 2px 8px rgba(255, 0, 110, 0.3), 0 0 20px rgba(255, 0, 110, 0.1);">
+                  <span id="player2-score">0</span>
+                </div>
               </div>
             </div>
           </div>
@@ -195,16 +208,24 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     return `
       <div class="absolute inset-0 z-20 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-md rounded-2xl"></div>
-        <div class="relative w-full max-w-md mx-4 glass-panel rounded-2xl p-6 text-center" style="border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(6, 8, 20, 0.95);">
-          <p class="text-sm uppercase tracking-widest text-white/60">Match Finished</p>
-          <h3 class="text-3xl sm:text-4xl font-bold mt-3 mb-6" style="color: var(--color-brand-primary);">🏆 ${winnerLabel}</h3>
-          <button
-            data-action="return-home"
-            class="btn-touch px-6 py-3 rounded-xl font-semibold touch-feedback"
-            style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
-          >
-            Return to Home
-          </button>
+        <div class="relative w-full max-w-md mx-4 rounded-2xl p-8 text-center overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1); background: linear-gradient(135deg, rgba(13, 17, 23, 0.98) 0%, rgba(27, 31, 35, 0.98) 100%); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);">
+          <!-- Subtle glow effect -->
+          <div class="absolute inset-0 opacity-10" style="background: radial-gradient(circle at 50% 0%, var(--color-brand-primary), transparent 60%);"></div>
+          
+          <div class="relative">
+            <p class="text-xs sm:text-sm uppercase tracking-widest font-semibold" style="color: rgba(255, 255, 255, 0.5); letter-spacing: 0.15em;">Match Finished</p>
+            <h3 class="text-3xl sm:text-5xl font-bold mt-4 mb-8 flex items-center justify-center gap-3" style="color: #ffffff; text-shadow: 0 2px 20px rgba(0, 179, 217, 0.4);">
+              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="48" height="48" fill="currentColor"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>
+              ${winnerLabel}
+            </h3>
+            <button
+              data-action="return-home"
+              class="btn-touch px-8 py-4 rounded-xl font-semibold touch-feedback transition-all duration-300 hover:scale-105"
+              style="background: linear-gradient(135deg, #00b3d9 0%, #0095b8 100%); color: white; box-shadow: 0 4px 20px rgba(0, 179, 217, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);"
+            >
+              Return to Home
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -616,10 +637,10 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     if (this.isRunning) {
       this.stopLoop();
-      this.startStopBtn.textContent = '▶️ Start Game';
+      this.startStopBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><g data-name="24.play circle"><path d="M12 0a12 12 0 1 0 12 12A12.013 12.013 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10.011 10.011 0 0 1-10 10z"/><path d="m10.8 15.8 5-4a1 1 0 0 0 0-1.6l-5-4a1 1 0 0 0-1.6.8v8a1 1 0 0 0 1.6.8z"/></g></svg>Start Game';
     } else {
       this.startLoop();
-      this.startStopBtn.textContent = '⏹ Stop Game';
+      this.startStopBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><g data-name="pause circle"><path d="M12 0a12 12 0 1 0 12 12A12 12 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10 10 0 0 1-10 10z"/><path d="M14 8v8a1 1 0 0 0 2 0V8a1 1 0 0 0-2 0zM8 8v8a1 1 0 0 0 2 0V8a1 1 0 0 0-2 0z"/></g></svg>Stop Game';
     }
   }
 
@@ -715,7 +736,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     // Re-enable start button after reset
     if (this.startStopBtn) {
-      this.startStopBtn.textContent = '▶️ Start Game';
+      this.startStopBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><g data-name="24.play circle"><path d="M12 0a12 12 0 1 0 12 12A12.013 12.013 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10.011 10.011 0 0 1-10 10z"/><path d="m10.8 15.8 5-4a1 1 0 0 0 0-1.6l-5-4a1 1 0 0 0-1.6.8v8a1 1 0 0 0 1.6.8z"/></g></svg>Start Game';
       this.startStopBtn.disabled = false;
       this.startStopBtn.style.opacity = '1';
     }
@@ -789,7 +810,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private endGame(winner: string): void {
     this.stopLoop();
     if (this.startStopBtn) {
-      this.startStopBtn.textContent = `🏆 ${winner} Wins!`;
+      this.startStopBtn.innerHTML = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>${winner} Wins!`;
       this.startStopBtn.disabled = true;
     }
     this.showGameEndModal(undefined, winner);

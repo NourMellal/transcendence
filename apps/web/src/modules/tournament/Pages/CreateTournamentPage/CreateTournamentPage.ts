@@ -141,73 +141,77 @@ export default class CreateTournamentPage extends Component<Record<string, never
               <p class="text-sm" style="color: var(--color-success);">${success}</p>
             </div>
           ` : ''}
-          <form data-action="create-tournament" class="glass-panel p-6 space-y-5">
+          <form data-action="create-tournament" class="glass-panel p-8 space-y-6">
             <div>
-              <label class="text-sm text-white/70">Tournament Name</label>
+              <label class="block text-sm font-medium mb-3" style="color: var(--color-text-secondary);">Tournament Name</label>
               <input
                 type="text"
                 name="name"
                 value="${form.name}"
-                class="glass-input w-full rounded-xl mt-2"
+                class="glass-input w-full rounded-xl px-5 py-4 text-base"
+                style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);"
                 placeholder="Neon Legends Cup"
                 required
               />
             </div>
             <div>
-              <label class="text-sm text-white/70">Description</label>
+              <label class="block text-sm font-medium mb-3" style="color: var(--color-text-secondary);">Description</label>
               <textarea
                 name="description"
-                rows="3"
-                class="glass-input w-full rounded-xl mt-2"
+                rows="4"
+                class="glass-input w-full rounded-xl px-5 py-4 text-base resize-none"
+                style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);"
                 placeholder="Optional details, rules, or theme."
               >${form.description}</textarea>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label class="text-sm text-white/70">Bracket Type</label>
-                <select name="type" class="glass-input w-full rounded-xl mt-2">
+                <label class="block text-sm font-medium mb-3" style="color: var(--color-text-secondary);">Bracket Type</label>
+                <select name="type" class="glass-input w-full rounded-xl px-5 py-4 text-base" style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);">
                   <option value="single_elimination" ${form.type === 'single_elimination' ? 'selected' : ''}>Single Elimination</option>
                   <option value="double_elimination" ${form.type === 'double_elimination' ? 'selected' : ''}>Double Elimination</option>
                   <option value="round_robin" ${form.type === 'round_robin' ? 'selected' : ''}>Round Robin</option>
                 </select>
               </div>
               <div>
-                <label class="text-sm text-white/70">Max Participants</label>
+                <label class="block text-sm font-medium mb-3" style="color: var(--color-text-secondary);">Max Participants</label>
                 <input
                   type="number"
                   name="maxParticipants"
                   min="4"
                   max="64"
                   value="${form.maxParticipants}"
-                  class="glass-input w-full rounded-xl mt-2"
+                  class="glass-input w-full rounded-xl px-5 py-4 text-base"
+                  style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);"
                 />
               </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label class="flex items-center gap-3 text-sm text-white/70">
-                <input type="checkbox" name="isPublic" ${form.isPublic ? 'checked' : ''} class="rounded" />
-                Public tournament (listed in discovery)
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <label class="flex items-center gap-3 px-5 py-4 rounded-xl cursor-pointer transition-all" style="background: var(--color-panel-bg); border: 1px solid var(--color-panel-border);">
+                <input type="checkbox" name="isPublic" ${form.isPublic ? 'checked' : ''} class="w-5 h-5 rounded" style="accent-color: var(--color-brand-primary);" />
+                <span class="text-sm" style="color: var(--color-text-primary);">Public tournament (listed in discovery)</span>
               </label>
-              <label class="flex items-center gap-3 text-sm text-white/70">
-                <input type="checkbox" name="isPowerUpsEnabled" ${form.isPowerUpsEnabled ? 'checked' : ''} class="rounded" />
-                Enable power-ups
+              <label class="flex items-center gap-3 px-5 py-4 rounded-xl cursor-pointer transition-all" style="background: var(--color-panel-bg); border: 1px solid var(--color-panel-border);">
+                <input type="checkbox" name="isPowerUpsEnabled" ${form.isPowerUpsEnabled ? 'checked' : ''} class="w-5 h-5 rounded" style="accent-color: var(--color-brand-primary);" />
+                <span class="text-sm" style="color: var(--color-text-primary);">Enable power-ups</span>
               </label>
             </div>
             <div>
-              <label class="text-sm text-white/70">Max Score per match</label>
+              <label class="block text-sm font-medium mb-3" style="color: var(--color-text-secondary);">Max Score per match</label>
               <input
                 type="number"
                 name="maxScore"
                 min="5"
                 max="21"
                 value="${form.maxScore}"
-                class="glass-input w-full rounded-xl mt-2"
+                class="glass-input w-full rounded-xl px-5 py-4 text-base"
+                style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);"
               />
             </div>
             <button
               type="submit"
-              class="btn-touch w-full py-3 rounded-2xl touch-feedback font-semibold"
-              style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
+              class="btn-touch w-full py-4 rounded-xl touch-feedback font-semibold text-lg transition-all duration-300 hover:scale-[1.02]"
+              style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white; border: 1px solid rgba(255, 255, 255, 0.1);"
               ${isSubmitting ? 'disabled' : ''}
             >
               ${isSubmitting ? 'Creating...' : 'Create Tournament'}
