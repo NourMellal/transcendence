@@ -263,12 +263,6 @@ export class HttpClient {
     const errorMessage = errorData?.message || errorData?.error || '';
     console.log('[HttpClient] 🔑 401 detected:', errorMessage);
 
-    // Check if it's a 2FA challenge
-    if (errorMessage.toLowerCase().includes('two-factor') || errorMessage.toLowerCase().includes('2fa')) {
-      console.log('[HttpClient] 🔐 2FA required, requesting code from user...');
-      return this.handle2FARequired(response);
-    }
-
     // Try to recover the original request config and url we saved earlier
     const originalEntry = this.responseToRequestMap.get(response) || undefined;
     const originalConfig = originalEntry?.config;
@@ -306,60 +300,6 @@ export class HttpClient {
         this.refreshPromise = this.processTokenRefresh();
       }
     });
-  }
-
-  /**
-   * Handle 2FA required scenario
-   */
-  private async handle2FARequired(response: Response): Promise<Response> {
-    const originalEntry = this.responseToRequestMap.get(response) || undefined;
-    const originalUrl = originalEntry?.url || response.url;
-    const originalConfig = originalEntry?.config;
-
-    try {
-      // Request 2FA code from user via event emitter
-      const totpCode = await authEvents.request2FA({
-        url: originalUrl,
-        config: originalConfig || { method: 'GET', headers: {} }
-      });
-
-      console.log('[HttpClient] 🔐 2FA code received, retrying login with code...');
-
-      // Retry the original request with 2FA code
-      // Parse the original body if it exists
-      let originalBody: any = {};
-      if (originalConfig && originalConfig.body) {
-        try {
-          originalBody = JSON.parse(originalConfig.body as string);
-        } catch (e) {
-          console.warn('[HttpClient] Failed to parse original request body');
-        }
-      }
-
-      // Add totpCode to the request body
-      const bodyWithTotp = {
-        ...originalBody,
-        totpCode
-      };
-
-      const retryHeaders = this.normalizeHeaders(originalConfig?.headers);
-      retryHeaders.set('Content-Type', 'application/json');
-
-      const retryResponse = await fetch(originalUrl, {
-        ...originalConfig,
-        body: JSON.stringify(bodyWithTotp),
-        headers: retryHeaders
-      });
-
-      if (!retryResponse.ok) {
-        throw new Error('2FA verification failed');
-      }
-
-      return retryResponse;
-    } catch (error) {
-      console.error('[HttpClient] ❌ 2FA flow failed:', error);
-      throw error;
-    }
   }
 
   /**

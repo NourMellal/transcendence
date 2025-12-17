@@ -114,9 +114,6 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
     }
 
     const normalized = code.toLowerCase();
-    if (normalized.includes('already_logged')) {
-      return 'This account is already active on another device. Please logout there before signing in again.';
-    }
     if (normalized === 'missing_code') {
       return 'Missing OAuth parameters.';
     }

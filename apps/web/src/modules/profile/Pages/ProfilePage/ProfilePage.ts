@@ -2,6 +2,7 @@ import Component from '@/core/Component';
 import type { User, UserDTOs } from '@/models';
 import { appState } from '@/state';
 import { userService } from '@/services/api/UserService';
+import { authService } from '@/services/auth/AuthService';
 import { navigate } from '@/routes';
 
 type ProfileFormValues = {
@@ -15,6 +16,11 @@ type State = {
   isLoading: boolean;
   isSaving: boolean;
   avatarPreview: string;
+  twoFAFlow?: 'enable';
+  twoFAToken: string;
+  twoFASecret?: string;
+  twoFAQrCode?: string;
+  is2FAWorking: boolean;
   error?: string;
   success?: string;
 };
@@ -37,6 +43,11 @@ export default class ProfilePage extends Component<Record<string, never>, State>
       isLoading: !auth.user,
       isSaving: false,
       avatarPreview: auth.user?.avatar || '/assets/images/ape.png',
+      twoFAFlow: undefined,
+      twoFAToken: '',
+      twoFASecret: undefined,
+      twoFAQrCode: undefined,
+      is2FAWorking: false,
       error: undefined,
       success: undefined,
     };
@@ -154,6 +165,113 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     this.avatarFile = file;
     this.replaceAvatarPreview(URL.createObjectURL(file));
   };
+
+  private readonly handle2FATokenChange = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    // Avoid setState() here: it replaces the whole component DOM on every keystroke,
+    // which looks like a page reload/flicker and can steal input focus.
+    // Keep the latest value for confirm + future rerenders triggered by other actions.
+    this.state.twoFAToken = input.value;
+  };
+
+  private readonly handleManage2FA = (event: Event) => {
+    event.preventDefault();
+    void this.start2FAFlow();
+  };
+
+  private readonly handleConfirm2FA = (event: Event) => {
+    event.preventDefault();
+    void this.confirm2FA();
+  };
+
+  private readonly handleCancel2FA = (event: Event) => {
+    event.preventDefault();
+    this.setState({
+      twoFAFlow: undefined,
+      twoFAToken: '',
+      twoFASecret: undefined,
+      twoFAQrCode: undefined,
+      is2FAWorking: false,
+      error: undefined,
+      success: undefined,
+    });
+  };
+
+  private async start2FAFlow(): Promise<void> {
+    const user = this.state.user;
+    if (!user || this.state.is2FAWorking) return;
+    if (user.oauthProvider === '42') return;
+
+    // Requirement: once enabled, user cannot disable 2FA from profile.
+    if (user.isTwoFAEnabled) return;
+
+    const mode: 'enable' = 'enable';
+
+    this.setState({
+      twoFAFlow: mode,
+      twoFAToken: '',
+      twoFASecret: undefined,
+      twoFAQrCode: undefined,
+      is2FAWorking: mode === 'enable',
+      error: undefined,
+      success: undefined,
+    });
+
+    if (mode === 'enable') {
+      try {
+        const { secret, qrCode } = await authService.generate2FA();
+        this.setState({ twoFASecret: secret, twoFAQrCode: qrCode, is2FAWorking: false });
+      } catch (error) {
+        this.setState({
+          error: this.getErrorMessage(error),
+          is2FAWorking: false,
+        });
+      }
+    }
+  }
+
+  private async confirm2FA(): Promise<void> {
+    const user = this.state.user;
+    const mode = this.state.twoFAFlow;
+    if (!user || !mode || this.state.is2FAWorking) return;
+
+    const tokenInput = this.element?.querySelector<HTMLInputElement>('[data-profile-2fa="token"]');
+    const token = (tokenInput?.value ?? this.state.twoFAToken).trim();
+    if (!/^\d{6}$/.test(token)) {
+      this.setState({ error: 'Please enter a valid 6-digit code.', twoFAToken: token });
+      return;
+    }
+
+    this.setState({ is2FAWorking: true, error: undefined, success: undefined });
+
+    try {
+      const response = await authService.enable2FA({ token });
+
+      const refreshed = await userService.getMe();
+      const auth = appState.auth.get();
+      appState.auth.set({
+        ...auth,
+        user: refreshed,
+        isAuthenticated: true,
+      });
+
+      this.setState({
+        user: refreshed,
+        twoFAFlow: undefined,
+        twoFAToken: '',
+        twoFASecret: undefined,
+        twoFAQrCode: undefined,
+        is2FAWorking: false,
+        success:
+          response?.message || 'Two-factor authentication enabled.',
+      });
+    } catch (error) {
+      this.setState({
+        error: this.getErrorMessage(error),
+        is2FAWorking: false,
+      });
+    }
+  }
 
   private async submitProfile(): Promise<void> {
     if (this.state.isSaving || !this.state.user) return;
@@ -478,11 +596,15 @@ export default class ProfilePage extends Component<Record<string, never>, State>
   }
 
   private renderSecurityCard(isOAuthUser: boolean): string {
-    const buttonLabel = this.state.user?.isTwoFAEnabled ? 'Manage 2FA' : 'Enable 2FA';
+    const buttonLabel = this.state.user?.isTwoFAEnabled ? '2FA Enabled' : 'Enable 2FA';
     const statusLabel = this.state.user?.isTwoFAEnabled ? 'Currently enabled' : 'Currently disabled';
     const description = isOAuthUser
       ? '2FA is handled by your OAuth provider.'
       : 'Add a rotating code on top of your password to ensure your account remains secure.';
+
+    const flow = this.state.twoFAFlow;
+    const showFlow = Boolean(flow) && !isOAuthUser;
+    const confirmLabel = 'Confirm enable';
       
     return `
       <div class="profile-glass-panel rounded-3xl p-8 flex flex-col h-full">
@@ -502,11 +624,63 @@ export default class ProfilePage extends Component<Record<string, never>, State>
             <button 
               class="px-4 py-2 bg-white/10 border border-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${isOAuthUser ? 'opacity-50 cursor-not-allowed' : ''}" 
               data-profile-action="manage-2fa"
-              ${isOAuthUser ? 'disabled' : ''}
+              ${isOAuthUser || showFlow || this.state.is2FAWorking || Boolean(this.state.user?.isTwoFAEnabled) ? 'disabled' : ''}
             >
               ${buttonLabel}
             </button>
           </div>
+
+          ${showFlow ? `
+            <div class="mt-6 p-4 rounded-xl bg-black/20 border border-white/10">
+              <p class="text-xs text-text-secondary mb-3">
+                Scan this QR code with your authenticator app, then enter the 6-digit code.
+              </p>
+              ${this.state.twoFAQrCode ? `
+                <div class="flex items-start gap-4">
+                  <img alt="2FA QR code" class="w-28 h-28 rounded-lg bg-white p-1" src="${this.escape(this.state.twoFAQrCode)}" />
+                  ${this.state.twoFASecret ? `
+                    <div class="flex-1">
+                      <p class="text-[10px] text-text-secondary uppercase tracking-wider font-semibold mb-1">Manual code</p>
+                      <p class="text-xs text-white break-all">${this.escape(this.state.twoFASecret)}</p>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : `
+                <p class="text-xs text-text-secondary">Generating QR code…</p>
+              `}
+
+              <div class="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                <div class="flex-1 w-full">
+                  <label class="text-xs font-medium text-text-secondary ml-1">6-digit code</label>
+                  <input
+                    class="mt-1 w-full rounded-lg px-3 py-2.5 text-sm bg-black/20 border border-white/10 focus:bg-black/40 focus:border-white/20 text-white transition-all"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    placeholder="123456"
+                    value="${this.escape(this.state.twoFAToken)}"
+                    data-profile-2fa="token"
+                  />
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    class="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-200 transition-all ${this.state.is2FAWorking ? 'opacity-50 cursor-not-allowed' : ''}"
+                    data-profile-action="confirm-2fa"
+                    ${this.state.is2FAWorking ? 'disabled' : ''}
+                  >
+                    ${this.state.is2FAWorking ? 'Working…' : confirmLabel}
+                  </button>
+                  <button
+                    class="px-4 py-2 bg-white/10 border border-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors"
+                    data-profile-action="cancel-2fa"
+                    ${this.state.is2FAWorking ? 'disabled' : ''}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -562,12 +736,26 @@ export default class ProfilePage extends Component<Record<string, never>, State>
 
     const manage2fa = this.element.querySelector<HTMLElement>('[data-profile-action="manage-2fa"]');
     if (manage2fa) {
-      const handler = (event: Event) => {
-        event.preventDefault();
-        console.info('[ProfilePage] 2FA management flow not yet implemented.');
-      };
-      manage2fa.addEventListener('click', handler);
-      this.subscriptions.push(() => manage2fa.removeEventListener('click', handler));
+      manage2fa.addEventListener('click', this.handleManage2FA);
+      this.subscriptions.push(() => manage2fa.removeEventListener('click', this.handleManage2FA));
+    }
+
+    const tokenInput = this.element.querySelector<HTMLInputElement>('[data-profile-2fa="token"]');
+    if (tokenInput) {
+      tokenInput.addEventListener('input', this.handle2FATokenChange);
+      this.subscriptions.push(() => tokenInput.removeEventListener('input', this.handle2FATokenChange));
+    }
+
+    const confirm2fa = this.element.querySelector<HTMLElement>('[data-profile-action="confirm-2fa"]');
+    if (confirm2fa) {
+      confirm2fa.addEventListener('click', this.handleConfirm2FA);
+      this.subscriptions.push(() => confirm2fa.removeEventListener('click', this.handleConfirm2FA));
+    }
+
+    const cancel2fa = this.element.querySelector<HTMLElement>('[data-profile-action="cancel-2fa"]');
+    if (cancel2fa) {
+      cancel2fa.addEventListener('click', this.handleCancel2FA);
+      this.subscriptions.push(() => cancel2fa.removeEventListener('click', this.handleCancel2FA));
     }
   }
 
