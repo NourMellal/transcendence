@@ -122,11 +122,6 @@ export class AuthController {
                     error: 'Unauthorized',
                     message
                 });
-            } else if (message.includes('already logged')) {
-                reply.code(409).send({
-                    error: 'Conflict',
-                    message
-                });
             } else if (message.includes('required') || message.includes('JWT configuration')) {
                 reply.code(400).send({
                     error: 'Bad Request',
@@ -269,7 +264,7 @@ export class AuthController {
         } catch (error: any) {
             request.log.error({ err: error }, 'OAuth 42 callback failed');
             const message = (error as Error)?.message ?? '';
-            const reason = message.includes('already logged') ? 'already_logged_in' : 'oauth_error';
+            const reason = 'oauth_error';
             reply.redirect(this.buildFailureRedirect(reason));
         }
     }

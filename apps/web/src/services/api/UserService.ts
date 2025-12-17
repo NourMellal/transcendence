@@ -25,6 +25,24 @@ const userCache = new Map<string, { username: string; displayName?: string; avat
  * Handles user profile management, friends, and user-related operations
  */
 export class UserService {
+  private normalizeUser(user: any): User {
+    if (!user || typeof user !== 'object') {
+      throw new Error('Invalid user payload');
+    }
+
+    const isTwoFAEnabled =
+      typeof (user as any).isTwoFAEnabled === 'boolean'
+        ? (user as any).isTwoFAEnabled
+        : typeof (user as any).is2FAEnabled === 'boolean'
+          ? (user as any).is2FAEnabled
+          : false;
+
+    return {
+      ...(user as User),
+      isTwoFAEnabled,
+    };
+  }
+
   /**
    * Get current user profile
    */
@@ -33,7 +51,7 @@ export class UserService {
     if (!response.data) {
       throw new Error('Failed to fetch user profile');
     }
-    return response.data;
+    return this.normalizeUser(response.data);
   }
 
   /**
@@ -45,9 +63,10 @@ export class UserService {
       if (!response.data) {
         throw new Error('Failed to fetch user profile');
       }
+      const normalized = this.normalizeUser(response.data);
       const stats = await this.getUserStats(userId).catch(() => this.buildEmptyStats());
       return {
-        ...response.data,
+        ...normalized,
         stats,
         friends: [],
         matchHistory: [],
@@ -97,7 +116,7 @@ export class UserService {
           'Accept': 'application/json'
         }
       });
-      return response.data ?? null;
+      return response.data ? this.normalizeUser(response.data) : null;
     } catch (error) {
       // Return null if user not found (404) or other errors
       console.warn('[UserService] User search failed', error);
@@ -194,10 +213,11 @@ export class UserService {
     try {
       const response = await httpClient.get<User>(`${API_PREFIX}/users/${userId}`);
       if (response.data) {
+        const normalized = this.normalizeUser(response.data);
         const info = {
-          username: response.data.username,
-          displayName: response.data.displayName,
-          avatar: response.data.avatar,
+          username: normalized.username,
+          displayName: normalized.displayName,
+          avatar: normalized.avatar,
         };
         userCache.set(userId, info);
         return info;

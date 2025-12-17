@@ -5,6 +5,7 @@
 
 import httpClient, { HttpClient } from '../../modules/shared/services/HttpClient';
 import type { User } from '../../models/User';
+import type { UserDTOs } from '../../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../../models/Auth';
 import { appState } from '../../state';
 
@@ -38,12 +39,25 @@ export class AuthService {
   async login(
     credentials: LoginRequest & { twoFACode?: string }
   ): Promise<LoginResponse> {
+    // Backend expects `totpCode`; keep `twoFACode` as a UI-friendly alias.
+    const payload: Record<string, unknown> = {
+      ...credentials,
+      totpCode: (credentials as any).totpCode ?? credentials.twoFACode,
+    };
+    delete (payload as any).twoFACode;
+
     const response = await this.http.post<LoginResponse>(
       '/auth/login',
-      credentials
+      payload
     );
 
     const data = response.data!;
+
+    // Normalize user payload field naming (some APIs use `is2FAEnabled`).
+    if (data.user && typeof (data.user as any).isTwoFAEnabled !== 'boolean' && typeof (data.user as any).is2FAEnabled === 'boolean') {
+      (data.user as any).isTwoFAEnabled = (data.user as any).is2FAEnabled;
+    }
+
     if (data.accessToken && data.refreshToken) {
       this.persistTokens(data.accessToken, data.refreshToken, data.user);
     }
@@ -124,6 +138,33 @@ export class AuthService {
 
   async initiate42Login(): Promise<void> {
     this.start42Login();
+  }
+
+  /**
+   * Generate a new 2FA secret + QR code
+   * POST /auth/2fa/generate
+   */
+  async generate2FA(): Promise<UserDTOs.Generate2FAResponse> {
+    const response = await this.http.post<UserDTOs.Generate2FAResponse>('/auth/2fa/generate', {});
+    return response.data!;
+  }
+
+  /**
+   * Enable 2FA using a TOTP code
+   * POST /auth/2fa/enable
+   */
+  async enable2FA(payload: UserDTOs.Enable2FARequest): Promise<{ message?: string }> {
+    const response = await this.http.post<{ message?: string }>('/auth/2fa/enable', payload);
+    return response.data ?? {};
+  }
+
+  /**
+   * Disable 2FA using a TOTP code
+   * POST /auth/2fa/disable
+   */
+  async disable2FA(payload: UserDTOs.Disable2FARequest): Promise<{ message?: string }> {
+    const response = await this.http.post<{ message?: string }>('/auth/2fa/disable', payload);
+    return response.data ?? {};
   }
 
   /**
