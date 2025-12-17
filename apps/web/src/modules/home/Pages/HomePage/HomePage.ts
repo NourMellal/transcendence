@@ -321,7 +321,9 @@ export default class HomePage extends Component<Props, State> {
               <p class="text-xs sm:text-sm" style="color: var(--color-text-muted);">Play against friends or matchmake with players worldwide</p>
             </div>
             <div class="text-center p-6 rounded-xl transition-all touch-feedback" style="border: 1px solid rgba(255, 255, 255, 0.1);">
-              <div class="text-3xl sm:text-4xl mb-3">🏆</div>
+              <div class="text-3xl sm:text-4xl mb-3">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="48" height="48" fill="currentColor" style="display: inline-block;"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>
+              </div>
               <h3 class="font-semibold mb-2 text-sm sm:text-base" style="color: var(--color-text-primary);">Tournaments</h3>
               <p class="text-xs sm:text-sm" style="color: var(--color-text-muted);">Compete in tournaments and climb the leaderboard</p>
             </div>
