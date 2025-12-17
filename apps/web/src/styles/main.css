@@ -116,6 +116,15 @@
     box-shadow: var(--shadow-glass);
   }
 
+  .profile-glass-panel {
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 40px -10px rgba(255, 0, 110, 0.5), 
+              0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
   .glass-card {
     background: rgba(47, 54, 61, 0.6);
     border: 1px solid rgba(88, 96, 105, 0.3);
@@ -317,6 +326,10 @@
   .glow-secondary {
     box-shadow: var(--shadow-glow-secondary);
   }
+
+  .animate-fade-in-up {
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
   /* 🌟 Cyberpunk Background Utilities */
   .cyberpunk-radial-bg {
@@ -606,6 +619,11 @@
     62.5% { transform: translateY(-0.5rem); }
     100% { transform: translateY(0rem); }
   }
+
+  @keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
 
   .animate-pong-paddle-left {
     animation: pong-paddle-left 8s linear infinite;
