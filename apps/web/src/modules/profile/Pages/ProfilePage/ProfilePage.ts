@@ -277,11 +277,12 @@ export default class ProfilePage extends Component<Record<string, never>, State>
   render(): string {
     if (this.state.isLoading) {
       return `
-        <section class="profile-shell">
-          <div class="glass-panel profile-shell__placeholder">
-            <p>Loading profile from the User Service…</p>
+        <main class="relative w-full px-6 pt-16 pb-20 max-w-5xl mx-auto flex flex-col gap-6">
+          <div class="absolute top-20 left-1/2 -translate-x-1/2 w-[80vw] h-[60vh] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+          <div class="profile-glass-panel rounded-3xl p-8 md:p-10 animate-fade-in-up">
+            <p class="text-center text-text-secondary">Loading profile from the User Service…</p>
           </div>
-        </section>
+        </main>
       `;
     }
 
@@ -289,15 +290,16 @@ export default class ProfilePage extends Component<Record<string, never>, State>
 
     if (!user) {
       return `
-        <section class="profile-shell">
-          <div class="glass-panel profile-shell__placeholder">
-            <h1>Profile unavailable</h1>
-            <p>We were unable to fetch your profile from the User Service.</p>
-            <button type="button" class="btn-secondary" data-action="reload-profile">
+        <main class="relative w-full px-6 pt-16 pb-20 max-w-5xl mx-auto flex flex-col gap-6">
+          <div class="absolute top-20 left-1/2 -translate-x-1/2 w-[80vw] h-[60vh] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+          <div class="profile-glass-panel rounded-3xl p-8 md:p-10 animate-fade-in-up text-center">
+            <h1 class="text-2xl font-bold text-white mb-4">Profile unavailable</h1>
+            <p class="text-text-secondary mb-6">We were unable to fetch your profile from the User Service.</p>
+            <button type="button" class="px-5 py-2.5 bg-white/10 text-text-primary hover:bg-white/20 text-sm font-medium rounded-lg transition-colors border border-white/10" data-action="reload-profile">
               Retry
             </button>
           </div>
-        </section>
+        </main>
       `;
     }
 
@@ -305,164 +307,208 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     const status = user.status ?? 'OFFLINE';
     const avatarPreview = this.state.avatarPreview || '/assets/images/ape.png';
 
-    const alerts = this.renderAlerts();
-
     return `
-      <section class="profile-shell profile-shell--simple">
-        <div class="profile-simple-grid">
-          ${this.renderHeroCard(user, status, avatarPreview)}
-          ${alerts ? `<div class="glass-panel profile-simple__card profile-simple__card--alerts">${alerts}</div>` : ''}
+      <main class="relative w-full px-6 pt-16 pb-20 max-w-5xl mx-auto flex flex-col gap-6">
+        <div class="absolute top-20 left-1/2 -translate-x-1/2 w-[80vw] h-[60vh] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+        <div class="absolute bottom-0 right-0 w-[40vw] h-[40vh] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+        
+        ${this.renderAlerts()}
+        ${this.renderHeroCard(user, status, avatarPreview)}
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up" style="animation-delay: 0.2s;">
           ${this.renderFormCard(isOAuthUser, avatarPreview)}
           ${this.renderSecurityCard(isOAuthUser)}
         </div>
-      </section>
+      </main>
     `;
   }
 
   private renderAlerts(): string {
+    if (!this.state.error && !this.state.success) return '';
+    
     const alerts: string[] = [];
+    
     if (this.state.error) {
       alerts.push(`
-        <div class="profile-alert profile-alert--error">
-          ${this.escape(this.state.error)}
+        <div class="profile-glass-panel rounded-2xl p-4 border-red-500/30 bg-red-500/10 animate-fade-in-up" style="animation-delay: 0s;">
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-red-400 text-[20px]">error</span>
+            <p class="text-sm text-red-200 flex-1">${this.escape(this.state.error)}</p>
+          </div>
         </div>
       `);
     }
+    
     if (this.state.success) {
       alerts.push(`
-        <div class="profile-alert profile-alert--success">
-          ${this.escape(this.state.success)}
+        <div class="profile-glass-panel rounded-2xl p-4 border-green-500/30 bg-green-500/10 animate-fade-in-up" style="animation-delay: 0s;">
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-green-400 text-[20px]">check_circle</span>
+            <p class="text-sm text-green-200 flex-1">${this.escape(this.state.success)}</p>
+          </div>
         </div>
       `);
     }
+    
     return alerts.join('');
   }
 
   private renderHeroCard(user: User, status: string, avatar: string): string {
+    const statusColors: Record<string, string> = {
+      ONLINE: 'green',
+      OFFLINE: 'red',
+      AWAY: 'yellow',
+      BUSY: 'orange'
+    };
+    
+    const statusColor = statusColors[status] || 'gray';
+    
     return `
-      <header class="glass-panel profile-simple__card profile-simple__card--hero">
-        <div class="profile-simple__identity">
-          <img src="${this.escape(avatar)}" alt="${this.escape(user.displayName || user.username)}" onerror="this.src='/assets/images/ape.png';" />
-          <div>
-            <p class="profile-simple__eyebrow">Your account</p>
-            <h1>${this.escape(user.displayName || user.username)}</h1>
-            <p>${this.escape(user.email)}</p>
-            <span class="status-pill status-pill--${status.toLowerCase()}">${status}</span>
+      <div class="profile-glass-panel rounded-3xl p-8 md:p-10 animate-fade-in-up" style="animation-delay: 0.1s;">
+        <div class="flex flex-col md:flex-row items-start justify-between gap-8">
+          <div class="flex items-start gap-6">
+            <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 overflow-hidden shrink-0 border border-white/10 shadow-lg">
+              <img alt="${this.escape(user.displayName || user.username)}" class="w-full h-full object-cover" src="${this.escape(avatar)}" onerror="this.src='/assets/images/ape.png';" />
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold tracking-widest text-text-secondary uppercase mb-2">Your Account</h4>
+              <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight mb-1">${this.escape(user.displayName || user.username)}</h1>
+              <div class="flex flex-col gap-1 mb-4">
+                <p class="text-sm text-text-secondary">${this.escape(user.email)}</p>
+                <span class="text-xs font-medium text-${statusColor}-400 bg-${statusColor}-400/10 px-2 py-0.5 rounded w-fit mt-1">${status}</span>
+              </div>
+              <div class="flex gap-8 mt-6">
+                <div>
+                  <p class="text-[10px] uppercase tracking-wider text-text-secondary font-semibold mb-1">Member Since</p>
+                  <p class="text-sm text-white font-medium">${this.formatDate(user.createdAt)}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] uppercase tracking-wider text-text-secondary font-semibold mb-1">Last Update</p>
+                  <p class="text-sm text-white font-medium">${this.formatDate(user.updatedAt)}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <dl class="profile-simple__meta">
-          <div>
-            <dt>Member since</dt>
-            <dd>${this.formatDate(user.createdAt)}</dd>
-          </div>
-          <div>
-            <dt>Last update</dt>
-            <dd>${this.formatDate(user.updatedAt)}</dd>
-          </div>
-        </dl>
-        <div class="profile-simple__actions">
-          <button class="btn-primary" data-profile-action="nav-dashboard">Go to dashboard</button>
-          <button class="btn-secondary" data-action="reload-profile">Refresh</button>
+        <div class="flex gap-3 mt-8 pt-6 border-t border-white/10">
+          <button class="px-5 py-2.5 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30 text-sm font-medium rounded-lg transition-colors border border-blue-500/20" data-profile-action="nav-dashboard">
+            Go to dashboard
+          </button>
+          <button class="px-5 py-2.5 bg-white/10 text-text-primary hover:bg-white/20 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 border border-white/10" data-action="reload-profile">
+            Refresh
+            <svg class="w-4 h-4 text-current animate-spin-slow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-3.9-7.1" />
+              <polyline points="21 3 21 9 15 9" />
+            </svg>
+          </button>
         </div>
-      </header>
+      </div>
     `;
   }
 
   private renderFormCard(isOAuthUser: boolean, avatar: string): string {
     return `
-      <section class="glass-panel profile-simple__card profile-simple__card--form">
-        <div class="profile-section__header">
-          <div>
-            <p>Profile</p>
-            <h2>Edit details</h2>
+      <div class="profile-glass-panel rounded-3xl p-8 flex flex-col h-full">
+        <div class="mb-6">
+          <h4 class="text-xs font-semibold tracking-widest text-text-secondary uppercase mb-2">Profile</h4>
+          <h2 class="text-2xl font-bold text-white tracking-tight">Edit details</h2>
+          <p class="text-xs text-text-secondary mt-1 uppercase tracking-wide">Keep it short and hit save when you're ready.</p>
+        </div>
+        
+        <div class="flex items-center gap-4 mb-8 bg-black/20 p-4 rounded-xl border border-white/5">
+          <div class="w-12 h-12 rounded-lg bg-surface-highlight overflow-hidden shrink-0 border border-white/10">
+            <img alt="Avatar Preview" class="w-full h-full object-cover" src="${this.escape(avatar)}" onerror="this.src='/assets/images/ape.png';" />
           </div>
-          <p class="profile-simple__hint">Keep it short and hit save when you're ready.</p>
+          <div class="flex-1">
+            <input class="block w-full text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 cursor-pointer" type="file" accept="image/*" data-action="avatar-input" />
+            <p class="text-[10px] text-text-secondary mt-1">PNG or JPG, max 5MB</p>
+          </div>
         </div>
-        <div class="profile-account__avatar">
-          <img src="${this.escape(avatar)}" alt="${this.escape(this.state.user?.displayName || this.state.user?.username || 'Avatar')}" onerror="this.src='/assets/images/ape.png';" />
-          <label class="avatar-upload">
-            <input type="file" accept="image/*" data-action="avatar-input" />
-            <span>Upload new avatar</span>
-          </label>
-          <p>PNG or JPG, max 5MB.</p>
-        </div>
-        <form id="profile-form" class="profile-form__grid profile-simple__form">
-          <label class="form-field">
-            <span>Display name</span>
-            <input
-              id="displayName"
-              name="displayName"
-              type="text"
-              placeholder="e.g. Player One"
-              value="${this.escape(this.formValues.displayName)}"
-              data-profile-field="displayName"
-            />
-          </label>
-
-          <label class="form-field">
-            <span>Username</span>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              value="${this.escape(this.formValues.username)}"
-              data-profile-field="username"
-              required
-            />
-          </label>
-
-          <label class="form-field${isOAuthUser ? ' is-disabled' : ''}">
-            <span>Email</span>
-            <input
-              id="email"
-              name="email"
-              type="email"
+        
+        <form id="profile-form" class="flex-1 flex flex-col">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-text-secondary ml-1">Display name</label>
+              <input 
+                class="w-full rounded-lg px-3 py-2.5 text-sm bg-black/20 border border-white/10 focus:bg-black/40 focus:border-white/20 text-white transition-all" 
+                type="text" 
+                value="${this.escape(this.formValues.displayName)}"
+                placeholder="e.g. Player One"
+                data-profile-field="displayName"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-text-secondary ml-1">Username</label>
+              <input 
+                class="w-full rounded-lg px-3 py-2.5 text-sm bg-black/20 border border-white/10 focus:bg-black/40 focus:border-white/20 text-white transition-all" 
+                type="text" 
+                value="${this.escape(this.formValues.username)}"
+                data-profile-field="username"
+                required
+              />
+            </div>
+          </div>
+          
+          <div class="space-y-1.5 mb-8">
+            <label class="text-xs font-medium text-text-secondary ml-1">Email</label>
+            <input 
+              class="w-full rounded-lg px-3 py-2.5 text-sm bg-black/20 border border-white/10 focus:bg-black/40 focus:border-white/20 text-white transition-all ${isOAuthUser ? 'opacity-50 cursor-not-allowed' : ''}" 
+              type="email" 
               value="${this.escape(this.formValues.email)}"
               data-profile-field="email"
               ${isOAuthUser ? 'disabled' : ''}
             />
-            <small class="form-field__hint">
+            <p class="text-[10px] text-text-secondary mt-1 ml-1">
               ${isOAuthUser ? 'Email comes from 42 OAuth.' : 'Validated by the gateway before saving.'}
-            </small>
-          </label>
-
-          <div class="profile-form__actions">
-            <button
+            </p>
+          </div>
+          
+          <div class="mt-auto">
+            <button 
               type="submit"
-              class="btn-secondary"
+              class="px-6 py-2.5 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] ${this.state.isSaving ? 'opacity-50 cursor-not-allowed' : ''}"
               ${this.state.isSaving ? 'disabled' : ''}
             >
               ${this.state.isSaving ? 'Saving…' : 'Save changes'}
             </button>
           </div>
         </form>
-      </section>
+      </div>
     `;
   }
 
   private renderSecurityCard(isOAuthUser: boolean): string {
     const buttonLabel = this.state.user?.isTwoFAEnabled ? 'Manage 2FA' : 'Enable 2FA';
+    const statusLabel = this.state.user?.isTwoFAEnabled ? 'Currently enabled' : 'Currently disabled';
     const description = isOAuthUser
       ? '2FA is handled by your OAuth provider.'
-      : 'Add a rotating code on top of your password.';
+      : 'Add a rotating code on top of your password to ensure your account remains secure.';
+      
     return `
-      <section class="glass-panel profile-simple__card profile-simple__card--security">
-        <div class="profile-section__header">
-          <div>
-            <p>Security</p>
-            <h2>Two-factor authentication</h2>
+      <div class="profile-glass-panel rounded-3xl p-8 flex flex-col h-full">
+        <div class="mb-6">
+          <h4 class="text-xs font-semibold tracking-widest text-text-secondary uppercase mb-2">Security</h4>
+          <h2 class="text-2xl font-bold text-white tracking-tight">Two-factor authentication</h2>
+        </div>
+        
+        <div class="flex-1">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white mb-1">${statusLabel}</h3>
+              <p class="text-sm text-text-secondary leading-relaxed max-w-sm">
+                ${description}
+              </p>
+            </div>
+            <button 
+              class="px-4 py-2 bg-white/10 border border-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${isOAuthUser ? 'opacity-50 cursor-not-allowed' : ''}" 
+              data-profile-action="manage-2fa"
+              ${isOAuthUser ? 'disabled' : ''}
+            >
+              ${buttonLabel}
+            </button>
           </div>
         </div>
-        <div class="profile-simple__security">
-          <div>
-            <strong>${this.state.user?.isTwoFAEnabled ? 'Currently enabled' : 'Currently disabled'}</strong>
-            <p>${description}</p>
-          </div>
-          <button class="btn-secondary" data-profile-action="manage-2fa" ${isOAuthUser ? 'disabled' : ''}>
-            ${buttonLabel}
-          </button>
-        </div>
-      </section>
+      </div>
     `;
   }
 
