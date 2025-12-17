@@ -7,9 +7,6 @@ export async function startGameService(): Promise<void> {
     try {
         const config = await loadGameServiceConfig();
         const container = await createContainer(config);
-        const userEventsQueue = `${config.messaging.queuePrefix}.user-events`;
-        await container.messaging.userEventsHandler.start(userEventsQueue, config.messaging.exchange);
-        logger.info(`📨 Subscribed to user events queue "${userEventsQueue}"`);
 
         const app = createHttpServer({
             routes: {
