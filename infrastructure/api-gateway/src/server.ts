@@ -198,6 +198,12 @@ async function createGateway() {
             upstream: config.gameServiceUrl,
             prefix: '/api/games/ws',
             websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
             replyOptions: {
                 rewriteRequestHeaders: (originalReq, headers) => {
                     return {
@@ -215,6 +221,12 @@ async function createGateway() {
             upstream: config.chatServiceUrl,
             prefix: '/api/chat/ws',
             websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
             replyOptions: {
                 rewriteRequestHeaders: (originalReq, headers) => {
                     return {
