@@ -4,7 +4,6 @@ import type {
     SessionRepository,
     UserPresenceRepository,
     UserRepository,
-    UserEventsPublisher,
 } from '../../src/domain/ports';
 
 export function createMockUserRepository(): Mocked<UserRepository> {
@@ -48,10 +47,4 @@ export function createMockPresenceRepository(): Mocked<UserPresenceRepository> {
         findByUserId: vi.fn(),
         markOffline: vi.fn(),
     } as Mocked<UserPresenceRepository>;
-}
-
-export function createMockUserEventsPublisher(): Mocked<UserEventsPublisher> {
-    return {
-        publishUserDeleted: vi.fn(),
-    } as Mocked<UserEventsPublisher>;
 }

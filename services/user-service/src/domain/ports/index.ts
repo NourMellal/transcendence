@@ -4,4 +4,3 @@ export * from './inbound/presence.ports';
 export * from './inbound/user.ports';
 export * from './outbound/external-services';
 export * from './outbound/repositories';
-export * from './outbound/events';
