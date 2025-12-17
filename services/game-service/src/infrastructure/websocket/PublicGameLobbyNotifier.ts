@@ -32,7 +32,7 @@ export class PublicGameLobbyNotifier {
                 games: summaries
             });
         } catch (error) {
-            logger.error('[PublicGameLobbyNotifier] Failed to broadcast lobby snapshot', error);
+            logger.error({ err: error }, '[PublicGameLobbyNotifier] Failed to broadcast lobby snapshot');
         }
     }
 
@@ -67,7 +67,7 @@ export class PublicGameLobbyNotifier {
                 return summary.username;
             }
         } catch (error) {
-            logger.warn('[PublicGameLobbyNotifier] Failed to resolve username', { userId, error });
+            logger.warn({ userId, err: error }, '[PublicGameLobbyNotifier] Failed to resolve username');
         }
 
         return undefined;

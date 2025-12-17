@@ -92,6 +92,19 @@ export class SQLiteMessageRepository implements IMessageRepository {
     });
   }
 
+  async deleteByConversationId(conversationId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const query = `DELETE FROM messages WHERE conversation_id = ?`;
+      this.db.run(query, [conversationId], (err) => {
+        if (err) {
+          reject(new Error(`Failed to delete messages for conversation ${conversationId}: ${err.message}`));
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
   private mapRowToMessage(row: any): Message {
     return Message.reconstitute({
       id: row.id,

@@ -17,7 +17,6 @@ export default abstract class Component<P = {}, S = {}> {
 
   setState(part: Partial<S>) {
     this.state = { ...(this.state as object), ...(part as object) } as S;
-    // Re-render this component in-place using the Component's own update logic
     if (!this.element || !this.element.parentElement) return;
 
     const parent = this.element.parentElement;
@@ -29,12 +28,11 @@ export default abstract class Component<P = {}, S = {}> {
     this.attachEventListeners();
   }
 
-  // render may return a string, an HTMLElement, or an array mixing strings, elements and Components
-  abstract render(): string | HTMLElement | Array<string | HTMLElement | Component<unknown, unknown>>;
-
   onMount?(): void;
   onUpdate?(prevProps: P, prevState: S): void;
   onUnmount?(): void;
+
+  abstract render(): string | HTMLElement | Array<string | HTMLElement | Component<any, any>>;
 
   /**
    * Normalize render() output into a single HTMLElement root.
@@ -42,8 +40,7 @@ export default abstract class Component<P = {}, S = {}> {
    * - string returned: parsed into nodes and wrapped in a div
    * - array returned: each item can be string|HTMLElement|Component; Components are mounted into placeholders
    */
-  protected buildContent(content: string | HTMLElement | Array<string | HTMLElement | Component<unknown, unknown>>): HTMLElement {
-    // If render returned an element, use it directly
+  protected buildContent(content: string | HTMLElement | Array<string | HTMLElement | Component<any, any>>): HTMLElement {
     if (content instanceof HTMLElement) return content;
 
     const appendStringToContainer = (html: string, container: HTMLElement) => {
@@ -52,23 +49,17 @@ export default abstract class Component<P = {}, S = {}> {
       container.appendChild(template.content.cloneNode(true));
     };
 
-    // Helper: when a string or single-item array parses to exactly one top-level HTMLElement,
-    // return that element directly to avoid adding an extra wrapper.
     if (typeof content === 'string') {
       const temp = document.createElement('template');
-      temp.innerHTML = content.trim(); // Trim whitespace to avoid text nodes
-      // if exactly one top-level element, return it (no extra wrapper)
+      temp.innerHTML = content.trim();
       if (temp.content.childElementCount === 1) {
         return temp.content.firstElementChild as HTMLElement;
       }
-      // otherwise fall back to wrapper
       const wrapper = document.createElement('div');
       wrapper.appendChild(temp.content.cloneNode(true));
       return wrapper;
     }
 
-    // content is an array
-    // if array has a single item and that item is string or element, try to return a single element
     if (Array.isArray(content) && content.length === 1) {
       const only = content[0];
       if (typeof only === 'string') {
@@ -83,7 +74,7 @@ export default abstract class Component<P = {}, S = {}> {
     }
 
     const wrapper = document.createElement('div');
-    for (const item of content) {
+    for (const item of content as Array<string | HTMLElement | Component<any, any>>) {
       if (typeof item === 'string') {
         appendStringToContainer(item, wrapper);
       } else if (item instanceof HTMLElement) {
@@ -95,7 +86,6 @@ export default abstract class Component<P = {}, S = {}> {
         item.mount(placeholder);
       }
     }
-
     return wrapper;
   }
 
@@ -113,6 +103,7 @@ export default abstract class Component<P = {}, S = {}> {
     } else {
       mountTarget = container;
     }
+
     if (!mountTarget) throw new Error('Mount target not found.');
 
     const raw = this.render();
@@ -140,7 +131,6 @@ export default abstract class Component<P = {}, S = {}> {
       if (parent) {
         const raw = this.render();
         const content = this.buildContent(raw);
-
         parent.replaceChild(content, this.element);
         this.element = content;
       } else {
@@ -153,7 +143,7 @@ export default abstract class Component<P = {}, S = {}> {
   }
 
   unmount() {
-    this.subscriptions.forEach(unsub => unsub());
+    this.subscriptions.forEach((unsub) => unsub());
     this.onUnmount?.();
     if (this.element) {
       this.element.innerHTML = '';

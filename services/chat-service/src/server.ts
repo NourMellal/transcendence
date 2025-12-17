@@ -29,11 +29,11 @@ export async function createHttpServer(options: CreateHttpServerOptions): Promis
     return app;
 }
 
-export async function startChatService(): Promise<void> {
+export async function startChatService(): Promise<void> {    
     try {
         logger.info('🚀 Starting Chat Service...');
         const config = await loadChatServiceConfig();
-        const container = await createContainer(config);
+        const container = await createContainer(config); 
         const messagingConfig = createMessagingConfig();
         let messagingConnection: RabbitMQConnection | undefined;
 

@@ -1,4 +1,10 @@
-import type { ApiResponse } from '@transcendence/shared-types';
+// Type definitions
+export interface ApiResponse<T = unknown> {
+    success: boolean;
+    data?: T;
+    error?: string;
+    message?: string;
+}
 
 // Export constants
 export * from './constants';

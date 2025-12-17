@@ -5,6 +5,8 @@ import { gameService } from '../services/GameService';
 import { gameWS } from '@/modules/shared/services/WebSocketClient';
 import { userService } from '@/services/api/UserService';
 import { navigate } from '@/routes';
+import { LobbyChatPanel } from './LobbyChatPanel';
+import { lobbyChatService } from '../services/LobbyChatService';
 
 interface GameLobbyProps {
   gameId: string;
@@ -40,6 +42,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   private unsubscribeGame?: () => void;
   private timeoutInterval?: number;
   private wsUnsubscribes: Array<() => void> = [];
+  private lobbyChat?: LobbyChatPanel;
 
   constructor(props: GameLobbyProps) {
     super(props);
@@ -112,6 +115,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         // Auto-navigate when game starts
         if (gameState.current.status === 'IN_PROGRESS' || gameState.current.status === 'PLAYING') {
           console.log('[GameLobby] Game started! Navigating to play screen...');
+          this.teardownLobbyChat();
           this.navigateTo(`/game/play/${gameState.current.id}`);
         }
 
@@ -124,7 +128,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       // If game already in progress, go to play screen
       if (game.status === 'IN_PROGRESS' || game.status === 'PLAYING') {
         this.navigateTo(`/game/play/${game.id}`);
+        return;
       }
+
+      // Mount lobby chat overlay once lobby is ready
+      this.mountLobbyChat();
 
     } catch (error) {
       console.error('[GameLobby] Failed to mount:', error);
@@ -358,7 +366,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
     readyBtn?.addEventListener('click', () => this.handleReady());
     leaveBtn?.addEventListener('click', () => this.handleLeave());
-    backBtn?.addEventListener('click', () => this.navigateTo('/dashboard'));
+    backBtn?.addEventListener('click', () => this.handleBack());
   }
 
   private async handleReady(): Promise<void> {
@@ -387,13 +395,20 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       await gameService.leaveGame(this.props.gameId);
       console.log('[GameLobby] ✅ Successfully left game');
       gameWS.disconnect();
+      this.teardownLobbyChat();
       this.navigateTo('/dashboard');
     } catch (error) {
       console.error('[GameLobby] ❌ Failed to leave game:', error);
       // Still navigate away even if leave fails
       gameWS.disconnect();
+      this.teardownLobbyChat();
       this.navigateTo('/dashboard');
     }
+  }
+
+  private handleBack(): void {
+    this.teardownLobbyChat();
+    this.navigateTo('/dashboard');
   }
 
   private startTimeout(): void {
@@ -439,6 +454,22 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     this.update({});
   }
 
+  private mountLobbyChat(): void {
+    if (this.lobbyChat) return;
+    this.lobbyChat = new LobbyChatPanel({ gameId: this.props.gameId });
+    this.lobbyChat.mount(document.body);
+  }
+
+  private teardownLobbyChat(): void {
+    if (this.lobbyChat && typeof (this.lobbyChat as any).dispose === 'function') {
+      (this.lobbyChat as any).dispose();
+    } else {
+      this.lobbyChat?.unmount();
+    }
+    this.lobbyChat = undefined;
+    lobbyChatService.disconnect();
+  }
+
   private async setupWebSocket(): Promise<void> {
     const updateConnectionStatus = (status: GameLobbyState['connectionStatus']) => {
       this.state.connectionStatus = status;
@@ -473,13 +504,9 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       }),
       gameWS.on('game_start', (data: any) => {
         console.log('[GameLobby] Game started:', data);
-        if (this.state.game && data.gameId === this.state.game.id) {
-          this.state.game.status = 'IN_PROGRESS';
-          this.update({});
-          setTimeout(() => {
-            this.navigateTo(`/game/play/${data.gameId}`);
-          }, 500);
-        }
+        const targetGameId = data?.gameId ?? this.props.gameId;
+        if (!targetGameId) return;
+        this.handleGameStart(targetGameId);
       }),
       gameWS.on('error', (data: any) => {
         console.error('[GameLobby] Game error:', data);
@@ -605,12 +632,41 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     this.update({});
   }
 
+  private handleGameStart(gameId: string): void {
+    // Keep local and global state in sync before navigation
+    if (this.state.game) {
+      this.state.game = { ...this.state.game, status: 'IN_PROGRESS' };
+      appState.game.set({
+        current: this.state.game,
+        isLoading: false,
+        error: null,
+      });
+      this.update({});
+    } else {
+      const current = appState.game.get().current;
+      appState.game.set({
+        current: current ? { ...current, id: current.id ?? gameId, status: 'IN_PROGRESS' } : null,
+        isLoading: false,
+        error: null,
+      });
+    }
+
+    this.teardownLobbyChat();
+
+    // Navigate immediately; Router will unmount this component
+    const targetPath = `/game/play/${gameId}`;
+    if (window.location.pathname !== targetPath) {
+      this.navigateTo(targetPath);
+    }
+  }
+
   private navigateTo(path: string): void {
     navigate(path);
   }
 
   onUnmount(): void {
     this.unsubscribeGame?.();
+    this.teardownLobbyChat();
     this.stopTimeout();
 
     this.wsUnsubscribes.forEach((unsubscribe) => unsubscribe());
