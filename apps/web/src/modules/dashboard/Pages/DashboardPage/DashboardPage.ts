@@ -189,7 +189,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
   private async refreshLeaderboard(): Promise<void> {
     try {
-      const leaderboard = await userService.getLeaderboard(3);
+      const leaderboard = await userService.getLeaderboard(20);
       this.setState({ leaderboard });
     } catch (error) {
       console.warn('[DashboardPage] Failed to refresh leaderboard', error);
@@ -207,7 +207,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       userService.getProfile(),
       userService.getFriends(),
       userService.getRecentMatches(3),
-      userService.getLeaderboard(3),
+      userService.getLeaderboard(20),
     ]);
 
     const errors: string[] = [];
@@ -1181,14 +1181,14 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
           )
           .join('')
       : `<div class="text-sm text-white/50 rounded-xl p-4" style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.2);">
-          ${this.state.isLoading ? 'Loading leaderboard...' : 'Leaderboard unavailable.'}
+          ${this.state.isLoading ? 'Loading leaderboard...' : 'No leaderboard data yet.'}
         </div>`;
 
     return `
       <section class="glass-panel p-6">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <p class="text-sm text-white/60">Top Players</p>
+            <p class="text-sm text-white/60">Top 20 Players</p>
             <h3 class="text-xl font-semibold">Leaderboard</h3>
           </div>
           <div class="flex items-center gap-3 text-xs text-white/60">
