@@ -223,7 +223,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
               class="btn-touch px-8 py-4 rounded-xl font-semibold touch-feedback transition-all duration-300 hover:scale-105"
               style="background: linear-gradient(135deg, #00b3d9 0%, #0095b8 100%); color: white; box-shadow: 0 4px 20px rgba(0, 179, 217, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);"
             >
-              Return to Home
+              Return to Dashboard
             </button>
           </div>
         </div>
@@ -254,7 +254,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   }
 
   private handleReturnHome(): void {
-    navigate('/home');
+    navigate('/dashboard');
   }
 
   onMount(): void {

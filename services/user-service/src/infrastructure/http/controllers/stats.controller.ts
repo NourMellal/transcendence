@@ -1,9 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
-  GetLeaderboardInput,
   IGetLeaderboardUseCase,
-} from '../../../application/use-cases/stats/get-leaderboard.usecase';
-
+} from '../../../domain/ports/inbound/user.ports';
+import type { GetLeaderboardInput } from '../../../application/dto/user.dto';
 export class StatsController {
   constructor(private readonly getLeaderboardUseCase: IGetLeaderboardUseCase) {}
 

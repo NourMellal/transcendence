@@ -34,7 +34,39 @@ export interface UpdateProfileResponseDTO {
 export interface UpdateProfileInputDTO extends UpdateProfileRequestDTO {
     readonly userId: string;
 }
+export type LeaderboardType =
+  | 'GAMES_WON'
+  | 'WIN_RATE'
+  | 'TOURNAMENTS_WON'
+  | 'TOTAL_SCORE';
+
+export interface UserStatsDTO {
+  userId: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  gamesLost: number;
+  winRate: number;
+  tournamentsPlayed: number;
+  tournamentsWon: number;
+  ranking: number;
+  totalScore: number;
+}
 
 export interface GetUserInputDTO {
     readonly userId: string;
+}
+
+export interface LeaderboardEntryDTO {
+  user: UserProfileDTO;
+  stats: UserStatsDTO;
+}
+
+export interface LeaderboardDTO {
+  topPlayers: LeaderboardEntryDTO[];
+  lastUpdated: string;
+}
+
+export interface GetLeaderboardInput {
+  limit?: number;
+  type?: LeaderboardType;
 }

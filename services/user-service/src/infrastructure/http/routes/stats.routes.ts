@@ -1,9 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { validateInternalApiKey } from '../middlewares/internal-api.middleware';
-import type {
-  GetLeaderboardInput,
-  LeaderboardType,
-} from '../../../application/use-cases/stats/get-leaderboard.usecase';
+import type { GetLeaderboardInput,LeaderboardType } from '../../../application/dto/user.dto';
 import { StatsController } from '../controllers/stats.controller';
 
 const ALLOWED_TYPES: ReadonlySet<LeaderboardType> = new Set([
