@@ -12,12 +12,15 @@ import {
     runMigrations,
     SQLiteTournamentRepository,
     SQLiteTournamentParticipantRepository,
+    SQLiteTournamentMatchRepository,
+    SQLiteTournamentBracketStateRepository,
     SQLiteUnitOfWork
 } from './infrastructure/database';
-import { CreateTournamentUseCase } from './application/use-cases';
+import { CreateTournamentUseCase, StartTournamentUseCase } from './application/use-cases';
 import { JoinTournamentUseCase } from './application/use-cases/join-tournament.usecase';
 import { Errors, AppError } from './application/errors';
 import { Tournament, TournamentMatch, TournamentParticipant } from './domain/entities';
+import { AutoStartService } from './application/services';
 
 interface TournamentServiceConfig {
     PORT: number;
@@ -75,6 +78,8 @@ async function createApp() {
 
     const tournamentRepo = new SQLiteTournamentRepository(db);
     const participantRepo = new SQLiteTournamentParticipantRepository(db);
+    const matchRepo = new SQLiteTournamentMatchRepository(db);
+    const bracketRepo = new SQLiteTournamentBracketStateRepository(db);
     const unitOfWork = new SQLiteUnitOfWork(db);
 
     const createTournament = new CreateTournamentUseCase(tournamentRepo, unitOfWork, {
@@ -88,12 +93,45 @@ async function createApp() {
         autoStartTimeoutSeconds: config.AUTO_START_TIMEOUT_SECONDS
     });
 
+    const startTournament = new StartTournamentUseCase(
+        tournamentRepo,
+        participantRepo,
+        matchRepo,
+        bracketRepo,
+        unitOfWork,
+        {
+            minParticipants: config.MIN_PARTICIPANTS,
+            maxParticipants: config.MAX_PARTICIPANTS
+        }
+    );
+
+    const autoStartService = new AutoStartService(
+        tournamentRepo,
+        participantRepo,
+        startTournament,
+        {
+            minParticipants: config.MIN_PARTICIPANTS,
+            maxParticipants: config.MAX_PARTICIPANTS
+        },
+        logger
+    );
+
     const app = fastify({
         logger
     });
 
+    const timeoutInterval = setInterval(() => {
+        autoStartService.processTimeouts().catch((error) => {
+            app.log.error(
+                { error: error instanceof Error ? error.message : 'unknown' },
+                'Auto-start timeout processing failed'
+            );
+        });
+    }, 30_000);
+
     app.decorate('db', db);
     app.addHook('onClose', async () => {
+        clearInterval(timeoutInterval);
         await db.close();
     });
 
@@ -153,9 +191,9 @@ async function createApp() {
                 throw Errors.notFound('Tournament not found');
             }
             const participants = await participantRepo.listByTournamentId(id);
-            // Matches will be added when bracket generation is implemented
+            const matches = await matchRepo.listByTournamentId(id);
             return {
-                ...mapTournamentDetail(tournament, participants, []),
+                ...mapTournamentDetail(tournament, participants, matches),
             };
         } catch (error) {
             handleError(reply, error);
@@ -199,14 +237,43 @@ async function createApp() {
                 passcode
             });
 
+            if (result.autoStart) {
+                const started = await startTournament.execute({
+                    tournamentId: id,
+                    reason: 'auto_full'
+                });
+
+                return {
+                    ...result,
+                    status: started.tournament.status,
+                    tournament: mapTournamentDetail(started.tournament, started.participants, started.matches)
+                };
+            }
+
             return result;
         } catch (error) {
             handleError(reply, error);
         }
     });
 
-    app.post('/api/tournaments/:id/start', async (_request, reply) => {
-        reply.code(501).send({ message: 'Manual start not yet implemented' });
+    app.post('/api/tournaments/:id/start', async (request, reply) => {
+        try {
+            const { id } = request.params as any;
+            const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
+            if (!userId) {
+                throw Errors.unauthorized('Missing user identity');
+            }
+
+            const started = await startTournament.execute({
+                tournamentId: id,
+                requestedBy: userId,
+                reason: 'manual'
+            });
+
+            return mapTournamentDetail(started.tournament, started.participants, started.matches);
+        } catch (error) {
+            handleError(reply, error);
+        }
     });
 
     return { app, config, db };

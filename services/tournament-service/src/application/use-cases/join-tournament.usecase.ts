@@ -49,6 +49,7 @@ export class JoinTournamentUseCase {
         const nextCount = tournament.currentParticipants + 1;
         const now = new Date();
         const shouldSetReady = nextCount >= this.config.minParticipants;
+        const willAutoStart = nextCount >= this.config.maxParticipants;
         const startTimeoutAt =
             shouldSetReady && nextCount < this.config.maxParticipants
                 ? new Date(now.getTime() + this.config.autoStartTimeoutSeconds * 1000)
@@ -70,13 +71,14 @@ export class JoinTournamentUseCase {
 
         return {
             success: true,
-            message: 'Joined tournament',
+            message: willAutoStart ? 'Tournament is full and will auto-start' : 'Joined tournament',
             status: tournament.status,
             participantCount: nextCount,
             readyToStart: shouldSetReady,
             startTimeoutSeconds: startTimeoutAt
                 ? Math.round((startTimeoutAt.getTime() - now.getTime()) / 1000)
-                : 0
+                : 0,
+            autoStart: willAutoStart
         };
     }
 
