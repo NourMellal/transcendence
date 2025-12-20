@@ -13,6 +13,7 @@ import {
 export interface TournamentRepository {
     findById(id: string): Promise<Tournament | null>;
     listByStatus(status?: TournamentStatus): Promise<Tournament[]>;
+    findReadyForTimeout(cutoff: Date): Promise<Tournament[]>;
     create(tournament: Tournament): Promise<void>;
     update(tournament: Tournament): Promise<void>;
     incrementParticipantCount(id: string): Promise<void>;

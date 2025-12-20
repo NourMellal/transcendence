@@ -101,6 +101,23 @@ export class SQLiteTournamentRepository implements TournamentRepository {
         return rows.map(mapTournament);
     }
 
+    async findReadyForTimeout(cutoff: Date): Promise<Tournament[]> {
+        const rows = await this.db.all(
+            `
+            SELECT *
+            FROM tournaments
+            WHERE status = 'recruiting'
+              AND ready_to_start = 1
+              AND start_timeout_at IS NOT NULL
+              AND start_timeout_at <= ?
+            ORDER BY start_timeout_at ASC
+        `,
+            cutoff.toISOString()
+        );
+
+        return rows.map(mapTournament);
+    }
+
     async create(tournament: Tournament): Promise<void> {
         await this.db.run(
             `
