@@ -1,19 +1,103 @@
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { JoinTournamentCommand } from '../dto/join-tournament.dto';
 import {
     TournamentParticipantRepository,
     TournamentRepository,
     UnitOfWork
 } from '../../domain/repositories';
+import { Tournament } from '../../domain/entities';
+import { Errors } from '../errors';
+
+export interface JoinTournamentConfig {
+    minParticipants: number;
+    maxParticipants: number;
+    autoStartTimeoutSeconds: number;
+}
 
 export class JoinTournamentUseCase {
     constructor(
         private readonly tournaments: TournamentRepository,
         private readonly participants: TournamentParticipantRepository,
-        private readonly unitOfWork: UnitOfWork
+        private readonly unitOfWork: UnitOfWork,
+        private readonly config: JoinTournamentConfig
     ) {}
 
-    async execute(_command: JoinTournamentCommand) {
-        // TODO: implement join flow (passcode validation, capacity checks, ready/timeout logic)
-        throw new Error('JoinTournamentUseCase not implemented yet');
+    async execute(command: JoinTournamentCommand) {
+        if (!command.userId) {
+            throw Errors.unauthorized('userId is required');
+        }
+
+        const tournament = await this.tournaments.findById(command.tournamentId);
+        if (!tournament) {
+            throw Errors.notFound('Tournament not found');
+        }
+
+        this.ensureRecruiting(tournament);
+
+        const alreadyJoined = await this.participants.findByTournamentAndUser(tournament.id, command.userId);
+        if (alreadyJoined) {
+            throw Errors.conflict('Already joined');
+        }
+
+        await this.ensurePasscodeIfNeeded(tournament, command.passcode);
+
+        if (tournament.currentParticipants >= this.config.maxParticipants) {
+            throw Errors.conflict('Tournament is full');
+        }
+
+        const nextCount = tournament.currentParticipants + 1;
+        const now = new Date();
+        const shouldSetReady = nextCount >= this.config.minParticipants;
+        const startTimeoutAt =
+            shouldSetReady && nextCount < this.config.maxParticipants
+                ? new Date(now.getTime() + this.config.autoStartTimeoutSeconds * 1000)
+                : null;
+
+        const participant = {
+            id: crypto.randomUUID(),
+            tournamentId: tournament.id,
+            userId: command.userId,
+            status: 'joined' as const,
+            joinedAt: now
+        };
+
+        await this.unitOfWork.withTransaction(async () => {
+            await this.participants.add(participant);
+            await this.tournaments.incrementParticipantCount(tournament.id);
+            await this.tournaments.setReadyState(tournament.id, shouldSetReady, startTimeoutAt);
+        });
+
+        return {
+            success: true,
+            message: 'Joined tournament',
+            status: tournament.status,
+            participantCount: nextCount,
+            readyToStart: shouldSetReady,
+            startTimeoutSeconds: startTimeoutAt
+                ? Math.round((startTimeoutAt.getTime() - now.getTime()) / 1000)
+                : 0
+        };
+    }
+
+    private ensureRecruiting(tournament: Tournament) {
+        if (tournament.status !== 'recruiting') {
+            throw Errors.badRequest('Tournament is not recruiting');
+        }
+    }
+
+    private async ensurePasscodeIfNeeded(tournament: Tournament, passcode?: string): Promise<void> {
+        if (tournament.isPublic) {
+            return;
+        }
+
+        if (!passcode || !tournament.passcodeHash) {
+            throw Errors.forbidden('Passcode required');
+        }
+
+        const matches = await bcrypt.compare(passcode, tournament.passcodeHash);
+        if (!matches) {
+            throw Errors.forbidden('Incorrect passcode');
+        }
     }
 }

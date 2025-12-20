@@ -7,7 +7,17 @@ dotenv.config({ path: join(__dirname, '../.env') });
 import fastify from 'fastify';
 import { getEnvVarAsNumber, createTournamentServiceVault } from '@transcendence/shared-utils';
 import { createLogger } from '@transcendence/shared-logging';
-import { createDatabaseConnection, runMigrations } from './infrastructure/database';
+import {
+    createDatabaseConnection,
+    runMigrations,
+    SQLiteTournamentRepository,
+    SQLiteTournamentParticipantRepository,
+    SQLiteUnitOfWork
+} from './infrastructure/database';
+import { CreateTournamentUseCase } from './application/use-cases';
+import { JoinTournamentUseCase } from './application/use-cases/join-tournament.usecase';
+import { Errors, AppError } from './application/errors';
+import { Tournament, TournamentMatch, TournamentParticipant } from './domain/entities';
 
 interface TournamentServiceConfig {
     PORT: number;
@@ -63,6 +73,21 @@ async function createApp() {
     const db = await createDatabaseConnection(config.DB_PATH);
     await runMigrations(db);
 
+    const tournamentRepo = new SQLiteTournamentRepository(db);
+    const participantRepo = new SQLiteTournamentParticipantRepository(db);
+    const unitOfWork = new SQLiteUnitOfWork(db);
+
+    const createTournament = new CreateTournamentUseCase(tournamentRepo, unitOfWork, {
+        minParticipants: config.MIN_PARTICIPANTS,
+        maxParticipants: config.MAX_PARTICIPANTS
+    });
+
+    const joinTournament = new JoinTournamentUseCase(tournamentRepo, participantRepo, unitOfWork, {
+        minParticipants: config.MIN_PARTICIPANTS,
+        maxParticipants: config.MAX_PARTICIPANTS,
+        autoStartTimeoutSeconds: config.AUTO_START_TIMEOUT_SECONDS
+    });
+
     const app = fastify({
         logger
     });
@@ -90,12 +115,98 @@ async function createApp() {
     });
 
     // Placeholder routes
-    app.get('/api/tournaments', async () => {
-        return { tournaments: [] };
+    app.get('/api/tournaments', async (request) => {
+        const statusParam = (request.query as any)?.status as string | undefined;
+        const status = statusParam && ['recruiting', 'in_progress', 'finished'].includes(statusParam)
+            ? (statusParam as any)
+            : undefined;
+
+        const tournaments = await tournamentRepo.listByStatus(status);
+        return {
+            tournaments: tournaments.map((t) => ({
+                id: t.id,
+                name: t.name,
+                creatorId: t.creatorId,
+                creatorName: undefined,
+                status: t.status,
+                currentParticipants: t.currentParticipants,
+                maxParticipants: t.maxParticipants,
+                minParticipants: t.minParticipants,
+                isPublic: t.isPublic,
+                accessCode: t.accessCode ?? null,
+                requiresPasscode: !t.isPublic,
+                readyToStart: t.readyToStart,
+                startTimeoutAt: t.startTimeoutAt ? t.startTimeoutAt.toISOString() : null,
+                myRole: 'none',
+                createdAt: t.createdAt.toISOString(),
+                startedAt: t.startedAt ? t.startedAt.toISOString() : null,
+                finishedAt: t.finishedAt ? t.finishedAt.toISOString() : null
+            }))
+        };
     });
 
-    app.post('/api/tournaments', async () => {
-        return { message: 'Tournament service create endpoint not yet implemented' };
+    app.get('/api/tournaments/:id', async (request, reply) => {
+        try {
+            const { id } = request.params as any;
+            const tournament = await tournamentRepo.findById(id);
+            if (!tournament) {
+                throw Errors.notFound('Tournament not found');
+            }
+            const participants = await participantRepo.listByTournamentId(id);
+            // Matches will be added when bracket generation is implemented
+            return {
+                ...mapTournamentDetail(tournament, participants, []),
+            };
+        } catch (error) {
+            handleError(reply, error);
+        }
+    });
+
+    app.post('/api/tournaments', async (request, reply) => {
+        try {
+            const body = request.body as any;
+            const creatorId = (request.headers['x-user-id'] as string) || body.creatorId;
+            if (!creatorId) {
+                throw Errors.unauthorized('Missing user identity');
+            }
+            const tournament = await createTournament.execute({
+                name: body.name,
+                bracketType: body.bracketType ?? 'single_elimination',
+                isPublic: body.isPublic !== false,
+                privatePasscode: body.privatePasscode,
+                creatorId
+            });
+
+            reply.code(201);
+            return mapTournamentDetail(tournament, [], []);
+        } catch (error) {
+            handleError(reply, error);
+        }
+    });
+
+    app.post('/api/tournaments/:id/join', async (request, reply) => {
+        try {
+            const { id } = request.params as any;
+            const passcode = (request.query as any)?.passcode as string | undefined;
+            const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
+            if (!userId) {
+                throw Errors.unauthorized('Missing user identity');
+            }
+
+            const result = await joinTournament.execute({
+                tournamentId: id,
+                userId,
+                passcode
+            });
+
+            return result;
+        } catch (error) {
+            handleError(reply, error);
+        }
+    });
+
+    app.post('/api/tournaments/:id/start', async (_request, reply) => {
+        reply.code(501).send({ message: 'Manual start not yet implemented' });
     });
 
     return { app, config, db };
@@ -127,3 +238,53 @@ async function start() {
 }
 
 start();
+
+function mapTournamentDetail(
+    tournament: Tournament,
+    participants: TournamentParticipant[],
+    matches: TournamentMatch[]
+) {
+    return {
+        id: tournament.id,
+        name: tournament.name,
+        creatorId: tournament.creatorId,
+        status: tournament.status,
+        bracketType: tournament.bracketType,
+        currentParticipants: tournament.currentParticipants,
+        maxParticipants: tournament.maxParticipants,
+        minParticipants: tournament.minParticipants,
+        isPublic: tournament.isPublic,
+        accessCode: tournament.accessCode ?? null,
+        readyToStart: tournament.readyToStart,
+        startTimeoutAt: tournament.startTimeoutAt ? tournament.startTimeoutAt.toISOString() : null,
+        participants: participants.map((p) => ({
+            userId: p.userId,
+            username: p.username ?? undefined,
+            joinedAt: p.joinedAt.toISOString()
+        })),
+        matches: matches.map((m) => ({
+            id: m.id,
+            round: m.round,
+            matchPosition: m.matchPosition,
+            player1: m.player1Id ? { userId: m.player1Id } : null,
+            player2: m.player2Id ? { userId: m.player2Id } : null,
+            status: m.status,
+            gameId: m.gameId ?? null,
+            winnerId: m.winnerId ?? null,
+            startedAt: m.startedAt ? m.startedAt.toISOString() : null,
+            finishedAt: m.finishedAt ? m.finishedAt.toISOString() : null
+        })),
+        createdAt: tournament.createdAt.toISOString(),
+        startedAt: tournament.startedAt ? tournament.startedAt.toISOString() : null,
+        finishedAt: tournament.finishedAt ? tournament.finishedAt.toISOString() : null
+    };
+}
+
+function handleError(reply: any, error: any) {
+    if (error instanceof AppError) {
+        reply.code(error.statusCode).send({ message: error.message });
+        return;
+    }
+
+    reply.code(500).send({ message: 'Internal server error' });
+}
