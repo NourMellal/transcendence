@@ -15,6 +15,24 @@ export class AuthService {
     // No-op; callers should invoke hydrateFromStorage() during app bootstrap
   }
 
+  private normalizeUser(user: any): User {
+    if (!user || typeof user !== 'object') {
+      throw new Error('Invalid user payload');
+    }
+
+    const isTwoFAEnabled =
+      typeof (user as any).isTwoFAEnabled === 'boolean'
+        ? (user as any).isTwoFAEnabled
+        : typeof (user as any).is2FAEnabled === 'boolean'
+          ? (user as any).is2FAEnabled
+          : false;
+
+    return {
+      ...(user as User),
+      isTwoFAEnabled,
+    };
+  }
+
   /**
    * Register a new user
    * POST /auth/signup
@@ -60,6 +78,19 @@ export class AuthService {
 
     if (data.accessToken && data.refreshToken) {
       this.persistTokens(data.accessToken, data.refreshToken, data.user);
+
+      // Prefer the authoritative backend profile (includes presence status).
+      try {
+        const profile = await this.http.get<User>('/users/me');
+        if (profile.data) {
+          const normalized = this.normalizeUser(profile.data);
+          const current = appState.auth.get();
+          appState.auth.set({ ...current, user: normalized });
+          data.user = normalized;
+        }
+      } catch (err) {
+        console.warn('Failed to hydrate user after login', err);
+      }
     }
     return data;
   }
@@ -117,7 +148,7 @@ export class AuthService {
       if (!user) {
         try {
           const profile = await this.http.get<User>('/users/me');
-          user = profile.data ?? undefined;
+          user = profile.data ? this.normalizeUser(profile.data) : undefined;
           if (user) {
             const current = appState.auth.get();
             appState.auth.set({ ...current, user });
@@ -188,11 +219,23 @@ export class AuthService {
 
     try {
       const user = await this.getStatus();
+
+      // Prefer the authoritative backend profile (includes presence status).
+      let profileUser = user;
+      if (user) {
+        try {
+          const profile = await this.http.get<User>('/users/me');
+          profileUser = profile.data ? this.normalizeUser(profile.data) : user;
+        } catch (err) {
+          console.warn('Failed to hydrate user profile after restore', err);
+        }
+      }
+
       const latest = appState.auth.get();
       appState.auth.set({
         ...latest,
-        user,
-        isAuthenticated: Boolean(user),
+        user: profileUser,
+        isAuthenticated: Boolean(profileUser),
         isLoading: false,
       });
     } catch (error) {

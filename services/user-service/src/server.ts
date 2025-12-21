@@ -27,8 +27,10 @@ import { OAuth42CallbackUseCaseImpl } from './application/use-cases/auth/oauth42
 import { OAuthStateManager } from './application/services/oauth-state.manager';
 import { AuthController } from './infrastructure/http/controllers/auth.controller';
 import { UserController } from './infrastructure/http/controllers/user.controller';
+import { StatsController } from './infrastructure/http/controllers/stats.controller';
 import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes';
 import { registerUserRoutes } from './infrastructure/http/routes/user.routes';
+import { registerStatsRoutes } from './infrastructure/http/routes/stats.routes';
 import { registerFriendRoutes } from './infrastructure/http/routes/friend.routes';
 import { registerPresenceRoutes } from './infrastructure/http/routes/presence.routes';
 import { initializeJWTService } from './infrastructure/services/jwt.service';
@@ -51,6 +53,7 @@ import { createMessagingConfig } from './infrastructure/messaging/config/messagi
 import { RabbitMQConnection } from './infrastructure/messaging/RabbitMQConnection';
 import { EventSerializer } from './infrastructure/messaging/serialization/EventSerializer';
 import { createLogger } from '@transcendence/shared-logging';
+import { GetLeaderboardUseCase } from './application/use-cases/stats/get-leaderboard.usecase';
 
 const PORT = parseInt(process.env.USER_SERVICE_PORT || '3001');
 const HOST = process.env.USER_SERVICE_HOST || '0.0.0.0';
@@ -131,6 +134,7 @@ async function main() {
     const cancelFriendRequestUseCase = new CancelFriendRequestUseCase(friendshipRepository);
     const updatePresenceUseCase = new UpdatePresenceUseCase(presenceRepository);
     const getPresenceUseCase = new GetPresenceUseCase(presenceRepository);
+    const getLeaderboardUseCase = new GetLeaderboardUseCase(userRepository);
 
     // Initialize controllers
     const authController = new AuthController(
@@ -146,6 +150,7 @@ async function main() {
         disable2FAUseCase
     );
     const userController = new UserController(updateProfileUseCase, getUserUseCase, getUserByUsernameUseCase);
+    const statsController = new StatsController(getLeaderboardUseCase);
     const friendController = new FriendController(
         sendFriendRequestUseCase,
         respondFriendRequestUseCase,
@@ -180,6 +185,7 @@ async function main() {
     // Register routes
     registerAuthRoutes(fastify, authController);
     registerUserRoutes(fastify, userController);
+    registerStatsRoutes(fastify, statsController);
     registerFriendRoutes(fastify, friendController);
     registerPresenceRoutes(fastify, presenceController);
 
