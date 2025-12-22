@@ -32,6 +32,27 @@ services:
     networks:
       - transcendence-network
 
+  # Nginx reverse proxy (fronting the API Gateway, optional WAF)
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    image: transcendence-nginx:local
+    ports:
+      - "443:443"
+      - "80:80"
+    environment:
+      - WAF_ENABLED=${WAF_ENABLED:-false}
+    depends_on:
+      - api-gateway
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+      - ./docker/nginx/modsec:/etc/nginx/modsec:ro
+    networks:
+      - transcendence-network
+
   # User Service
   user-service:
     build:

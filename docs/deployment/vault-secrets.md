@@ -39,6 +39,29 @@ This page lists the vault secrets each service consumes, how to load them in dev
 2. Create scoped tokens for each service (no shared dev-root token) that only read their paths from the table above.
 3. Store deployment automation credentials (CI/CD) separately and inject Vault tokens at deploy time; never bake secrets into images or Git history.
 
+### TLS & running Vault in production mode
+
+- The repository now contains a TLS-ready `vault.hcl` at `infrastructure/vault/config/vault.hcl` which expects TLS cert and key files at `/vault/config/tls/server.crt` and `/vault/config/tls/server.key`.
+- When running the Vault container in production mode, set environment variable `VAULT_MODE=prod` so the container uses the HCL config instead of dev mode. Example (docker-compose override or runtime env):
+
+```env
+VAULT_MODE=prod
+VAULT_AUTO_SEED=0
+```
+
+- Mount your TLS cert/key into the container (do NOT commit them to Git):
+
+```yaml
+services:
+	vault:
+		volumes:
+			- ./infrastructure/vault/config/vault.hcl:/vault/config/vault.hcl:ro
+			- ./secrets/vault/tls/server.crt:/vault/config/tls/server.crt:ro
+			- ./secrets/vault/tls/server.key:/vault/config/tls/server.key:ro
+```
+
+- The entrypoint will run `vault server -config=/vault/config/vault.hcl` when `VAULT_MODE=prod` and the Vault API will be served over HTTPS as configured in `vault.hcl`.
+
 ## Rotation policies and procedures
 
 - **JWT & internal API keys**: rotate every 90 days or immediately on suspicion. Publish new versions in Vault, redeploy gateway/services to pick up the new values, then revoke old versions.

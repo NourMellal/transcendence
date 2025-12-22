@@ -1,15 +1,26 @@
 #!/bin/bash
 set -euo pipefail
 
+# Entrypoint supports two modes:
+#  - dev (default): run 'vault server -dev' for local development
+#  - prod: run 'vault server -config=/vault/config/vault.hcl' (requires mounted config and TLS certs)
+
+VAULT_MODE="${VAULT_MODE:-dev}"
 VAULT_DEV_ROOT_TOKEN_ID="${VAULT_DEV_ROOT_TOKEN_ID:-dev-root-token}"
 VAULT_DEV_LISTEN_ADDRESS="${VAULT_DEV_LISTEN_ADDRESS:-0.0.0.0:8200}"
 VAULT_SEED_SECRETS="${VAULT_AUTO_SEED:-1}"
 INTERNAL_VAULT_ADDR="http://127.0.0.1:8200"
 
-echo "▶️  Starting Vault in dev mode (listen: ${VAULT_DEV_LISTEN_ADDRESS})"
-vault server -dev \
-    -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID}" \
-    -dev-listen-address="${VAULT_DEV_LISTEN_ADDRESS}" &
+if [[ "$VAULT_MODE" = "prod" ]]; then
+    echo "▶️  Starting Vault in production mode (config: /vault/config/vault.hcl)"
+    vault server -config=/vault/config/vault.hcl &
+else
+    echo "▶️  Starting Vault in dev mode (listen: ${VAULT_DEV_LISTEN_ADDRESS})"
+    vault server -dev \
+        -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID}" \
+        -dev-listen-address="${VAULT_DEV_LISTEN_ADDRESS}" &
+fi
+
 VAULT_PID=$!
 
 terminate() {
