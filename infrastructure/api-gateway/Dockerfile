@@ -19,12 +19,13 @@ FROM base AS builder
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY packages ./packages
 COPY services ./services
+COPY infrastructure ./infrastructure
 COPY apps ./apps
 COPY docs ./docs
 COPY README.md ./README.md
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @transcendence/user-service... build
+RUN pnpm --filter @transcendence/api-gateway... build
 RUN pnpm prune --prod
 
 FROM node:20-bookworm-slim AS runner
@@ -33,24 +34,24 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
-RUN mkdir -p /app/data /app/uploads /var/log/transcendence
+RUN mkdir -p /var/log/transcendence
 
 COPY --from=builder /workspace/package.json ./package.json
 COPY --from=builder /workspace/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder /workspace/node_modules ./node_modules
 COPY --from=builder /workspace/packages ./packages
-COPY --from=builder /workspace/services/user-service ./services/user-service
+COPY --from=builder /workspace/infrastructure/api-gateway ./infrastructure/api-gateway
 
 RUN chown -R node:node /app /var/log/transcendence
 
 USER node
 
-WORKDIR /app/services/user-service
+WORKDIR /app/infrastructure/api-gateway
 
-EXPOSE 3001
+EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 CMD ["node", "dist/server.js"]

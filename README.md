@@ -260,6 +260,15 @@ docker-compose logs -f [service]            # View logs
 docker-compose down                         # Stop all services
 ```
 
+### Docker-first workflow
+
+1. Copy `.env.example` to `.env` (defaults already target container hostnames and enable the WAF).
+2. Build and start the stack with ModSecurity enabled: `docker compose up --build`.
+3. Hit `https://localhost/api/health` through nginx (accept the self-signed cert) — only the gateway, user, and game services are active by default.
+4. Optional: run `scripts/test-waf.sh` to confirm TLS, headers, and WAF blocking (expects `SecRuleEngine On`).
+
+> Chat and tournament services are commented out in `docker-compose.yml`. Uncomment them later when those services are ready to ship.
+
 ### Vault Commands
 
 ```bash

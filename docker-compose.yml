@@ -13,6 +13,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_PRETTY=${LOG_PRETTY}
       - GATEWAY_PORT=${GATEWAY_PORT}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - USER_SERVICE_URL=${USER_SERVICE_URL}
       - GAME_SERVICE_URL=${GAME_SERVICE_URL}
       - CHAT_SERVICE_URL=${CHAT_SERVICE_URL}
@@ -21,13 +22,14 @@ services:
       - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
       - VAULT_ADDR=${VAULT_ADDR}
       - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
     volumes:
       - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
     depends_on:
       - user-service
       - game-service
-      - chat-service
-      - tournament-service
       - vault
     networks:
       - transcendence-network
@@ -42,7 +44,7 @@ services:
       - "443:443"
       - "80:80"
     environment:
-      - WAF_ENABLED=${WAF_ENABLED:-false}
+      - WAF_ENABLED=${WAF_ENABLED:-true}
     depends_on:
       - api-gateway
     volumes:
@@ -67,8 +69,10 @@ services:
       - USER_SERVICE_PORT=${USER_SERVICE_PORT}
       - DB_PATH=${USER_SERVICE_DB_PATH}
       - UPLOAD_DIR=${USER_SERVICE_UPLOAD_DIR}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - VAULT_ADDR=${VAULT_ADDR}
       - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
+      - VAULT_TOKEN=${VAULT_TOKEN}
       - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - user-data:/app/data
@@ -93,7 +97,11 @@ services:
       - LOG_PRETTY=${LOG_PRETTY}
       - GAME_SERVICE_PORT=${GAME_SERVICE_PORT}
       - GAME_SERVICE_DB_PATH=${GAME_SERVICE_DB_PATH}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - RABBITMQ_URL=${RABBITMQ_URL}
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
+      - VAULT_TOKEN=${VAULT_TOKEN}
     volumes:
       - game-data:/app/data
       - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
@@ -102,49 +110,49 @@ services:
     networks:
       - transcendence-network
 
-  # Chat Service
-  chat-service:
-    build:
-      context: .
-      dockerfile: services/chat-service/Dockerfile
-    ports:
-      - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
-    environment:
-      - LOG_DIR=/var/log/transcendence
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_PRETTY=${LOG_PRETTY}
-      - CHAT_SERVICE_PORT=${CHAT_SERVICE_PORT}
-      - CHAT_SERVICE_DB_PATH=${CHAT_SERVICE_DB_PATH}
-      - RABBITMQ_URL=${RABBITMQ_URL}
-    volumes:
-      - chat-data:/app/data
-      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
-    depends_on:
-      - rabbitmq
-    networks:
-      - transcendence-network
+  # Chat Service (disabled in this stack)
+  # chat-service:
+  #   build:
+  #     context: .
+  #     dockerfile: services/chat-service/Dockerfile
+  #   ports:
+  #     - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
+  #   environment:
+  #     - LOG_DIR=/var/log/transcendence
+  #     - LOG_LEVEL=${LOG_LEVEL}
+  #     - LOG_PRETTY=${LOG_PRETTY}
+  #     - CHAT_SERVICE_PORT=${CHAT_SERVICE_PORT}
+  #     - CHAT_SERVICE_DB_PATH=${CHAT_SERVICE_DB_PATH}
+  #     - RABBITMQ_URL=${RABBITMQ_URL}
+  #   volumes:
+  #     - chat-data:/app/data
+  #     - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
+  #   depends_on:
+  #     - rabbitmq
+  #   networks:
+  #     - transcendence-network
 
-  # Tournament Service
-  tournament-service:
-    build:
-      context: .
-      dockerfile: services/tournament-service/Dockerfile
-    ports:
-      - "${TOURNAMENT_SERVICE_PORT}:${TOURNAMENT_SERVICE_PORT}"
-    environment:
-      - LOG_DIR=/var/log/transcendence
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_PRETTY=${LOG_PRETTY}
-      - TOURNAMENT_SERVICE_PORT=${TOURNAMENT_SERVICE_PORT}
-      - TOURNAMENT_DB_PATH=${TOURNAMENT_DB_PATH}
-      - RABBITMQ_URL=${RABBITMQ_URL}
-    volumes:
-      - tournament-data:/app/data
-      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
-    depends_on:
-      - rabbitmq
-    networks:
-      - transcendence-network
+  # Tournament Service (disabled in this stack)
+  # tournament-service:
+  #   build:
+  #     context: .
+  #     dockerfile: services/tournament-service/Dockerfile
+  #   ports:
+  #     - "${TOURNAMENT_SERVICE_PORT}:${TOURNAMENT_SERVICE_PORT}"
+  #   environment:
+  #     - LOG_DIR=/var/log/transcendence
+  #     - LOG_LEVEL=${LOG_LEVEL}
+  #     - LOG_PRETTY=${LOG_PRETTY}
+  #     - TOURNAMENT_SERVICE_PORT=${TOURNAMENT_SERVICE_PORT}
+  #     - TOURNAMENT_DB_PATH=${TOURNAMENT_DB_PATH}
+  #     - RABBITMQ_URL=${RABBITMQ_URL}
+  #   volumes:
+  #     - tournament-data:/app/data
+  #     - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
+  #   depends_on:
+  #     - rabbitmq
+  #   networks:
+  #     - transcendence-network
 
   # RabbitMQ for event-driven messaging
   rabbitmq:
@@ -196,16 +204,16 @@ services:
     restart: unless-stopped
 
   # Grafana for dashboards
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3300:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-    volumes:
-      - grafana-data:/var/lib/grafana
-    networks:
-      - transcendence-network
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   ports:
+  #     - "3300:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   networks:
+  #     - transcendence-network
 
   # Elasticsearch for log storage
   elasticsearch:

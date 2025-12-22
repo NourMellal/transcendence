@@ -12,7 +12,7 @@ To get actual blocking you must ensure the image is rebuilt (the build process c
 Files
 - `docker/nginx/Dockerfile` - builds Nginx + ModSecurity from source (no prebuilt images).
 - `docker/nginx/entrypoint.sh` - toggles which modsec include is symlinked based on `WAF_ENABLED` env var.
-- `docker/nginx/modsec/modsecurity.conf` - minimal example config (DetectionOnly by default).
+- `docker/nginx/modsec/modsecurity.conf` - hardened config (blocking mode + OWASP CRS).
 - `docker/nginx/modsec/modsec_enabled.conf` - include used when WAF is enabled.
 - `docker/nginx/modsec/modsec_disabled.conf` - empty include used when WAF is disabled.
 
@@ -27,7 +27,7 @@ WAF_ENABLED=true
 - To disable WAF: `WAF_ENABLED=false` (or unset).
 
 Notes about blocking vs detection
-- `docker/nginx/modsec/modsecurity.conf` sets `SecRuleEngine DetectionOnly` by default to avoid accidental blocking during setup. Change it to `SecRuleEngine On` to enable blocking.
+- `docker/nginx/modsec/modsecurity.conf` ships with `SecRuleEngine On` so requests matching the CRS are blocked. For smoke testing you can flip it back to `DetectionOnly`.
 
 Local self-signed TLS (for development)
 

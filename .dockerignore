@@ -1,0 +1,31 @@
+# Git metadata
+.git
+.gitignore
+
+# Node.js installs
+node_modules
+**/node_modules
+
+# Build outputs
+**/dist
+**/.turbo
+**/tsconfig.tsbuildinfo
+
+# Local environment files
+.env
+.env.*
+
+# Tooling caches
+coverage
+.pnpm-store
+.pnpm-store-user
+
+# Generated data/log directories
+data
+*.log
+
+# Editor cruft
+.DS_Store
+.idea
+.vscode
+
