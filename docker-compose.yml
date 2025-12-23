@@ -23,8 +23,6 @@ services:
       - VAULT_ADDR=${VAULT_ADDR}
       - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
       - VAULT_TOKEN=${VAULT_TOKEN}
-      - VAULT_ADDR=${VAULT_ADDR}
-      - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
     volumes:
       - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
     depends_on:
@@ -34,7 +32,7 @@ services:
     networks:
       - transcendence-network
 
-  # Nginx reverse proxy (fronting the API Gateway, optional WAF)
+  # Nginx reverse proxy with HTTPS + WAF
   nginx:
     build:
       context: ./docker/nginx
@@ -52,8 +50,11 @@ services:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/certs:/etc/nginx/certs:ro
       - ./docker/nginx/modsec:/etc/nginx/modsec:ro
+      - ./docker/nginx/logs:/var/log/nginx
+
     networks:
       - transcendence-network
+
 
   # User Service
   user-service:
@@ -110,57 +111,13 @@ services:
     networks:
       - transcendence-network
 
-  # Chat Service (disabled in this stack)
-  # chat-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/chat-service/Dockerfile
-  #   ports:
-  #     - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
-  #   environment:
-  #     - LOG_DIR=/var/log/transcendence
-  #     - LOG_LEVEL=${LOG_LEVEL}
-  #     - LOG_PRETTY=${LOG_PRETTY}
-  #     - CHAT_SERVICE_PORT=${CHAT_SERVICE_PORT}
-  #     - CHAT_SERVICE_DB_PATH=${CHAT_SERVICE_DB_PATH}
-  #     - RABBITMQ_URL=${RABBITMQ_URL}
-  #   volumes:
-  #     - chat-data:/app/data
-  #     - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
-  #   depends_on:
-  #     - rabbitmq
-  #   networks:
-  #     - transcendence-network
-
-  # Tournament Service (disabled in this stack)
-  # tournament-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/tournament-service/Dockerfile
-  #   ports:
-  #     - "${TOURNAMENT_SERVICE_PORT}:${TOURNAMENT_SERVICE_PORT}"
-  #   environment:
-  #     - LOG_DIR=/var/log/transcendence
-  #     - LOG_LEVEL=${LOG_LEVEL}
-  #     - LOG_PRETTY=${LOG_PRETTY}
-  #     - TOURNAMENT_SERVICE_PORT=${TOURNAMENT_SERVICE_PORT}
-  #     - TOURNAMENT_DB_PATH=${TOURNAMENT_DB_PATH}
-  #     - RABBITMQ_URL=${RABBITMQ_URL}
-  #   volumes:
-  #     - tournament-data:/app/data
-  #     - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
-  #   depends_on:
-  #     - rabbitmq
-  #   networks:
-  #     - transcendence-network
-
-  # RabbitMQ for event-driven messaging
+  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: transcendence-rabbitmq
     ports:
-      - "5672:5672"    # AMQP port
-      - "15672:15672"  # Management UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
@@ -174,7 +131,7 @@ services:
       timeout: 10s
       retries: 5
 
-  # Redis for caching and session storage
+  # Redis
   redis:
     image: redis:7-alpine
     ports:
@@ -184,6 +141,7 @@ services:
     networks:
       - transcendence-network
 
+  # Vault
   vault:
     build:
       context: infrastructure/vault
@@ -203,91 +161,15 @@ services:
       - transcendence-network
     restart: unless-stopped
 
-  # Grafana for dashboards
-  # grafana:
-  #   image: grafana/grafana:latest
-  #   ports:
-  #     - "3300:3000"
-  #   environment:
-  #     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-  #   volumes:
-  #     - grafana-data:/var/lib/grafana
-  #   networks:
-  #     - transcendence-network
-
-  # Elasticsearch for log storage
-  elasticsearch:
-    image: ${ELASTICSEARCH_IMAGE}
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=${ELASTICSEARCH_SECURITY_ENABLED}
-      - "ES_JAVA_OPTS=-Xms${ELASTICSEARCH_HEAP} -Xmx${ELASTICSEARCH_HEAP}"
-    ports:
-      - "${ELASTICSEARCH_PORT}:9200"
-    volumes:
-      - es-data:/usr/share/elasticsearch/data
-    networks:
-      - transcendence-network
-
-  # Logstash for log processing
-  logstash:
-    image: ${LOGSTASH_IMAGE}
-    ports:
-      - "${LOGSTASH_BEATS_PORT}:${LOGSTASH_BEATS_PORT}"
-    environment:
-      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
-      - ELASTICSEARCH_INDEX_PREFIX=${ELASTICSEARCH_INDEX_PREFIX}
-      - LOGSTASH_BEATS_PORT=${LOGSTASH_BEATS_PORT}
-    volumes:
-      - ./infrastructure/elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
-    depends_on:
-      - elasticsearch
-    networks:
-      - transcendence-network
-
-  # Kibana for log exploration
-  kibana:
-    image: ${KIBANA_IMAGE}
-    environment:
-      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOST}
-    ports:
-      - "${KIBANA_PORT}:5601"
-    depends_on:
-      - elasticsearch
-    networks:
-      - transcendence-network
-
-  # Filebeat to ship service logs into Logstash
-  filebeat:
-    image: ${FILEBEAT_IMAGE}
-    user: root
-    command: ["filebeat", "-e", "--strict.perms=false"]
-    environment:
-      - FILEBEAT_LOG_DIR=${FILEBEAT_LOG_DIR}
-      - LOGSTASH_HOST=${LOGSTASH_HOST}
-    volumes:
-      - ./infrastructure/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ${HOST_LOG_DIR}:${FILEBEAT_LOG_DIR}:ro
-    depends_on:
-      - logstash
-    networks:
-      - transcendence-network
-
-
 volumes:
   user-data:
   user-uploads:
   game-data:
-  chat-data:
-  tournament-data:
   redis-data:
   rabbitmq-data:
   vault-data:
   vault-logs:
-  postgres-data:
-  prometheus-data:
-  grafana-data:
-  es-data:
+  nginx-modsec-run:
 
 networks:
   transcendence-network:

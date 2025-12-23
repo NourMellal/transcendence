@@ -1,9 +1,11 @@
+############################
+# BUILD STAGE
+############################
 FROM debian:bookworm-slim AS build
 
 ARG NGINX_VERSION=1.24.0
 ARG MODSEC_VERSION=v3.0.10
 ARG MODSEC_NGINX_VERSION=master
-ARG CRS_VERSION=3.3.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -28,20 +30,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /tmp
 
-RUN git clone --branch ${MODSEC_VERSION} https://github.com/SpiderLabs/ModSecurity.git modsecurity \
-    && cd modsecurity \
+# --- Build libmodsecurity ---
+RUN git clone --branch ${MODSEC_VERSION} https://github.com/SpiderLabs/ModSecurity.git \
+    && cd ModSecurity \
     && git submodule update --init --recursive \
     && ./build.sh \
     && ./configure --enable-shared --disable-static \
     && make -j"$(nproc)" \
     && make install
 
-RUN git clone --depth 1 --branch ${MODSEC_NGINX_VERSION} https://github.com/SpiderLabs/ModSecurity-nginx.git modsecurity-nginx
+# --- ModSecurity nginx connector ---
+RUN git clone --depth 1 --branch ${MODSEC_NGINX_VERSION} \
+    https://github.com/SpiderLabs/ModSecurity-nginx.git
 
+# --- Build nginx ---
 RUN wget -q https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && tar xzf nginx-${NGINX_VERSION}.tar.gz
 
 WORKDIR /tmp/nginx-${NGINX_VERSION}
+
 RUN ./configure \
     --with-compat \
     --with-http_ssl_module \
@@ -49,12 +56,16 @@ RUN ./configure \
     --with-http_gzip_static_module \
     --with-stream \
     --with-http_realip_module \
-    --add-dynamic-module=/tmp/modsecurity-nginx \
+    --add-dynamic-module=/tmp/ModSecurity-nginx \
     && make -j"$(nproc)" \
     && make install
 
+############################
+# RUNTIME STAGE
+############################
 FROM debian:bookworm-slim
 
+ARG CRS_VERSION=3.3.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -67,42 +78,48 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4 \
     liblmdb0 \
     curl \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup --system nginx && adduser --system --no-create-home --ingroup nginx --disabled-login nginx
+RUN addgroup --system nginx \
+ && adduser --system --no-create-home --ingroup nginx nginx
 
+# --- Copy binaries ---
 COPY --from=build /usr/local/nginx /usr/local/nginx
-COPY --from=build /usr/local/modsecurity /usr/local/modsecurity
-COPY --from=build /usr/local/lib/libmodsecurity.* /usr/local/lib/
-COPY --from=build /usr/local/include/modsecurity /usr/local/include/modsecurity
+COPY --from=build /usr/local/lib/libmodsecurity.so* /usr/local/lib/
+COPY --from=build /usr/local/include /usr/local/include
 
-RUN mkdir -p /usr/sbin \
-    && ln -sf /usr/local/nginx/sbin/nginx /usr/sbin/nginx
+RUN ln -sf /usr/local/nginx/sbin/nginx /usr/sbin/nginx
 
-RUN mkdir -p /etc/nginx/modsec
-
+# --- ModSecurity + CRS ---
 RUN set -eux; \
-    CRS_DIR=/etc/nginx/modsec/crs; \
     mkdir -p /etc/nginx/modsec; \
-    rm -rf "$CRS_DIR"; \
-    curl -fsSL "https://github.com/coreruleset/coreruleset/archive/refs/tags/v${CRS_VERSION}.tar.gz" -o /tmp/crs.tar.gz; \
-    tar -C /tmp -xzf /tmp/crs.tar.gz; \
-    mv /tmp/coreruleset-${CRS_VERSION} "$CRS_DIR"; \
-    cp "$CRS_DIR/crs-setup.conf.example" "$CRS_DIR/crs-setup.conf"; \
-    echo "# Managed by entrypoint" > /etc/nginx/modsec/modsec_includes.conf
+    curl -fsSL \
+      "https://github.com/coreruleset/coreruleset/archive/refs/tags/v${CRS_VERSION}.tar.gz" \
+      -o /tmp/crs.tar.gz; \
+    tar -xzf /tmp/crs.tar.gz -C /tmp; \
+    mv /tmp/coreruleset-${CRS_VERSION} /etc/nginx/modsec/crs; \
+    cp /etc/nginx/modsec/crs/crs-setup.conf.example \
+       /etc/nginx/modsec/crs/crs-setup.conf; \
+    rm -rf /tmp/crs.tar.gz; \
+    mkdir -p /etc/nginx/modsec-run
 
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
+# --- Configs ---
 COPY modsec/ /etc/nginx/modsec/
 COPY conf.d/ /etc/nginx/conf.d/
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY conf.d/api-proxy.conf /etc/nginx/conf.d/api-proxy.conf
 
-RUN touch /var/log/modsec_audit.log && chown nginx:nginx /var/log/modsec_audit.log
+# --- Logs ---
+RUN touch /var/log/modsec_audit.log \
+ && chown nginx:nginx /var/log/modsec_audit.log
 
 RUN ldconfig
 
 EXPOSE 80 443
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]

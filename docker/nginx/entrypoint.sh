@@ -1,21 +1,23 @@
 #!/bin/sh
 set -e
 
-MODSEC_DIR=/etc/nginx/modsec
-INCLUDE_FILE="$MODSEC_DIR/modsec_includes.conf"
+MODSEC_RUN_DIR=/etc/nginx/modsec-run
+INCLUDE_FILE="$MODSEC_RUN_DIR/modsec_includes.conf"
+
+mkdir -p "$MODSEC_RUN_DIR"
 
 if [ "$WAF_ENABLED" = "true" ] || [ "$WAF_ENABLED" = "1" ]; then
   echo "[entrypoint] WAF_ENABLED=true -> enabling ModSecurity include"
-  if [ -f "$MODSEC_DIR/modsec_enabled.conf" ]; then
-    ln -sf "$MODSEC_DIR/modsec_enabled.conf" "$INCLUDE_FILE"
+  if [ -f /etc/nginx/modsec/modsec_enabled.conf ]; then
+    ln -sf /etc/nginx/modsec/modsec_enabled.conf "$INCLUDE_FILE"
   else
-    echo "[entrypoint] Warning: $MODSEC_DIR/modsec_enabled.conf not found"
+    echo "[entrypoint] Warning: /etc/nginx/modsec/modsec_enabled.conf not found"
     rm -f "$INCLUDE_FILE" || true
   fi
 else
   echo "[entrypoint] WAF not enabled -> disabling ModSecurity include"
-  if [ -f "$MODSEC_DIR/modsec_disabled.conf" ]; then
-    ln -sf "$MODSEC_DIR/modsec_disabled.conf" "$INCLUDE_FILE"
+  if [ -f /etc/nginx/modsec/modsec_disabled.conf ]; then
+    ln -sf /etc/nginx/modsec/modsec_disabled.conf "$INCLUDE_FILE"
   else
     rm -f "$INCLUDE_FILE" || true
   fi
