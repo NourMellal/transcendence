@@ -200,6 +200,56 @@
             schema:
               $ref: '../components/schemas/common.yaml#/Error'
 
+/tournaments/{tournamentId}/matches/{matchId}/play:
+  post:
+    tags: [Tournaments]
+    operationId: Tournaments_playMatch
+    summary: Start a tournament match (create game)
+    parameters:
+      - name: tournamentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: matchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Game created for the match
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/tournament.yaml#/PlayMatchResponse'
+      '400':
+        description: Match is not pending or not ready
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '403':
+        description: You are not a participant in this match
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '409':
+        description: Player already has an active game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '503':
+        description: Game service unavailable
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+
 /tournaments/{tournamentId}/leave:
   post:
     tags: [Tournaments]

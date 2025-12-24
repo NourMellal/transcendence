@@ -53,12 +53,16 @@ export class HttpClient {
 
       if (auth?.token && !hasAuthHeader) {
         // Check if token is expired or about to expire (5 min buffer)
+        let tokenToUse = auth.token;
         if (isTokenExpired(auth.token, 300)) {
           console.log('[HttpClient] 🔄 Token expiring soon, preemptively refreshing...');
           try {
             const newToken = await this.refreshTokenIfNeeded();
-            if (newToken) {
-              auth.token = newToken;
+            if (newToken && newToken !== auth.token) {
+              tokenToUse = newToken;
+              // Keep app state in sync so WS clients pick up the refreshed token.
+              appState.auth.set({ ...auth, token: newToken, isAuthenticated: true });
+              authEvents.emit({ type: 'token-refreshed', newToken });
             }
           } catch (error) {
             console.warn('[HttpClient] ⚠️ Preemptive refresh failed, will retry on 401:', error);
@@ -66,11 +70,11 @@ export class HttpClient {
         }
 
         if (config.headers instanceof Headers) {
-          config.headers.set('Authorization', `Bearer ${auth.token}`);
+          config.headers.set('Authorization', `Bearer ${tokenToUse}`);
         } else {
           (config.headers as Record<string, string>) = {
             ...(config.headers as Record<string, string> || {}),
-            Authorization: `Bearer ${auth.token}`,
+            Authorization: `Bearer ${tokenToUse}`,
           };
         }
       }

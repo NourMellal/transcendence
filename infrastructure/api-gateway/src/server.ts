@@ -239,7 +239,30 @@ async function createGateway() {
         });
     });
 
-    app.log.info('📡 WebSocket proxies registered: /api/games/ws, /api/chat/ws');
+    await app.register(async (fastify) => {
+        await fastify.register(proxy, {
+            upstream: config.tournamentServiceUrl,
+            prefix: '/api/tournaments/ws',
+            websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
+            replyOptions: {
+                rewriteRequestHeaders: (originalReq, headers) => {
+                    return {
+                        ...headers,
+                        'x-internal-api-key': config.internalApiKey,
+                        'x-forwarded-by': 'transcendence-gateway',
+                    };
+                }
+            }
+        });
+    });
+
+    app.log.info('📡 WebSocket proxies registered: /api/games/ws, /api/chat/ws, /api/tournaments/ws');
 
     // Health check endpoint
     app.get('/health', async (request, reply) => {

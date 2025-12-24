@@ -101,6 +101,36 @@ export class SQLiteTournamentRepository implements TournamentRepository {
         return rows.map(mapTournament);
     }
 
+    async listByUser(userId: string, status?: TournamentStatus): Promise<Tournament[]> {
+        const rows = status
+            ? await this.db.all(
+                  `
+                  SELECT DISTINCT t.*
+                  FROM tournaments t
+                  LEFT JOIN tournament_participants p ON p.tournament_id = t.id
+                  WHERE (t.creator_id = ? OR p.user_id = ?)
+                    AND t.status = ?
+                  ORDER BY t.created_at DESC
+              `,
+                  userId,
+                  userId,
+                  status
+              )
+            : await this.db.all(
+                  `
+                  SELECT DISTINCT t.*
+                  FROM tournaments t
+                  LEFT JOIN tournament_participants p ON p.tournament_id = t.id
+                  WHERE (t.creator_id = ? OR p.user_id = ?)
+                  ORDER BY t.created_at DESC
+              `,
+                  userId,
+                  userId
+              );
+
+        return rows.map(mapTournament);
+    }
+
     async findReadyForTimeout(cutoff: Date): Promise<Tournament[]> {
         const rows = await this.db.all(
             `
@@ -191,6 +221,16 @@ export class SQLiteTournamentRepository implements TournamentRepository {
         );
     }
 
+    async delete(id: string): Promise<void> {
+        await this.db.run(
+            `
+            DELETE FROM tournaments
+            WHERE id = ?
+        `,
+            id
+        );
+    }
+
     async incrementParticipantCount(id: string): Promise<void> {
         await this.db.run(
             `
@@ -199,6 +239,19 @@ export class SQLiteTournamentRepository implements TournamentRepository {
                 updated_at = datetime('now')
             WHERE id = ?
         `,
+            id
+        );
+    }
+
+    async setParticipantCount(id: string, count: number): Promise<void> {
+        await this.db.run(
+            `
+            UPDATE tournaments
+            SET current_participants = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+        `,
+            count,
             id
         );
     }
@@ -260,6 +313,27 @@ export class SQLiteTournamentParticipantRepository implements TournamentParticip
             participant.userId,
             participant.joinedAt.toISOString(),
             participant.status
+        );
+    }
+
+    async removeByTournamentAndUser(tournamentId: string, userId: string): Promise<void> {
+        await this.db.run(
+            `
+            DELETE FROM tournament_participants
+            WHERE tournament_id = ? AND user_id = ?
+        `,
+            tournamentId,
+            userId
+        );
+    }
+
+    async removeByTournamentId(tournamentId: string): Promise<void> {
+        await this.db.run(
+            `
+            DELETE FROM tournament_participants
+            WHERE tournament_id = ?
+        `,
+            tournamentId
         );
     }
 
@@ -366,6 +440,16 @@ export class SQLiteTournamentMatchRepository implements TournamentMatchRepositor
             id
         );
     }
+
+    async removeByTournamentId(tournamentId: string): Promise<void> {
+        await this.db.run(
+            `
+            DELETE FROM tournament_matches
+            WHERE tournament_id = ?
+        `,
+            tournamentId
+        );
+    }
 }
 
 export class SQLiteTournamentBracketStateRepository implements TournamentBracketStateRepository {
@@ -396,5 +480,15 @@ export class SQLiteTournamentBracketStateRepository implements TournamentBracket
             tournamentId
         );
         return row ? mapBracketState(row) : null;
+    }
+
+    async removeByTournamentId(tournamentId: string): Promise<void> {
+        await this.db.run(
+            `
+            DELETE FROM tournament_bracket_states
+            WHERE tournament_id = ?
+        `,
+            tournamentId
+        );
     }
 }

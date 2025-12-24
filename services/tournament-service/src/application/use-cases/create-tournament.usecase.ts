@@ -5,6 +5,7 @@ import { TournamentRepository, UnitOfWork } from '../../domain/repositories';
 import { Tournament } from '../../domain/entities';
 import { TournamentBracketType } from '../../domain/types';
 import { Errors } from '../errors';
+import { ITournamentEventPublisher } from '../ports/messaging/ITournamentEventPublisher';
 
 export interface CreateTournamentConfig {
     minParticipants: number;
@@ -16,7 +17,8 @@ export class CreateTournamentUseCase {
     constructor(
         private readonly tournaments: TournamentRepository,
         private readonly unitOfWork: UnitOfWork,
-        private readonly config: CreateTournamentConfig
+        private readonly config: CreateTournamentConfig,
+        private readonly publisher?: ITournamentEventPublisher
     ) {}
 
     async execute(command: CreateTournamentCommand): Promise<Tournament> {
@@ -58,6 +60,10 @@ export class CreateTournamentUseCase {
         await this.unitOfWork.withTransaction(async () => {
             await this.tournaments.create(tournament);
         });
+
+        if (this.publisher?.publishTournamentCreated) {
+            await this.publisher.publishTournamentCreated(tournament);
+        }
 
         return tournament;
     }

@@ -8,6 +8,7 @@ import {
 } from '../../domain/repositories';
 import { Tournament } from '../../domain/entities';
 import { Errors } from '../errors';
+import { ITournamentEventPublisher } from '../ports/messaging/ITournamentEventPublisher';
 
 export interface JoinTournamentConfig {
     minParticipants: number;
@@ -20,7 +21,8 @@ export class JoinTournamentUseCase {
         private readonly tournaments: TournamentRepository,
         private readonly participants: TournamentParticipantRepository,
         private readonly unitOfWork: UnitOfWork,
-        private readonly config: JoinTournamentConfig
+        private readonly config: JoinTournamentConfig,
+        private readonly publisher?: ITournamentEventPublisher
     ) {}
 
     async execute(command: JoinTournamentCommand) {
@@ -68,6 +70,10 @@ export class JoinTournamentUseCase {
             await this.tournaments.incrementParticipantCount(tournament.id);
             await this.tournaments.setReadyState(tournament.id, shouldSetReady, startTimeoutAt);
         });
+
+        if (this.publisher?.publishPlayerRegistered) {
+            await this.publisher.publishPlayerRegistered(tournament.id, participant);
+        }
 
         return {
             success: true,

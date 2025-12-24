@@ -33,6 +33,8 @@
     "prettier": "^3.6.2",
     "sass": "^1.94.0",
     "sass-embedded": "^1.93.3",
+    "socket.io-client": "^4.8.1",
+    "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
@@ -46,6 +48,8 @@
     "dev:web": "pnpm --filter @transcendence/web dev",
     "dev:gateway": "pnpm --filter @transcendence/api-gateway dev",
     "dev:all": "pnpm --parallel dev",
+    "bots:tournament": "ts-node tools/tournament-bots.ts",
+    "bots:game": "ts-node tools/game-bot.ts",
     "build": "pnpm --recursive build",
     "test": "pnpm --recursive test",
     "lint": "pnpm --recursive lint",

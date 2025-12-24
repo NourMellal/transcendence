@@ -254,3 +254,15 @@ StartTournamentResponse:
       format: date-time
       nullable: true
   required: [success, status]
+
+PlayMatchResponse:
+  type: object
+  properties:
+    gameId:
+      type: string
+      format: uuid
+      example: "game-123e4567"
+    redirectUrl:
+      type: string
+      example: "/game/play/game-123e4567"
+  required: [gameId, redirectUrl]

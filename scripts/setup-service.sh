@@ -146,6 +146,14 @@ for var in "${!DB_PATHS[@]}"; do
 done
 echo ""
 
+echo -e "${BLUE}📂 Step 3b: Service data directories${NC}"
+for svc in user-service game-service chat-service tournament-service; do
+    svc_data="${ROOT_DIR}/services/${svc}/data"
+    ensure_dir "$svc_data" "Service data dir (${svc})"
+    normalize_perms "$svc_data" "Service data dir (${svc})"
+done
+echo ""
+
 echo -e "${BLUE}🔍 Step 4: Dependency check${NC}"
 require_cmd "curl" "apt install curl"
 require_cmd "node" "install Node.js 22+"
