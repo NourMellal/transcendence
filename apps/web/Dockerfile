@@ -22,17 +22,15 @@ COPY infrastructure ./infrastructure
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
-RUN pnpm --filter @transcendence/user-service build
+RUN pnpm --filter @transcendence/web build
 
 FROM base AS dev
 ENV NODE_ENV=development
 ENTRYPOINT ["/opt/entrypoints/wait-for-pnpm.sh"]
-CMD ["pnpm", "--filter", "@transcendence/user-service", "dev"]
+CMD ["pnpm", "--filter", "@transcendence/web", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 
-FROM base AS prod
-ENV NODE_ENV=production
-WORKDIR /workspace/services/user-service
-COPY --from=build /workspace/services/user-service/dist ./dist
-COPY --from=deps /workspace/services/user-service/package.json ./
-COPY --from=deps /workspace/node_modules ./node_modules
-CMD ["node", "dist/server.js"]
+FROM nginx:1.27-alpine AS prod
+WORKDIR /usr/share/nginx/html
+COPY --from=build /workspace/apps/web/dist ./
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

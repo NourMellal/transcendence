@@ -171,7 +171,7 @@ fi
 if ! command -v pnpm >/dev/null 2>&1; then
     if command -v corepack >/dev/null 2>&1; then
         echo -e "${YELLOW}⚠️  pnpm missing, enabling via corepack...${NC}"
-        corepack enable pnpm || true
+        corepack enable && corepack prepare pnpm@9.1.0 --activate || true
     else
         echo -e "${RED}❌ pnpm missing and corepack not available (install Node.js 22+).${NC}"
         missing_dep=1

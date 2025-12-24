@@ -182,7 +182,7 @@ export function createVaultClientFromEnv(): VaultClient {
     }
 
     const config: VaultConfig = {
-        address: process.env.VAULT_ADDR || 'http://localhost:8200',
+        address: process.env.VAULT_ADDR || 'http://vault:8200',
         token,
         timeout: parseInt(process.env.VAULT_TIMEOUT || '5000', 10),
     };

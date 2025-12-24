@@ -273,12 +273,17 @@ const tournamentWsUrlFromEnv =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_TOURNAMENT_URL?.trim()) || '';
 const apiBaseFromEnv =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL?.trim()) || '';
+const browserOrigin =
+  typeof window !== 'undefined' && typeof window.location?.origin === 'string'
+    ? window.location.origin
+    : '';
 
 const defaultWsHost =
   wsUrlFromEnv ||
+  browserOrigin ||
   (/^https?:\/\//i.test(apiBaseFromEnv)
     ? apiBaseFromEnv.replace(/\/?api$/, '')
-    : 'http://localhost:3000');
+    : 'http://api-gateway:3000');
 const defaultWsPath =
   import.meta.env.VITE_WS_GAME_PATH || '/api/games/ws/socket.io';
 const defaultTournamentWsPath =

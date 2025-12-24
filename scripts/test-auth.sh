@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Comprehensive User Service smoke test via API Gateway
-# Usage: BASE_URL=http://localhost:3000/api ./scripts/test-auth.sh
+# Usage: BASE_URL=http://api-gateway:3000/api ./scripts/test-auth.sh
 
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:3000/api}"
+BASE_URL="${BASE_URL:-http://api-gateway:3000/api}"
 TIMESTAMP=$(date +%s)
 PRIMARY_EMAIL="user-${TIMESTAMP}@example.com"
 PRIMARY_USERNAME="user${TIMESTAMP}"

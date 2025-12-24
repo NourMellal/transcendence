@@ -9,7 +9,7 @@ export function createMessagingConfig(): MessagingConfig {
     process.env.RABBITMQ_URL ||
     process.env.RABBITMQ_URI ||
     // Matches docker-compose defaults
-    'amqp://transcendence:transcendence_dev@localhost:5672';
+    'amqp://transcendence:transcendence_dev@rabbitmq:5672';
 
   return {
     uri,

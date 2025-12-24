@@ -177,8 +177,14 @@ class LobbyChatService {
   }
 
   private getWebSocketUrl(): string {
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-    return apiBase.replace(/\/api\/?$/, '') || 'http://localhost:3000';
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
+    if (/^https?:\/\//i.test(apiBase)) {
+      return apiBase.replace(/\/api\/?$/, '') || apiBase;
+    }
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return window.location.origin;
+    }
+    return 'http://api-gateway:3000';
   }
 }
 

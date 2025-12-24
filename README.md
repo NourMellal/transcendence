@@ -83,14 +83,23 @@ Copy `.env.example` to `.env` and adjust paths/ports/secrets before running Dock
 pnpm dev:all
 ```
 
-**Services will be available at:**
+### Run Everything in Docker
+
+```bash
+docker compose up --build
+```
+
+This command builds every workspace image, installs dependencies inside the `pnpm-install` helper container, and starts the API Gateway, frontend, shared packages, and infrastructure services on the `transcendence` Docker network. Source code is hot-reloaded through bind mounts, so editing files locally immediately refreshes the running containers.
+
+**Key endpoints when running inside Docker:**
 - 🌐 API Gateway: `http://localhost:3000`
-- 👤 User Service: `http://localhost:3001`
-- 🎮 Game Service: `http://localhost:3002`
-- 💬 Chat Service: `http://localhost:3003`
-- 🏆 Tournament Service: `http://localhost:3004`
+- 🖥️ Frontend SPA: `http://localhost:5173`
 - 🐰 RabbitMQ UI: `http://localhost:15672` (transcendence/transcendence_dev)
 - 🔐 Vault: `http://localhost:8200`
+- 📈 Grafana: `http://localhost:3300`
+- 📊 Kibana: `http://localhost:5601`
+
+All backend services (user, game, chat, tournament) listen on their usual ports inside the `transcendence` Docker network (`http://user-service:3001`, etc.) and are routed publicly through the API Gateway.
 
 ### Start Individual Services
 

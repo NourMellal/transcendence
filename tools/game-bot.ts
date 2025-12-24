@@ -3,7 +3,7 @@
  * 1v1 game bot CLI.
  *
  * Usage:
- *   npx ts-node tools/game-bot.ts --game <id> --count 1 --api-url http://localhost:3000/api
+ *   npx ts-node tools/game-bot.ts --game <id> --count 1 --api-url http://api-gateway:3000/api
  *
  * Notes:
  * - Uses native fetch (Node 18+).
@@ -41,7 +41,7 @@ type JsonResult<T> = {
   error?: string;
 };
 
-const DEFAULT_API_URL = 'http://localhost:3000/api';
+const DEFAULT_API_URL = 'http://api-gateway:3000/api';
 const DEFAULT_COUNT = 1;
 const BOT_PASSWORD = 'Test1234!';
 
@@ -409,7 +409,7 @@ class Bot {
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (!options.gameId) {
-    console.error('Usage: --game <id> [--count 1] [--api-url http://localhost:3000/api] [--ws false]');
+    console.error('Usage: --game <id> [--count 1] [--api-url http://api-gateway:3000/api] [--ws false]');
     process.exit(1);
   }
 

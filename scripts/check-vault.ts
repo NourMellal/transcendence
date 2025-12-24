@@ -11,7 +11,7 @@ import { join } from 'path';
 
 const execAsync = promisify(exec);
 
-const VAULT_URL = 'http://localhost:8200';
+const VAULT_URL = process.env.VAULT_ADDR || 'http://vault:8200';
 
 async function checkVault() {
   try {

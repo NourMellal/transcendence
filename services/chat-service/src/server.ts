@@ -113,9 +113,11 @@ export async function startChatService(): Promise<void> {
             });
         });
 
+        const httpBase = process.env.CHAT_SERVICE_PUBLIC_URL || `http://chat-service:${config.port}`;
+        const wsBase = httpBase.replace(/^http/i, 'ws');
         logger.info(`💬 Chat Service running on port ${config.port}`);
-        logger.info(`📡 HTTP API: http://localhost:${config.port}/chat`);
-        logger.info(`🔌 WebSocket: ws://localhost:${config.port}/api/chat/ws`);
+        logger.info(`📡 HTTP API: ${httpBase}/chat`);
+        logger.info(`🔌 WebSocket: ${wsBase}/api/chat/ws`);
 
     } catch (error) {
         logger.error(error, 'Failed to start Chat Service');

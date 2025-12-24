@@ -14,7 +14,7 @@ export const config = {
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN || process.env.GATEWAY_HTTP_URL || 'http://api-gateway:3000',
     credentials: true
   },
 

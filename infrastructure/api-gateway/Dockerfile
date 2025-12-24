@@ -22,17 +22,17 @@ COPY infrastructure ./infrastructure
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
-RUN pnpm --filter @transcendence/user-service build
+RUN pnpm --filter @transcendence/api-gateway build
 
 FROM base AS dev
 ENV NODE_ENV=development
 ENTRYPOINT ["/opt/entrypoints/wait-for-pnpm.sh"]
-CMD ["pnpm", "--filter", "@transcendence/user-service", "dev"]
+CMD ["pnpm", "--filter", "@transcendence/api-gateway", "dev"]
 
 FROM base AS prod
 ENV NODE_ENV=production
-WORKDIR /workspace/services/user-service
-COPY --from=build /workspace/services/user-service/dist ./dist
-COPY --from=deps /workspace/services/user-service/package.json ./
+WORKDIR /workspace/infrastructure/api-gateway
+COPY --from=build /workspace/infrastructure/api-gateway/dist ./dist
+COPY --from=deps /workspace/infrastructure/api-gateway/package.json ./
 COPY --from=deps /workspace/node_modules ./node_modules
 CMD ["node", "dist/server.js"]
