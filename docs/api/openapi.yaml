@@ -66,12 +66,20 @@ components:
       $ref: './components/schemas/chat.yaml#/Conversation'
     
     # Tournament schemas
-    Tournament:
-      $ref: './components/schemas/tournament.yaml#/Tournament'
+    TournamentSummary:
+      $ref: './components/schemas/tournament.yaml#/TournamentSummary'
+    TournamentDetail:
+      $ref: './components/schemas/tournament.yaml#/TournamentDetail'
     TournamentMatch:
       $ref: './components/schemas/tournament.yaml#/TournamentMatch'
     CreateTournamentRequest:
       $ref: './components/schemas/tournament.yaml#/CreateTournamentRequest'
+    CreateTournamentResponse:
+      $ref: './components/schemas/tournament.yaml#/CreateTournamentResponse'
+    JoinTournamentResponse:
+      $ref: './components/schemas/tournament.yaml#/JoinTournamentResponse'
+    PlayMatchResponse:
+      $ref: './components/schemas/tournament.yaml#/PlayMatchResponse'
     
     # Stats schemas
     UserStats:
@@ -172,10 +180,14 @@ paths:
     $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}'
   /tournaments/{tournamentId}/join:
     $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1join'
+  /tournaments/{tournamentId}/start:
+    $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1start'
   /tournaments/{tournamentId}/leave:
     $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1leave'
   /tournaments/{tournamentId}/bracket:
     $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1bracket'
+  /tournaments/{tournamentId}/matches/{matchId}/play:
+    $ref: './paths/tournaments.yaml#/~1tournaments~1{tournamentId}~1matches~1{matchId}~1play'
   /tournaments/my-tournaments:
     $ref: './paths/tournaments.yaml#/~1tournaments~1my-tournaments'
   

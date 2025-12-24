@@ -269,6 +269,8 @@ export class WebSocketClient {
 
 const wsUrlFromEnv =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_GAME_URL?.trim()) || '';
+const tournamentWsUrlFromEnv =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_TOURNAMENT_URL?.trim()) || '';
 const apiBaseFromEnv =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL?.trim()) || '';
 
@@ -279,6 +281,8 @@ const defaultWsHost =
     : 'http://localhost:3000');
 const defaultWsPath =
   import.meta.env.VITE_WS_GAME_PATH || '/api/games/ws/socket.io';
+const defaultTournamentWsPath =
+  import.meta.env.VITE_WS_TOURNAMENT_PATH || '/api/tournaments/ws/socket.io';
 
 export function createGameWebSocketClient(
   url: string = defaultWsHost,
@@ -288,3 +292,15 @@ export function createGameWebSocketClient(
 }
 
 export const gameWS = new WebSocketClient(defaultWsHost, defaultWsPath);
+
+export function createTournamentWebSocketClient(
+  url: string = tournamentWsUrlFromEnv || defaultWsHost,
+  path: string = defaultTournamentWsPath
+): WebSocketClient {
+  return new WebSocketClient(url, path);
+}
+
+export const tournamentWS = new WebSocketClient(
+  tournamentWsUrlFromEnv || defaultWsHost,
+  defaultTournamentWsPath
+);

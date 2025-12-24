@@ -5,6 +5,7 @@ import { UserServiceClient } from '../infrastructure/external/UserServiceClient'
 import {
     CreateGameUseCase,
     FinishGameUseCase,
+    ForfeitGameUseCase,
     GetGameUseCase,
     JoinGameUseCase,
     HandlePaddleMoveUseCase,
@@ -20,6 +21,7 @@ import { GamePhysics, CollisionDetector } from '../domain/services';
 import { GameLoop, GameRoomManager, ConnectionHandler, PaddleMoveHandler, DisconnectHandler, PublicGameLobbyNotifier } from '../infrastructure/websocket';
 import { PaddleSetHandler } from '../infrastructure/websocket/handlers/PaddleSetHandler';
 import { GameAuthService } from '../infrastructure/auth';
+import { GameReadyTimeoutScheduler } from '../infrastructure/timeouts/GameReadyTimeoutScheduler';
 
 export interface GameServiceContainer {
     readonly controllers: {
@@ -39,6 +41,7 @@ export interface GameServiceContainer {
         readonly createGame: CreateGameUseCase;
         readonly startGame: StartGameUseCase;
         readonly finishGame: FinishGameUseCase;
+        readonly forfeitGame: ForfeitGameUseCase;
         readonly getGame: GetGameUseCase;
         readonly listGames: ListGamesUseCase;
         readonly joinGame: JoinGameUseCase;
@@ -68,7 +71,9 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
 
     const gamePhysics = new GamePhysics(new CollisionDetector());
 
-    const createGame = new CreateGameUseCase(repository, eventPublisher, userServiceClient);
+    const forfeitGame = new ForfeitGameUseCase(repository, eventPublisher);
+    const readyTimeoutScheduler = new GameReadyTimeoutScheduler(forfeitGame);
+    const createGame = new CreateGameUseCase(repository, eventPublisher, userServiceClient, readyTimeoutScheduler);
     const startGame = new StartGameUseCase(repository, eventPublisher);
     const finishGame = new FinishGameUseCase(repository, eventPublisher);
     const getGame = new GetGameUseCase(repository);
@@ -117,13 +122,14 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
             authService,
         },
         useCases: {
-            createGame,
-            startGame,
-            finishGame,
-            getGame,
-            listGames,
-            joinGame,
-            leaveGame,
+        createGame,
+        startGame,
+        finishGame,
+        forfeitGame,
+        getGame,
+        listGames,
+        joinGame,
+        leaveGame,
         handlePaddleMove,
         updateGameState,
         disconnectPlayer,

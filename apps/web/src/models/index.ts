@@ -15,7 +15,15 @@ export * from './Chat';
 // Type aliases for convenience
 export type { User, UserProfile, UserStats, Friend } from './User';
 export type { Game, GamePlayer, GameSettings, Match, GameState } from './Game';
-export type { Tournament, TournamentParticipant, TournamentMatch } from './Tournament';
+export type {
+  Tournament,
+  TournamentSummary,
+  TournamentDetail,
+  TournamentParticipant,
+  TournamentMatch,
+  TournamentMatchPlayer,
+  TournamentBracketResponse,
+} from './Tournament';
 export type { 
   ApiErrorResponse, 
   PaginatedResponse, 
