@@ -130,8 +130,8 @@ TournamentMatch:
       example: 1
     matchPosition:
       type: integer
-      minimum: 0
-      example: 0
+      minimum: 1
+      example: 1
     player1:
       $ref: "#/TournamentMatchPlayer"
       nullable: true
@@ -196,6 +196,7 @@ CreateTournamentRequest:
       type: string
       enum: [single_elimination]
       default: single_elimination
+      description: Only single-elimination is supported in the MVP.
     isPublic:
       type: boolean
       description: If false, a passcode must be provided to join.
@@ -204,15 +205,7 @@ CreateTournamentRequest:
       type: string
       description: Required when isPublic is false; stored as bcrypt hash.
       nullable: true
-    maxParticipants:
-      type: integer
-      enum: [8]
-      default: 8
-    minParticipants:
-      type: integer
-      enum: [4]
-      default: 4
-  required: [name, bracketType, isPublic]
+  required: [name]
 
 CreateTournamentResponse:
   $ref: "#/TournamentDetail"
@@ -237,23 +230,12 @@ JoinTournamentResponse:
     startTimeoutSeconds:
       type: integer
       example: 300
-  required: [success, message, status, participantCount]
-
-StartTournamentResponse:
-  type: object
-  properties:
-    success:
+    autoStart:
       type: boolean
-      example: true
-    status:
-      type: string
-      enum: [starting, in_progress]
-      example: starting
-    startedAt:
-      type: string
-      format: date-time
-      nullable: true
-  required: [success, status]
+      example: false
+    tournament:
+      $ref: "#/TournamentDetail"
+  required: [success, message, status, participantCount]
 
 PlayMatchResponse:
   type: object

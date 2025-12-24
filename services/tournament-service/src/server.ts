@@ -7,47 +7,12 @@ dotenv.config({ path: join(__dirname, '../.env') });
 import fastify from 'fastify';
 import { getEnvVarAsNumber, createTournamentServiceVault } from '@transcendence/shared-utils';
 import { createLogger } from '@transcendence/shared-logging';
-import {
-    createDatabaseConnection,
-    runMigrations,
-    SQLiteTournamentRepository,
-    SQLiteTournamentParticipantRepository,
-    SQLiteTournamentMatchRepository,
-    SQLiteTournamentBracketStateRepository,
-    SQLiteUnitOfWork
-} from './infrastructure/database';
-import {
-    CreateTournamentUseCase,
-    StartTournamentUseCase,
-    CompleteMatchUseCase,
-    PlayMatchUseCase,
-    LeaveTournamentUseCase
-} from './application/use-cases';
-import { JoinTournamentUseCase } from './application/use-cases/join-tournament.usecase';
 import { Errors, AppError } from './application/errors';
 import { Tournament, TournamentMatch, TournamentParticipant } from './domain/entities';
-import { AutoStartService } from './application/services';
-import { createMessagingConfig } from './infrastructure/messaging/config/messaging.config';
-import { RabbitMQConnection } from './infrastructure/messaging/RabbitMQConnection';
-import { EventSerializer } from './infrastructure/messaging/serialization/EventSerializer';
-import { RabbitMQTournamentEventPublisher } from './infrastructure/messaging/RabbitMQPublisher';
-import { GameFinishedConsumer } from './infrastructure/messaging/RabbitMQConsumer';
 import { createInternalApiMiddleware } from './infrastructure/http/middlewares/internal-api.middleware';
-import { GameServiceClient } from './infrastructure/external/GameServiceClient';
 import { TournamentWebSocketServer } from './infrastructure/websocket';
 import { TournamentAuthService } from './infrastructure/auth/TournamentAuthService';
-
-interface TournamentServiceConfig {
-    PORT: number;
-    HOST: string;
-    DB_PATH: string;
-    GAME_SERVICE_URL: string;
-    MAX_PARTICIPANTS: number;
-    MIN_PARTICIPANTS: number;
-    AUTO_START_TIMEOUT_SECONDS: number;
-    vault: unknown;
-    internalApiKey?: string;
-}
+import { createContainer, TournamentServiceConfig } from './dependency-injection/container';
 
 // Load configuration with Vault integration
 async function loadConfiguration(): Promise<TournamentServiceConfig> {
@@ -90,115 +55,16 @@ async function loadConfiguration(): Promise<TournamentServiceConfig> {
 
 async function createApp() {
     const config = await loadConfiguration();
-    const messagingConfig = createMessagingConfig();
 
     const logger = createLogger('tournament-service', {
         pretty: process.env.LOG_PRETTY === 'true'
     });
 
-    const db = await createDatabaseConnection(config.DB_PATH);
-    await runMigrations(db);
-
-    const tournamentRepo = new SQLiteTournamentRepository(db);
-    const participantRepo = new SQLiteTournamentParticipantRepository(db);
-    const matchRepo = new SQLiteTournamentMatchRepository(db);
-    const bracketRepo = new SQLiteTournamentBracketStateRepository(db);
-    const unitOfWork = new SQLiteUnitOfWork(db);
-    const gameServiceClient = new GameServiceClient(config.GAME_SERVICE_URL, config.internalApiKey);
-
-    const serializer = new EventSerializer();
-    const messaging = new RabbitMQConnection({
-        uri: messagingConfig.uri,
-        exchange: messagingConfig.exchange
-    });
-    const publisher = new RabbitMQTournamentEventPublisher(messaging, serializer, messagingConfig.exchange);
-
-    const createTournament = new CreateTournamentUseCase(
-        tournamentRepo,
-        unitOfWork,
-        {
-            minParticipants: config.MIN_PARTICIPANTS,
-            maxParticipants: config.MAX_PARTICIPANTS
-        },
-        publisher
-    );
-
-    const joinTournament = new JoinTournamentUseCase(tournamentRepo, participantRepo, unitOfWork, {
-        minParticipants: config.MIN_PARTICIPANTS,
-        maxParticipants: config.MAX_PARTICIPANTS,
-        autoStartTimeoutSeconds: config.AUTO_START_TIMEOUT_SECONDS
-    }, publisher);
-
-    const leaveTournament = new LeaveTournamentUseCase(
-        tournamentRepo,
-        participantRepo,
-        matchRepo,
-        bracketRepo,
-        unitOfWork,
-        {
-            minParticipants: config.MIN_PARTICIPANTS,
-            maxParticipants: config.MAX_PARTICIPANTS,
-            autoStartTimeoutSeconds: config.AUTO_START_TIMEOUT_SECONDS
-        }
-    );
-
-    const startTournament = new StartTournamentUseCase(
-        tournamentRepo,
-        participantRepo,
-        matchRepo,
-        bracketRepo,
-        unitOfWork,
-        {
-            minParticipants: config.MIN_PARTICIPANTS,
-            maxParticipants: config.MAX_PARTICIPANTS
-        },
-        publisher
-    );
-
-    const completeMatch = new CompleteMatchUseCase(
-        tournamentRepo,
-        participantRepo,
-        matchRepo,
-        bracketRepo,
-        unitOfWork,
-        publisher
-    );
-
-    const playMatch = new PlayMatchUseCase(
-        tournamentRepo,
-        matchRepo,
-        unitOfWork,
-        gameServiceClient
-    );
-
-    const autoStartService = new AutoStartService(
-        tournamentRepo,
-        participantRepo,
-        startTournament,
-        {
-            minParticipants: config.MIN_PARTICIPANTS,
-            maxParticipants: config.MAX_PARTICIPANTS
-        },
-        logger
-    );
-
-    // Messaging wiring
-    let gameFinishedConsumer: GameFinishedConsumer | null = null;
-    try {
-        const channel = await messaging.getChannel();
-        gameFinishedConsumer = new GameFinishedConsumer(
-            channel,
-            serializer,
-            completeMatch
-        );
-        await gameFinishedConsumer.start(`${messagingConfig.queuePrefix}.game-finished`);
-        logger.info('Tournament service messaging consumer started');
-    } catch (error) {
-        logger.warn(
-            { error: error instanceof Error ? error.message : 'unknown' },
-            'Messaging not available, continuing without RabbitMQ'
-        );
-    }
+    const container = await createContainer(config, logger);
+    const { db, messaging } = container;
+    const { tournamentRepo, participantRepo, matchRepo } = container.repositories;
+    const { createTournament, joinTournament, leaveTournament, startTournament, playMatch } = container.useCases;
+    const { autoStartService } = container.services;
 
     const app = fastify({
         logger
@@ -227,10 +93,9 @@ async function createApp() {
         });
     }, 30_000);
 
-    app.decorate('db', db);
     app.addHook('onClose', async () => {
         clearInterval(timeoutInterval);
-        await messaging.close().catch(() => undefined);
+        await messaging.connection.close().catch(() => undefined);
         await db.close();
     });
 
@@ -253,17 +118,9 @@ async function createApp() {
 
     // Placeholder routes
     app.get('/tournaments', async (request) => {
-        const query = request.query as any;
-        const statusParam = query?.status as string | undefined;
-        const searchParam = query?.search as string | undefined;
-        const allowedStatuses = ['recruiting', 'in_progress', 'finished'];
-        if (statusParam && !allowedStatuses.includes(statusParam)) {
-            throw Errors.badRequest('Invalid status filter');
-        }
-        const status = statusParam as any;
-
+        const status = validateStatusFilter((request.query as any)?.status);
         let tournaments = await tournamentRepo.listByStatus(status);
-        const search = typeof searchParam === 'string' ? searchParam.trim() : '';
+        const search = validateSearchQuery((request.query as any)?.search);
         if (search) {
             const needle = search.toLowerCase();
             tournaments = tournaments.filter((t) => {
@@ -281,17 +138,8 @@ async function createApp() {
 
     app.get('/tournaments/my-tournaments', async (request, reply) => {
         try {
-            const userId = request.headers['x-user-id'] as string;
-            if (!userId) {
-                throw Errors.unauthorized('Missing user identity');
-            }
-
-            const statusParam = (request.query as any)?.status as string | undefined;
-            const allowedStatuses = ['recruiting', 'in_progress', 'finished'];
-            if (statusParam && !allowedStatuses.includes(statusParam)) {
-                throw Errors.badRequest('Invalid status filter');
-            }
-            const status = statusParam as any;
+            const userId = getUserIdFromHeaders(request.headers as Record<string, unknown>);
+            const status = validateStatusFilter((request.query as any)?.status);
 
             const tournaments = await tournamentRepo.listByUser(userId, status);
             return {
@@ -322,10 +170,7 @@ async function createApp() {
     app.post('/tournaments', async (request, reply) => {
         try {
             const body = validateCreateTournamentBody(request.body as any);
-            const creatorId = (request.headers['x-user-id'] as string) || body.creatorId;
-            if (!creatorId) {
-                throw Errors.unauthorized('Missing user identity');
-            }
+            const creatorId = getUserIdFromHeaders(request.headers as Record<string, unknown>);
             const tournament = await createTournament.execute({
                 name: body.name,
                 bracketType: body.bracketType ?? 'single_elimination',
@@ -347,10 +192,7 @@ async function createApp() {
         try {
             const { id } = validateIdParams(request.params as any);
             const passcode = validatePasscodeQuery(request.query as any);
-            const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
-            if (!userId) {
-                throw Errors.unauthorized('Missing user identity');
-            }
+            const userId = getUserIdFromHeaders(request.headers as Record<string, unknown>);
 
             const result = await joinTournament.execute({
                 tournamentId: id,
@@ -387,10 +229,7 @@ async function createApp() {
     app.post('/tournaments/:id/leave', async (request, reply) => {
         try {
             const { id } = validateIdParams(request.params as any);
-            const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
-            if (!userId) {
-                throw Errors.unauthorized('Missing user identity');
-            }
+            const userId = getUserIdFromHeaders(request.headers as Record<string, unknown>);
 
             const result = await leaveTournament.execute({
                 tournamentId: id,
@@ -418,10 +257,7 @@ async function createApp() {
     app.post('/tournaments/:id/start', async (request, reply) => {
         try {
             const { id } = validateIdParams(request.params as any);
-            const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
-            if (!userId) {
-                throw Errors.unauthorized('Missing user identity');
-            }
+            const userId = getUserIdFromHeaders(request.headers as Record<string, unknown>);
 
             const started = await startTournament.execute({
                 tournamentId: id,
@@ -457,10 +293,7 @@ async function createApp() {
     app.post('/tournaments/:id/matches/:matchId/play', async (request, reply) => {
         try {
             const { id, matchId } = validateMatchParams(request.params as any);
-            const userId = request.headers['x-user-id'] as string;
-            if (!userId) {
-                throw Errors.unauthorized('Missing user identity');
-            }
+            const userId = getUserIdFromHeaders(request.headers as Record<string, unknown>);
 
             const result = await playMatch.execute({
                 tournamentId: id,
@@ -474,7 +307,7 @@ async function createApp() {
         }
     });
 
-    return { app, config, db };
+    return { app, config };
 }
 
 async function start() {
@@ -568,29 +401,66 @@ function handleError(reply: any, error: any) {
     reply.code(500).send({ message: 'Internal server error' });
 }
 
-function validateIdParams(params: any): { id: string } {
-    if (!params?.id || typeof params.id !== 'string') {
-        throw Errors.badRequest('Invalid id');
+type TournamentStatus = 'recruiting' | 'in_progress' | 'finished';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function ensureUuid(value: unknown, fieldName: string): string {
+    if (typeof value !== 'string' || !UUID_PATTERN.test(value)) {
+        throw Errors.badRequest(`Invalid ${fieldName}`);
     }
-    return { id: params.id };
+    return value;
+}
+
+function getUserIdFromHeaders(headers: Record<string, unknown>): string {
+    const raw = headers['x-user-id'];
+    if (typeof raw !== 'string' || raw.trim() === '') {
+        throw Errors.unauthorized('Missing user identity');
+    }
+    return raw;
+}
+
+function validateStatusFilter(value: unknown): TournamentStatus | undefined {
+    if (value === undefined || value === null || value === '') {
+        return undefined;
+    }
+    if (typeof value !== 'string') {
+        throw Errors.badRequest('Invalid status filter');
+    }
+    const allowed: TournamentStatus[] = ['recruiting', 'in_progress', 'finished'];
+    if (!allowed.includes(value as TournamentStatus)) {
+        throw Errors.badRequest('Invalid status filter');
+    }
+    return value as TournamentStatus;
+}
+
+function validateSearchQuery(value: unknown): string {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    if (typeof value !== 'string') {
+        throw Errors.badRequest('Invalid search query');
+    }
+    return value.trim();
+}
+
+function validateIdParams(params: any): { id: string } {
+    return { id: ensureUuid(params?.id, 'id') };
 }
 
 function validatePasscodeQuery(query: any): string | undefined {
     if (!query?.passcode) return undefined;
-    if (typeof query.passcode !== 'string') {
+    if (typeof query.passcode !== 'string' || query.passcode.trim().length === 0) {
         throw Errors.badRequest('Invalid passcode');
     }
     return query.passcode;
 }
 
 function validateMatchParams(params: any): { id: string; matchId: string } {
-    if (!params?.id || typeof params.id !== 'string') {
-        throw Errors.badRequest('Invalid id');
-    }
-    if (!params?.matchId || typeof params.matchId !== 'string') {
-        throw Errors.badRequest('Invalid match id');
-    }
-    return { id: params.id, matchId: params.matchId };
+    return {
+        id: ensureUuid(params?.id, 'id'),
+        matchId: ensureUuid(params?.matchId, 'match id')
+    };
 }
 
 function validateCreateTournamentBody(body: any) {
@@ -598,17 +468,31 @@ function validateCreateTournamentBody(body: any) {
         throw Errors.badRequest('Invalid request body');
     }
 
-    if (!body.name || typeof body.name !== 'string' || body.name.trim().length < 3) {
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (name.length < 3) {
         throw Errors.badRequest('Tournament name must be at least 3 characters');
     }
 
-    if (body.bracketType && body.bracketType !== 'single_elimination') {
+    if (body.bracketType !== undefined && body.bracketType !== 'single_elimination') {
         throw Errors.badRequest('Only single_elimination bracket type is supported');
+    }
+
+    if (body.isPublic !== undefined && typeof body.isPublic !== 'boolean') {
+        throw Errors.badRequest('Invalid isPublic flag');
     }
 
     if (body.isPublic === false && (!body.privatePasscode || typeof body.privatePasscode !== 'string')) {
         throw Errors.badRequest('Private tournaments require a passcode');
     }
 
-    return body;
+    if (body.privatePasscode !== undefined && body.isPublic !== false) {
+        throw Errors.badRequest('privatePasscode is only allowed for private tournaments');
+    }
+
+    return {
+        name,
+        bracketType: body.bracketType,
+        isPublic: body.isPublic,
+        privatePasscode: body.privatePasscode
+    };
 }
