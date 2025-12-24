@@ -47,10 +47,34 @@ export class UpdateGameStateUseCase {
         gameId: string,
         mutator: (game: import('../../../domain/entities').Game) => void
     ): Promise<GameSnapshot> {
-        const entry = await this.loadCachedGame(gameId);
-        mutator(entry.game);
-        await this.persist(gameId, entry);
-        return entry.game.toSnapshot();
+        const cached = this.cache.get(gameId);
+        if (cached && cached.game.status === GameStatus.IN_PROGRESS) {
+            mutator(cached.game);
+            await this.persist(gameId, cached);
+            return cached.game.toSnapshot();
+        }
+
+        const game = await this.gameRepository.findById(gameId);
+        if (!game) {
+            throw new GameNotFoundError(gameId);
+        }
+
+        mutator(game);
+        await this.gameRepository.update(game);
+
+        if (game.status === GameStatus.IN_PROGRESS) {
+            const snapshot = game.toSnapshot();
+            this.cache.set(gameId, {
+                game,
+                ticksSincePersist: 0,
+                lastScore: { p1: snapshot.score.player1, p2: snapshot.score.player2 },
+                lastStatus: snapshot.status
+            });
+        } else {
+            this.cache.delete(gameId);
+        }
+
+        return game.toSnapshot();
     }
 
     async execute(gameId: string, deltaTime: number): Promise<UpdateGameStateResult> {

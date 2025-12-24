@@ -66,12 +66,22 @@ components:
       $ref: './components/schemas/chat.yaml#/Conversation'
     
     # Tournament schemas
-    Tournament:
-      $ref: './components/schemas/tournament.yaml#/Tournament'
+    TournamentSummary:
+      $ref: './components/schemas/tournament.yaml#/TournamentSummary'
+    TournamentDetail:
+      $ref: './components/schemas/tournament.yaml#/TournamentDetail'
     TournamentMatch:
       $ref: './components/schemas/tournament.yaml#/TournamentMatch'
     CreateTournamentRequest:
       $ref: './components/schemas/tournament.yaml#/CreateTournamentRequest'
+    CreateTournamentResponse:
+      $ref: './components/schemas/tournament.yaml#/CreateTournamentResponse'
+    JoinTournamentResponse:
+      $ref: './components/schemas/tournament.yaml#/JoinTournamentResponse'
+    StartTournamentResponse:
+      $ref: './components/schemas/tournament.yaml#/StartTournamentResponse'
+    PlayMatchResponse:
+      $ref: './components/schemas/tournament.yaml#/PlayMatchResponse'
     
     # Stats schemas
     UserStats:

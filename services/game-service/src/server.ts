@@ -27,6 +27,7 @@ export async function startGameService(): Promise<void> {
         });
 
         container.useCases.updateGameState.setBroadcaster(websocketServer);
+        container.useCases.forfeitGame.setBroadcaster(websocketServer);
 
         const shutdown = async () => {
             logger.info('Shutting down Game Service...');

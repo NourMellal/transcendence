@@ -10,6 +10,7 @@ import {
 import { Errors } from '../errors';
 import { Tournament, TournamentMatch, TournamentParticipant } from '../../domain/entities';
 import { BracketGenerator, BracketGeneratorConfig } from '../services/bracket-generator';
+import { ITournamentEventPublisher } from '../ports/messaging/ITournamentEventPublisher';
 
 export type StartTournamentConfig = BracketGeneratorConfig;
 
@@ -28,7 +29,8 @@ export class StartTournamentUseCase {
         private readonly matches: TournamentMatchRepository,
         private readonly bracketStates: TournamentBracketStateRepository,
         private readonly unitOfWork: UnitOfWork,
-        private readonly config: StartTournamentConfig
+        private readonly config: StartTournamentConfig,
+        private readonly publisher?: ITournamentEventPublisher
     ) {
         this.bracket = new BracketGenerator(config);
     }
@@ -73,6 +75,13 @@ export class StartTournamentUseCase {
             });
             await this.tournaments.update(updatedTournament);
         });
+
+        if (this.publisher?.publishTournamentStarted) {
+            await this.publisher.publishTournamentStarted(
+                updatedTournament,
+                matches.filter((m) => m.round === 1 && m.player1Id && m.player2Id)
+            );
+        }
 
         return {
             tournament: updatedTournament,

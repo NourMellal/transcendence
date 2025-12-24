@@ -16,20 +16,37 @@ import {
     SQLiteTournamentBracketStateRepository,
     SQLiteUnitOfWork
 } from './infrastructure/database';
-import { CreateTournamentUseCase, StartTournamentUseCase } from './application/use-cases';
+import {
+    CreateTournamentUseCase,
+    StartTournamentUseCase,
+    CompleteMatchUseCase,
+    PlayMatchUseCase,
+    LeaveTournamentUseCase
+} from './application/use-cases';
 import { JoinTournamentUseCase } from './application/use-cases/join-tournament.usecase';
 import { Errors, AppError } from './application/errors';
 import { Tournament, TournamentMatch, TournamentParticipant } from './domain/entities';
 import { AutoStartService } from './application/services';
+import { createMessagingConfig } from './infrastructure/messaging/config/messaging.config';
+import { RabbitMQConnection } from './infrastructure/messaging/RabbitMQConnection';
+import { EventSerializer } from './infrastructure/messaging/serialization/EventSerializer';
+import { RabbitMQTournamentEventPublisher } from './infrastructure/messaging/RabbitMQPublisher';
+import { GameFinishedConsumer } from './infrastructure/messaging/RabbitMQConsumer';
+import { createInternalApiMiddleware } from './infrastructure/http/middlewares/internal-api.middleware';
+import { GameServiceClient } from './infrastructure/external/GameServiceClient';
+import { TournamentWebSocketServer } from './infrastructure/websocket';
+import { TournamentAuthService } from './infrastructure/auth/TournamentAuthService';
 
 interface TournamentServiceConfig {
     PORT: number;
     HOST: string;
     DB_PATH: string;
+    GAME_SERVICE_URL: string;
     MAX_PARTICIPANTS: number;
     MIN_PARTICIPANTS: number;
     AUTO_START_TIMEOUT_SECONDS: number;
     vault: unknown;
+    internalApiKey?: string;
 }
 
 // Load configuration with Vault integration
@@ -38,9 +55,11 @@ async function loadConfiguration(): Promise<TournamentServiceConfig> {
         PORT: getEnvVarAsNumber('TOURNAMENT_SERVICE_PORT', 3004),
         HOST: process.env.TOURNAMENT_SERVICE_HOST || '0.0.0.0',
         DB_PATH: process.env.TOURNAMENT_DB_PATH || './tournament-service.db',
+        GAME_SERVICE_URL: process.env.GAME_SERVICE_URL || 'http://game-service:3002',
         MAX_PARTICIPANTS: 8,
         MIN_PARTICIPANTS: 4,
-        AUTO_START_TIMEOUT_SECONDS: 300
+        AUTO_START_TIMEOUT_SECONDS: 300,
+        INTERNAL_API_KEY: process.env.INTERNAL_API_KEY
     };
 
     try {
@@ -48,12 +67,14 @@ async function loadConfiguration(): Promise<TournamentServiceConfig> {
         await vault.initialize();
 
         const tournamentConfig = await vault.getServiceConfig();
+        const internalApiKey = await vault.getInternalApiKey();
         return {
             ...defaults,
             MAX_PARTICIPANTS: tournamentConfig.maxTournamentSize || defaults.MAX_PARTICIPANTS,
             MIN_PARTICIPANTS: tournamentConfig.minParticipants || defaults.MIN_PARTICIPANTS,
             AUTO_START_TIMEOUT_SECONDS: tournamentConfig.startTimeoutSeconds || defaults.AUTO_START_TIMEOUT_SECONDS,
-            vault
+            vault,
+            internalApiKey: internalApiKey ?? defaults.INTERNAL_API_KEY
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -61,13 +82,15 @@ async function loadConfiguration(): Promise<TournamentServiceConfig> {
 
         return {
             ...defaults,
-            vault: null
+            vault: null,
+            internalApiKey: defaults.INTERNAL_API_KEY
         };
     }
 }
 
 async function createApp() {
     const config = await loadConfiguration();
+    const messagingConfig = createMessagingConfig();
 
     const logger = createLogger('tournament-service', {
         pretty: process.env.LOG_PRETTY === 'true'
@@ -81,17 +104,43 @@ async function createApp() {
     const matchRepo = new SQLiteTournamentMatchRepository(db);
     const bracketRepo = new SQLiteTournamentBracketStateRepository(db);
     const unitOfWork = new SQLiteUnitOfWork(db);
+    const gameServiceClient = new GameServiceClient(config.GAME_SERVICE_URL, config.internalApiKey);
 
-    const createTournament = new CreateTournamentUseCase(tournamentRepo, unitOfWork, {
-        minParticipants: config.MIN_PARTICIPANTS,
-        maxParticipants: config.MAX_PARTICIPANTS
+    const serializer = new EventSerializer();
+    const messaging = new RabbitMQConnection({
+        uri: messagingConfig.uri,
+        exchange: messagingConfig.exchange
     });
+    const publisher = new RabbitMQTournamentEventPublisher(messaging, serializer, messagingConfig.exchange);
+
+    const createTournament = new CreateTournamentUseCase(
+        tournamentRepo,
+        unitOfWork,
+        {
+            minParticipants: config.MIN_PARTICIPANTS,
+            maxParticipants: config.MAX_PARTICIPANTS
+        },
+        publisher
+    );
 
     const joinTournament = new JoinTournamentUseCase(tournamentRepo, participantRepo, unitOfWork, {
         minParticipants: config.MIN_PARTICIPANTS,
         maxParticipants: config.MAX_PARTICIPANTS,
         autoStartTimeoutSeconds: config.AUTO_START_TIMEOUT_SECONDS
-    });
+    }, publisher);
+
+    const leaveTournament = new LeaveTournamentUseCase(
+        tournamentRepo,
+        participantRepo,
+        matchRepo,
+        bracketRepo,
+        unitOfWork,
+        {
+            minParticipants: config.MIN_PARTICIPANTS,
+            maxParticipants: config.MAX_PARTICIPANTS,
+            autoStartTimeoutSeconds: config.AUTO_START_TIMEOUT_SECONDS
+        }
+    );
 
     const startTournament = new StartTournamentUseCase(
         tournamentRepo,
@@ -102,7 +151,24 @@ async function createApp() {
         {
             minParticipants: config.MIN_PARTICIPANTS,
             maxParticipants: config.MAX_PARTICIPANTS
-        }
+        },
+        publisher
+    );
+
+    const completeMatch = new CompleteMatchUseCase(
+        tournamentRepo,
+        participantRepo,
+        matchRepo,
+        bracketRepo,
+        unitOfWork,
+        publisher
+    );
+
+    const playMatch = new PlayMatchUseCase(
+        tournamentRepo,
+        matchRepo,
+        unitOfWork,
+        gameServiceClient
     );
 
     const autoStartService = new AutoStartService(
@@ -116,9 +182,41 @@ async function createApp() {
         logger
     );
 
+    // Messaging wiring
+    let gameFinishedConsumer: GameFinishedConsumer | null = null;
+    try {
+        const channel = await messaging.getChannel();
+        gameFinishedConsumer = new GameFinishedConsumer(
+            channel,
+            serializer,
+            completeMatch
+        );
+        await gameFinishedConsumer.start(`${messagingConfig.queuePrefix}.game-finished`);
+        logger.info('Tournament service messaging consumer started');
+    } catch (error) {
+        logger.warn(
+            { error: error instanceof Error ? error.message : 'unknown' },
+            'Messaging not available, continuing without RabbitMQ'
+        );
+    }
+
     const app = fastify({
         logger
     });
+
+    const tournamentAuthService = new TournamentAuthService();
+    const tournamentWebSocket = new TournamentWebSocketServer(app.server, {
+        authService: tournamentAuthService,
+        internalApiKey: config.internalApiKey,
+        logger: app.log
+    });
+
+    if (config.internalApiKey) {
+        const internalApiMiddleware = createInternalApiMiddleware(config.internalApiKey);
+        app.addHook('onRequest', internalApiMiddleware);
+    } else {
+        app.log.warn('INTERNAL_API_KEY not configured; API Gateway protection is disabled for now');
+    }
 
     const timeoutInterval = setInterval(() => {
         autoStartService.processTimeouts().catch((error) => {
@@ -132,6 +230,7 @@ async function createApp() {
     app.decorate('db', db);
     app.addHook('onClose', async () => {
         clearInterval(timeoutInterval);
+        await messaging.close().catch(() => undefined);
         await db.close();
     });
 
@@ -153,39 +252,59 @@ async function createApp() {
     });
 
     // Placeholder routes
-    app.get('/api/tournaments', async (request) => {
-        const statusParam = (request.query as any)?.status as string | undefined;
-        const status = statusParam && ['recruiting', 'in_progress', 'finished'].includes(statusParam)
-            ? (statusParam as any)
-            : undefined;
+    app.get('/tournaments', async (request) => {
+        const query = request.query as any;
+        const statusParam = query?.status as string | undefined;
+        const searchParam = query?.search as string | undefined;
+        const allowedStatuses = ['recruiting', 'in_progress', 'finished'];
+        if (statusParam && !allowedStatuses.includes(statusParam)) {
+            throw Errors.badRequest('Invalid status filter');
+        }
+        const status = statusParam as any;
 
-        const tournaments = await tournamentRepo.listByStatus(status);
+        let tournaments = await tournamentRepo.listByStatus(status);
+        const search = typeof searchParam === 'string' ? searchParam.trim() : '';
+        if (search) {
+            const needle = search.toLowerCase();
+            tournaments = tournaments.filter((t) => {
+                const nameMatch = t.name.toLowerCase().includes(needle);
+                const codeMatch = t.isPublic && t.accessCode
+                    ? t.accessCode.toLowerCase().includes(needle)
+                    : false;
+                return nameMatch || codeMatch;
+            });
+        }
         return {
-            tournaments: tournaments.map((t) => ({
-                id: t.id,
-                name: t.name,
-                creatorId: t.creatorId,
-                creatorName: undefined,
-                status: t.status,
-                currentParticipants: t.currentParticipants,
-                maxParticipants: t.maxParticipants,
-                minParticipants: t.minParticipants,
-                isPublic: t.isPublic,
-                accessCode: t.accessCode ?? null,
-                requiresPasscode: !t.isPublic,
-                readyToStart: t.readyToStart,
-                startTimeoutAt: t.startTimeoutAt ? t.startTimeoutAt.toISOString() : null,
-                myRole: 'none',
-                createdAt: t.createdAt.toISOString(),
-                startedAt: t.startedAt ? t.startedAt.toISOString() : null,
-                finishedAt: t.finishedAt ? t.finishedAt.toISOString() : null
-            }))
+            tournaments: tournaments.map(mapTournamentSummary)
         };
     });
 
-    app.get('/api/tournaments/:id', async (request, reply) => {
+    app.get('/tournaments/my-tournaments', async (request, reply) => {
         try {
-            const { id } = request.params as any;
+            const userId = request.headers['x-user-id'] as string;
+            if (!userId) {
+                throw Errors.unauthorized('Missing user identity');
+            }
+
+            const statusParam = (request.query as any)?.status as string | undefined;
+            const allowedStatuses = ['recruiting', 'in_progress', 'finished'];
+            if (statusParam && !allowedStatuses.includes(statusParam)) {
+                throw Errors.badRequest('Invalid status filter');
+            }
+            const status = statusParam as any;
+
+            const tournaments = await tournamentRepo.listByUser(userId, status);
+            return {
+                tournaments: tournaments.map(mapTournamentSummary)
+            };
+        } catch (error) {
+            handleError(reply, error);
+        }
+    });
+
+    app.get('/tournaments/:id', async (request, reply) => {
+        try {
+            const { id } = validateIdParams(request.params as any);
             const tournament = await tournamentRepo.findById(id);
             if (!tournament) {
                 throw Errors.notFound('Tournament not found');
@@ -200,9 +319,9 @@ async function createApp() {
         }
     });
 
-    app.post('/api/tournaments', async (request, reply) => {
+    app.post('/tournaments', async (request, reply) => {
         try {
-            const body = request.body as any;
+            const body = validateCreateTournamentBody(request.body as any);
             const creatorId = (request.headers['x-user-id'] as string) || body.creatorId;
             if (!creatorId) {
                 throw Errors.unauthorized('Missing user identity');
@@ -215,6 +334,8 @@ async function createApp() {
                 creatorId
             });
 
+            tournamentWebSocket.broadcastTournamentUpdate(mapTournamentSummary(tournament));
+
             reply.code(201);
             return mapTournamentDetail(tournament, [], []);
         } catch (error) {
@@ -222,10 +343,10 @@ async function createApp() {
         }
     });
 
-    app.post('/api/tournaments/:id/join', async (request, reply) => {
+    app.post('/tournaments/:id/join', async (request, reply) => {
         try {
-            const { id } = request.params as any;
-            const passcode = (request.query as any)?.passcode as string | undefined;
+            const { id } = validateIdParams(request.params as any);
+            const passcode = validatePasscodeQuery(request.query as any);
             const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
             if (!userId) {
                 throw Errors.unauthorized('Missing user identity');
@@ -243,11 +364,18 @@ async function createApp() {
                     reason: 'auto_full'
                 });
 
+                tournamentWebSocket.broadcastTournamentUpdate(mapTournamentSummary(started.tournament));
+
                 return {
                     ...result,
                     status: started.tournament.status,
                     tournament: mapTournamentDetail(started.tournament, started.participants, started.matches)
                 };
+            }
+
+            const updated = await tournamentRepo.findById(id);
+            if (updated) {
+                tournamentWebSocket.broadcastTournamentUpdate(mapTournamentSummary(updated));
             }
 
             return result;
@@ -256,9 +384,40 @@ async function createApp() {
         }
     });
 
-    app.post('/api/tournaments/:id/start', async (request, reply) => {
+    app.post('/tournaments/:id/leave', async (request, reply) => {
         try {
-            const { id } = request.params as any;
+            const { id } = validateIdParams(request.params as any);
+            const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
+            if (!userId) {
+                throw Errors.unauthorized('Missing user identity');
+            }
+
+            const result = await leaveTournament.execute({
+                tournamentId: id,
+                userId
+            });
+
+            if (result.tournamentDeleted) {
+                tournamentWebSocket.broadcastTournamentRemoved({ id });
+                return reply.code(204).send();
+            }
+
+            const updated = await tournamentRepo.findById(id);
+            if (updated) {
+                tournamentWebSocket.broadcastTournamentUpdate(mapTournamentSummary(updated));
+            } else {
+                tournamentWebSocket.broadcastTournamentRemoved({ id });
+            }
+
+            return reply.code(204).send();
+        } catch (error) {
+            handleError(reply, error);
+        }
+    });
+
+    app.post('/tournaments/:id/start', async (request, reply) => {
+        try {
+            const { id } = validateIdParams(request.params as any);
             const userId = (request.headers['x-user-id'] as string) || (request.body as any)?.userId;
             if (!userId) {
                 throw Errors.unauthorized('Missing user identity');
@@ -270,7 +429,46 @@ async function createApp() {
                 reason: 'manual'
             });
 
+            tournamentWebSocket.broadcastTournamentUpdate(mapTournamentSummary(started.tournament));
+
             return mapTournamentDetail(started.tournament, started.participants, started.matches);
+        } catch (error) {
+            handleError(reply, error);
+        }
+    });
+
+    app.get('/tournaments/:id/bracket', async (request, reply) => {
+        try {
+            const { id } = validateIdParams(request.params as any);
+            const tournament = await tournamentRepo.findById(id);
+            if (!tournament) {
+                throw Errors.notFound('Tournament not found');
+            }
+
+            const matches = await matchRepo.listByTournamentId(id);
+            return {
+                matches: matches.map(mapTournamentMatch)
+            };
+        } catch (error) {
+            handleError(reply, error);
+        }
+    });
+
+    app.post('/tournaments/:id/matches/:matchId/play', async (request, reply) => {
+        try {
+            const { id, matchId } = validateMatchParams(request.params as any);
+            const userId = request.headers['x-user-id'] as string;
+            if (!userId) {
+                throw Errors.unauthorized('Missing user identity');
+            }
+
+            const result = await playMatch.execute({
+                tournamentId: id,
+                matchId,
+                userId
+            });
+
+            return result;
         } catch (error) {
             handleError(reply, error);
         }
@@ -306,44 +504,58 @@ async function start() {
 
 start();
 
+function mapTournamentSummary(tournament: Tournament) {
+    return {
+        id: tournament.id,
+        name: tournament.name,
+        creatorId: tournament.creatorId,
+        creatorName: undefined,
+        status: tournament.status,
+        currentParticipants: tournament.currentParticipants,
+        maxParticipants: tournament.maxParticipants,
+        minParticipants: tournament.minParticipants,
+        isPublic: tournament.isPublic,
+        accessCode: tournament.accessCode ?? null,
+        requiresPasscode: !tournament.isPublic,
+        readyToStart: tournament.readyToStart,
+        startTimeoutAt: tournament.startTimeoutAt ? tournament.startTimeoutAt.toISOString() : null,
+        myRole: 'none',
+        createdAt: tournament.createdAt.toISOString(),
+        startedAt: tournament.startedAt ? tournament.startedAt.toISOString() : null,
+        finishedAt: tournament.finishedAt ? tournament.finishedAt.toISOString() : null
+    };
+}
+
+function mapTournamentMatch(match: TournamentMatch) {
+    return {
+        id: match.id,
+        tournamentId: match.tournamentId,
+        round: match.round,
+        matchPosition: match.matchPosition,
+        player1: match.player1Id ? { userId: match.player1Id } : null,
+        player2: match.player2Id ? { userId: match.player2Id } : null,
+        status: match.status,
+        gameId: match.gameId ?? null,
+        winnerId: match.winnerId ?? null,
+        startedAt: match.startedAt ? match.startedAt.toISOString() : null,
+        finishedAt: match.finishedAt ? match.finishedAt.toISOString() : null
+    };
+}
+
 function mapTournamentDetail(
     tournament: Tournament,
     participants: TournamentParticipant[],
     matches: TournamentMatch[]
 ) {
     return {
-        id: tournament.id,
-        name: tournament.name,
-        creatorId: tournament.creatorId,
-        status: tournament.status,
+        ...mapTournamentSummary(tournament),
         bracketType: tournament.bracketType,
-        currentParticipants: tournament.currentParticipants,
-        maxParticipants: tournament.maxParticipants,
-        minParticipants: tournament.minParticipants,
-        isPublic: tournament.isPublic,
-        accessCode: tournament.accessCode ?? null,
-        readyToStart: tournament.readyToStart,
-        startTimeoutAt: tournament.startTimeoutAt ? tournament.startTimeoutAt.toISOString() : null,
         participants: participants.map((p) => ({
             userId: p.userId,
             username: p.username ?? undefined,
             joinedAt: p.joinedAt.toISOString()
         })),
-        matches: matches.map((m) => ({
-            id: m.id,
-            round: m.round,
-            matchPosition: m.matchPosition,
-            player1: m.player1Id ? { userId: m.player1Id } : null,
-            player2: m.player2Id ? { userId: m.player2Id } : null,
-            status: m.status,
-            gameId: m.gameId ?? null,
-            winnerId: m.winnerId ?? null,
-            startedAt: m.startedAt ? m.startedAt.toISOString() : null,
-            finishedAt: m.finishedAt ? m.finishedAt.toISOString() : null
-        })),
-        createdAt: tournament.createdAt.toISOString(),
-        startedAt: tournament.startedAt ? tournament.startedAt.toISOString() : null,
-        finishedAt: tournament.finishedAt ? tournament.finishedAt.toISOString() : null
+        matches: matches.map(mapTournamentMatch)
     };
 }
 
@@ -354,4 +566,49 @@ function handleError(reply: any, error: any) {
     }
 
     reply.code(500).send({ message: 'Internal server error' });
+}
+
+function validateIdParams(params: any): { id: string } {
+    if (!params?.id || typeof params.id !== 'string') {
+        throw Errors.badRequest('Invalid id');
+    }
+    return { id: params.id };
+}
+
+function validatePasscodeQuery(query: any): string | undefined {
+    if (!query?.passcode) return undefined;
+    if (typeof query.passcode !== 'string') {
+        throw Errors.badRequest('Invalid passcode');
+    }
+    return query.passcode;
+}
+
+function validateMatchParams(params: any): { id: string; matchId: string } {
+    if (!params?.id || typeof params.id !== 'string') {
+        throw Errors.badRequest('Invalid id');
+    }
+    if (!params?.matchId || typeof params.matchId !== 'string') {
+        throw Errors.badRequest('Invalid match id');
+    }
+    return { id: params.id, matchId: params.matchId };
+}
+
+function validateCreateTournamentBody(body: any) {
+    if (!body || typeof body !== 'object') {
+        throw Errors.badRequest('Invalid request body');
+    }
+
+    if (!body.name || typeof body.name !== 'string' || body.name.trim().length < 3) {
+        throw Errors.badRequest('Tournament name must be at least 3 characters');
+    }
+
+    if (body.bracketType && body.bracketType !== 'single_elimination') {
+        throw Errors.badRequest('Only single_elimination bracket type is supported');
+    }
+
+    if (body.isPublic === false && (!body.privatePasscode || typeof body.privatePasscode !== 'string')) {
+        throw Errors.badRequest('Private tournaments require a passcode');
+    }
+
+    return body;
 }

@@ -1,15 +1,9 @@
-import GamePage from '../pages/GamePage';
 import CreateGamePage from '../pages/CreateGamePage';
 import LocalGamePage from '../pages/LocalGamePage';
 import { LobbyPage } from '../Pages/LobbyPage';
 import { PlayPage } from '../Pages/PlayPage';
 
 const routes = [
-  {
-    path: '/game',
-    component: GamePage,
-    props: {},
-  },
   {
     path: '/game/create',
     component: CreateGamePage,

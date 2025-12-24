@@ -15,6 +15,7 @@ import { isOnlineMode } from '../utils/featureFlags';
 import { gameService } from '../services/GameService';
 import { appState } from '@/state';
 import { navigate } from '@/routes';
+import { parseQueryParams } from '@/utils/helpers';
 
 interface GameCanvasProps {
   gameId?: string; // Optional: for online mode
@@ -40,6 +41,11 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private animationId: number | null = null;
   private isOnline: boolean = false;
   private wsUnsubscribes: Array<() => void> = [];
+  private autoReady: boolean = false;
+  private autoReadyKnown: boolean = false;
+  private autoReadySent: boolean = false;
+  private isTournamentGame: boolean = false;
+  private tournamentReturnPath?: string;
 
   private readonly BASE_WIDTH = 800;
   private readonly BASE_HEIGHT = 600;
@@ -168,7 +174,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
         <div class="relative overflow-hidden rounded-xl sm:rounded-2xl" style="background: linear-gradient(135deg, rgba(13, 17, 23, 0.95) 0%, rgba(27, 31, 35, 0.95) 100%); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
           <!-- Subtle animated background accent -->
           <div class="absolute inset-0 opacity-5" style="background: radial-gradient(circle at 30% 50%, var(--color-brand-primary), transparent 70%), radial-gradient(circle at 70% 50%, var(--color-brand-secondary), transparent 70%);"></div>
-          
+
           <div class="relative grid grid-cols-2 gap-6 sm:gap-12 text-center px-6 sm:px-12 py-5 sm:py-8">
             <!-- Player 1 Score -->
             <div class="space-y-1 sm:space-y-2">
@@ -204,6 +210,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     }
 
     const winnerLabel = this.state.winnerName ?? 'Winner';
+    const returnLabel = this.getReturnLabel();
 
     return `
       <div class="absolute inset-0 z-20 flex items-center justify-center">
@@ -211,7 +218,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
         <div class="relative w-full max-w-md mx-4 rounded-2xl p-8 text-center overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1); background: linear-gradient(135deg, rgba(13, 17, 23, 0.98) 0%, rgba(27, 31, 35, 0.98) 100%); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);">
           <!-- Subtle glow effect -->
           <div class="absolute inset-0 opacity-10" style="background: radial-gradient(circle at 50% 0%, var(--color-brand-primary), transparent 60%);"></div>
-          
+
           <div class="relative">
             <p class="text-xs sm:text-sm uppercase tracking-widest font-semibold" style="color: rgba(255, 255, 255, 0.5); letter-spacing: 0.15em;">Match Finished</p>
             <h3 class="text-3xl sm:text-5xl font-bold mt-4 mb-8 flex items-center justify-center gap-3" style="color: #ffffff; text-shadow: 0 2px 20px rgba(0, 179, 217, 0.4);">
@@ -223,7 +230,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
               class="btn-touch px-8 py-4 rounded-xl font-semibold touch-feedback transition-all duration-300 hover:scale-105"
               style="background: linear-gradient(135deg, #00b3d9 0%, #0095b8 100%); color: white; box-shadow: 0 4px 20px rgba(0, 179, 217, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);"
             >
-              Return to Dashboard
+              ${returnLabel}
             </button>
           </div>
         </div>
@@ -254,7 +261,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   }
 
   private handleReturnHome(): void {
-    navigate('/dashboard');
+    navigate(this.getReturnPath());
   }
 
   onMount(): void {
@@ -268,11 +275,14 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.observeCanvasResize();
     this.renderer.render(this.ball, this.player1, this.player2);
 
+    this.resolveTournamentReturnPath();
     this.attachEventListeners();
 
     if (this.isOnline) {
       this.disableLocalButtons();
-      void this.syncSideAndState();
+      void this.syncSideAndState().finally(() => {
+        void this.maybeAutoReady(true);
+      });
       void this.setupWebSocket();
     }
   }
@@ -454,6 +464,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       gameWS.on('connect', () => {
         updateStatus('connected');
         gameWS.send('join_game', { gameId: this.props.gameId });
+        void this.maybeAutoReady();
       }),
       gameWS.on('disconnect', () => updateStatus('disconnected')),
       gameWS.on('connect_error', () => updateStatus('error')),
@@ -486,9 +497,60 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       } else if (players[1]?.id === currentUserId) {
         this.mySide = 'right';
       }
+      this.isTournamentGame = game.mode === 'TOURNAMENT';
+      this.autoReady = this.isTournamentGame;
+      this.autoReadyKnown = true;
     } catch (error) {
       console.warn('[GameCanvas] syncSideAndState failed', error);
     }
+  }
+
+  private async maybeAutoReady(force = false): Promise<void> {
+    if (!this.props.gameId || this.autoReadySent) return;
+    if (!this.autoReadyKnown) {
+      try {
+        const game = await gameService.getGame(this.props.gameId);
+        this.isTournamentGame = game.mode === 'TOURNAMENT';
+        this.autoReady = this.isTournamentGame;
+        this.autoReadyKnown = true;
+      } catch (error) {
+        console.warn('[GameCanvas] Auto-ready check failed', error);
+        return;
+      }
+    }
+
+    if (!this.autoReady) return;
+    if (!force && gameWS.getState() !== 'connected') return;
+
+    this.autoReadySent = true;
+    gameWS.send('ready', { gameId: this.props.gameId });
+  }
+
+  private resolveTournamentReturnPath(): void {
+    const params = parseQueryParams();
+    if (params.tournamentId) {
+      this.tournamentReturnPath = `/tournament/${params.tournamentId}`;
+    }
+  }
+
+  private getReturnLabel(): string {
+    if (this.tournamentReturnPath) {
+      return 'Return to Bracket';
+    }
+    if (this.isTournamentGame) {
+      return 'Return to Tournaments';
+    }
+    return 'Return to Home';
+  }
+
+  private getReturnPath(): string {
+    if (this.tournamentReturnPath) {
+      return this.tournamentReturnPath;
+    }
+    if (this.isTournamentGame) {
+      return '/tournament/list';
+    }
+    return '/home';
   }
 
   private emitPaddleSet(y: number): void {
