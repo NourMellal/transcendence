@@ -8,7 +8,7 @@
         in: query
         schema:
           $ref: '../components/schemas/tournament.yaml#/TournamentStatus'
-        description: Filter by status; defaults to recruiting when omitted.
+        description: Filter by status; when omitted, all statuses are returned.
       - name: search
         in: query
         schema:
@@ -148,7 +148,7 @@
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/tournament.yaml#/StartTournamentResponse'
+              $ref: '../components/schemas/tournament.yaml#/TournamentDetail'
       '400':
         description: Not enough participants or already started
         content:
@@ -290,6 +290,7 @@
         in: query
         schema:
           $ref: '../components/schemas/tournament.yaml#/TournamentStatus'
+        description: Filter by status; when omitted, all statuses are returned.
     responses:
       '200':
         description: User's tournaments

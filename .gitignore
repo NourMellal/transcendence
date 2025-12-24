@@ -129,7 +129,7 @@ package-lock.json
 yarn.lock
 
 # Temporary files
-tmp/
+#tmp/
 temp/
 *.tmp
 *.temp
