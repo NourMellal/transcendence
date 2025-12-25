@@ -7,6 +7,25 @@ networks:
     driver: bridge
 
 services:
+  vault:
+      build:
+        context: infrastructure/vault
+        dockerfile: docker/Dockerfile
+      container_name: transcendence-vault
+      environment:
+        VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
+        VAULT_DEV_LISTEN_ADDRESS: ${VAULT_DEV_LISTEN_ADDRESS}
+      ports:
+        - "8200:8200"
+      cap_add:
+        - IPC_LOCK
+      volumes:
+        - vault-data:/vault/data
+        - vault-logs:/vault/logs
+      networks:
+        - transcendence
+      restart: unless-stopped
+
   pnpm-install:
     build:
       context: .
@@ -214,6 +233,7 @@ services:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
     depends_on:
+      - vault
       - pnpm-install
       - user-service
       - game-service
@@ -279,25 +299,7 @@ services:
     networks:
       - transcendence
 
-  vault:
-    build:
-      context: infrastructure/vault
-      dockerfile: docker/Dockerfile
-    container_name: transcendence-vault
-    environment:
-      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
-      VAULT_DEV_LISTEN_ADDRESS: ${VAULT_DEV_LISTEN_ADDRESS}
-    ports:
-      - "8200:8200"
-    cap_add:
-      - IPC_LOCK
-    volumes:
-      - vault-data:/vault/data
-      - vault-logs:/vault/logs
-    networks:
-      - transcendence
-    restart: unless-stopped
-
+  
   # grafana:
   #   image: grafana/grafana:latest
   #   ports:
