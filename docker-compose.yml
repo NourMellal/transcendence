@@ -120,8 +120,8 @@ services:
       dockerfile: services/user-service/Dockerfile
       target: dev
     env_file:
-      - .env
-      - services/user-service/.env
+      - .env.example
+      - services/user-service/.env.example
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
@@ -148,8 +148,8 @@ services:
       dockerfile: services/game-service/Dockerfile
       target: dev
     env_file:
-      - .env
-      - services/game-service/.env
+      - .env.example
+      - services/game-service/.env.example
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
@@ -175,8 +175,8 @@ services:
       dockerfile: services/chat-service/Dockerfile
       target: dev
     env_file:
-      - .env
-      - services/chat-service/.env
+      - .env.example
+      - services/chat-service/.env.example
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
@@ -201,8 +201,8 @@ services:
       dockerfile: services/tournament-service/Dockerfile
       target: dev
     env_file:
-      - .env
-      - services/tournament-service/.env
+      - .env.example
+      - services/tournament-service/.env.example
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
@@ -227,8 +227,8 @@ services:
       dockerfile: infrastructure/api-gateway/Dockerfile
       target: dev
     env_file:
-      - .env
-      - infrastructure/api-gateway/.env
+      - .env.example
+      - infrastructure/api-gateway/.env.example
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
@@ -255,8 +255,8 @@ services:
       dockerfile: apps/web/Dockerfile
       target: dev
     env_file:
-      - .env
-      - apps/web/.env
+      - .env.example
+      - apps/web/.env.example
     environment:
       <<: *workspace-env
     depends_on:
@@ -298,6 +298,31 @@ services:
       - redis-data:/data
     networks:
       - transcendence
+
+  nginx:
+    build:
+      context: docker/nginx
+      dockerfile: Dockerfile
+    container_name: transcendence-nginx
+    environment:
+      WAF_ENABLED: ${WAF_ENABLED:-false}
+    depends_on:
+      - api-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+      - nginx-logs:/var/log/nginx
+    networks:
+      - transcendence
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   
   # grafana:
@@ -378,5 +403,6 @@ volumes:
   rabbitmq-data:
   vault-data:
   vault-logs:
+  nginx-logs:
   # grafana-data:
   es-data:
