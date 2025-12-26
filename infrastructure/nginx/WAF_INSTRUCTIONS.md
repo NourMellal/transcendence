@@ -3,18 +3,18 @@
 This document explains how to enable/disable the ModSecurity WAF and how to verify it is routing and blocking requests.
 
 Important prerequisite
-- The `docker/nginx/Dockerfile` in this repo now builds Nginx together with `libmodsecurity` and the `modsecurity-nginx` connector from source so no prebuilt image is required. Building the image takes longer than pulling a prebuilt image but gives full control and avoids using community images.
+- The `infrastructure/nginx/Dockerfile` in this repo now builds Nginx together with `libmodsecurity` and the `modsecurity-nginx` connector from source so no prebuilt image is required. Building the image takes longer than pulling a prebuilt image but gives full control and avoids using community images.
 
 To get actual blocking you must ensure the image is rebuilt (the build process compiles ModSecurity and downloads OWASP CRS during image build):
   - Build the image with `docker-compose build --no-cache nginx` or `docker compose build --no-cache nginx`.
-  - Make sure `WAF_ENABLED=true` is set in your `.env` (and that `SecRuleEngine` is set to `On` in `docker/nginx/modsec/modsecurity.conf`).
+  - Make sure `WAF_ENABLED=true` is set in your `.env` (and that `SecRuleEngine` is set to `On` in `infrastructure/nginx/modsec/modsecurity.conf`).
 
 Files
-- `docker/nginx/Dockerfile` - builds Nginx + ModSecurity from source (no prebuilt images).
-- `docker/nginx/entrypoint.sh` - toggles which modsec include is symlinked based on `WAF_ENABLED` env var.
-- `docker/nginx/modsec/modsecurity.conf` - hardened config (blocking mode + OWASP CRS).
-- `docker/nginx/modsec/modsec_enabled.conf` - include used when WAF is enabled.
-- `docker/nginx/modsec/modsec_disabled.conf` - empty include used when WAF is disabled.
+- `infrastructure/nginx/Dockerfile` - builds Nginx + ModSecurity from source (no prebuilt images).
+- `infrastructure/nginx/entrypoint.sh` - toggles which modsec include is symlinked based on `WAF_ENABLED` env var.
+- `infrastructure/nginx/modsec/modsecurity.conf` - hardened config (blocking mode + OWASP CRS).
+- `infrastructure/nginx/modsec/modsec_enabled.conf` - include used when WAF is enabled.
+- `infrastructure/nginx/modsec/modsec_disabled.conf` - empty include used when WAF is disabled.
 
 Enable / disable WAF
 
@@ -27,17 +27,17 @@ WAF_ENABLED=true
 - To disable WAF: `WAF_ENABLED=false` (or unset).
 
 Notes about blocking vs detection
-- `docker/nginx/modsec/modsecurity.conf` ships with `SecRuleEngine On` so requests matching the CRS are blocked. For smoke testing you can flip it back to `DetectionOnly`.
+- `infrastructure/nginx/modsec/modsecurity.conf` ships with `SecRuleEngine On` so requests matching the CRS are blocked. For smoke testing you can flip it back to `DetectionOnly`.
 
 Local self-signed TLS (for development)
 
 Generate certs for localhost:
 
 ```bash
-mkdir -p docker/nginx/certs
+mkdir -p infrastructure/nginx/certs
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout docker/nginx/certs/privkey.pem \
-  -out docker/nginx/certs/fullchain.pem \
+  -keyout infrastructure/nginx/certs/privkey.pem \
+  -out infrastructure/nginx/certs/fullchain.pem \
   -subj "/C=US/ST=State/L=City/O=Org/CN=localhost"
 ```
 

@@ -485,7 +485,7 @@ function validateCreateTournamentBody(body: any) {
         throw Errors.badRequest('Private tournaments require a passcode');
     }
 
-    if (body.privatePasscode !== undefined && body.isPublic !== false) {
+    if (body.privatePasscode && body.isPublic !== false) {
         throw Errors.badRequest('privatePasscode is only allowed for private tournaments');
     }
 

@@ -27,7 +27,7 @@ echo ""
 
 # Check SSL certificate files
 echo "2. Checking SSL certificate files..."
-if [ -f "docker/nginx/certs/fullchain.pem" ] && [ -f "docker/nginx/certs/privkey.pem" ]; then
+if [ -f "infrastructure/nginx/certs/fullchain.pem" ] && [ -f "infrastructure/nginx/certs/privkey.pem" ]; then
   echo -e "${GREEN}✓ SSL certificate files exist${NC}"
 else
   echo -e "${RED}✗ SSL certificate files not found${NC}"
@@ -86,7 +86,11 @@ echo ""
 
 # Check WAF status
 echo "5. Checking WAF/ModSecurity status..."
-WAF_ENABLED=$(grep -E "^WAF_ENABLED=" .env.example 2>/dev/null | cut -d'=' -f2 | tr -d ' "' || echo "")
+ENV_FILE=".env"
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FILE=".env.example"
+fi
+WAF_ENABLED=$(grep -E "^WAF_ENABLED=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' "' || echo "")
 
 if [ "$WAF_ENABLED" = "true" ] || [ "$WAF_ENABLED" = "1" ]; then
   echo -e "${GREEN}✓ WAF is ENABLED${NC}"

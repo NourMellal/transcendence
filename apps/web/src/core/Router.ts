@@ -8,7 +8,16 @@ const GUEST_ONLY_ROUTES = ['/auth/login', '/auth/signup'];
 
 // Routes that require authentication (redirect to login if not authenticated)
 const PROTECTED_ROUTES = ['/dashboard', '/profile', '/chat', '/friends', '/game/lobby', '/game/play', '/tournament'];
-const GUEST_ALLOWED_ROUTES = ['/', '/game/local', '/auth/login', '/auth/signup', '/oauth/callback', '/oauth/error', '/auth/42/callback'];
+const GUEST_ALLOWED_ROUTES = [
+  '/',
+  '/game/local',
+  '/auth/login',
+  '/auth/signup',
+  '/oauth/callback',
+  '/auth/callback',
+  '/oauth/error',
+  '/auth/42/callback',
+];
 
 export default class Router {
    private _routes: Route[];

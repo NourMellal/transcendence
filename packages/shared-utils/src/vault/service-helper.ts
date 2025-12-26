@@ -222,6 +222,11 @@ export class ServiceVaultHelper {
             google_client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
             '42_client_id': process.env.OAUTH_42_CLIENT_ID || '',
             '42_client_secret': process.env.OAUTH_42_CLIENT_SECRET || '',
+            '42_redirect_uri': process.env.OAUTH_42_REDIRECT_URI || '',
+            '42_authorize_url': process.env.OAUTH_42_AUTHORIZE_URL || '',
+            '42_token_url': process.env.OAUTH_42_TOKEN_URL || '',
+            '42_profile_url': process.env.OAUTH_42_PROFILE_URL || '',
+            '42_scope': process.env.OAUTH_42_SCOPE || '',
         };
     }
 

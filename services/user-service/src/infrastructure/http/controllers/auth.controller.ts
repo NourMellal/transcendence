@@ -240,9 +240,11 @@ export class AuthController {
             const { authorizationUrl } = await this.oauth42LoginUseCase.execute();
             reply.redirect(authorizationUrl);
         } catch (error: any) {
-            reply.code(500).send({
-                error: 'Internal Server Error',
-                message: error.message || 'Failed to start OAuth flow'
+            const message = error?.message || 'Failed to start OAuth flow';
+            const isNotConfigured = message.includes('not configured');
+            reply.code(isNotConfigured ? 503 : 500).send({
+                error: isNotConfigured ? 'Service Unavailable' : 'Internal Server Error',
+                message
             });
         }
     }

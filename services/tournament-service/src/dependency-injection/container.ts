@@ -163,10 +163,12 @@ export async function createContainer(
     );
 
     let consumer: GameFinishedConsumer | null = null;
+    const queueName = `${messagingConfig.queuePrefix}.game-finished`;
+
     try {
         const channel = await messaging.getChannel();
         consumer = new GameFinishedConsumer(channel, serializer, completeMatch);
-        await consumer.start(`${messagingConfig.queuePrefix}.game-finished`);
+        await consumer.start(queueName);
         logger.info('Tournament service messaging consumer started');
     } catch (error) {
         logger.warn(

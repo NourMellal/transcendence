@@ -120,11 +120,17 @@ services:
       dockerfile: services/user-service/Dockerfile
       target: dev
     env_file:
-      - .env.example
-      - services/user-service/.env.example
+      - .env
+      - services/user-service/.env
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
       - pnpm-install
       - rabbitmq
@@ -148,11 +154,16 @@ services:
       dockerfile: services/game-service/Dockerfile
       target: dev
     env_file:
-      - .env.example
-      - services/game-service/.env.example
+      - .env
+      - services/game-service/.env
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
+      GAME_SERVICE_URL: http://game-service:3002
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
       - pnpm-install
       - rabbitmq
@@ -175,11 +186,13 @@ services:
       dockerfile: services/chat-service/Dockerfile
       target: dev
     env_file:
-      - .env.example
-      - services/chat-service/.env.example
+      - .env
+      - services/chat-service/.env
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
     depends_on:
       - pnpm-install
       - rabbitmq
@@ -201,11 +214,13 @@ services:
       dockerfile: services/tournament-service/Dockerfile
       target: dev
     env_file:
-      - .env.example
-      - services/tournament-service/.env.example
+      - .env
+      - services/tournament-service/.env
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
     depends_on:
       - pnpm-install
       - rabbitmq
@@ -227,11 +242,16 @@ services:
       dockerfile: infrastructure/api-gateway/Dockerfile
       target: dev
     env_file:
-      - .env.example
-      - infrastructure/api-gateway/.env.example
+      - .env
+      - infrastructure/api-gateway/.env
     environment:
       <<: *workspace-env
       LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
+      CHAT_SERVICE_URL: http://chat-service:3003
+      TOURNAMENT_SERVICE_URL: http://tournament-service:3004
     depends_on:
       - vault
       - pnpm-install
@@ -255,10 +275,12 @@ services:
       dockerfile: apps/web/Dockerfile
       target: dev
     env_file:
-      - .env.example
-      - apps/web/.env.example
+      - .env
+      - apps/web/.env
     environment:
       <<: *workspace-env
+      VITE_API_PROXY_TARGET: https://nginx
+      VITE_API_PROXY_WS_TARGET: wss://nginx
     depends_on:
       - pnpm-install
       - api-gateway
@@ -301,7 +323,7 @@ services:
 
   nginx:
     build:
-      context: docker/nginx
+      context: infrastructure/nginx
       dockerfile: Dockerfile
     container_name: transcendence-nginx
     environment:
@@ -312,19 +334,19 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/nginx/certs:/etc/nginx/certs:ro
+      - ./infrastructure/nginx/certs:/etc/nginx/certs:ro
       - nginx-logs:/var/log/nginx
     networks:
       - transcendence
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "-k", "https://localhost/"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  
+
   # grafana:
   #   image: grafana/grafana:latest
   #   ports:

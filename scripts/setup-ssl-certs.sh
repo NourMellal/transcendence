@@ -4,7 +4,7 @@ set -e
 # Script to generate self-signed SSL certificates for local development
 # These certificates are used by the Nginx reverse proxy
 
-CERT_DIR="docker/nginx/certs"
+CERT_DIR="infrastructure/nginx/certs"
 DAYS_VALID=365
 
 echo "Setting up SSL certificates for local development..."

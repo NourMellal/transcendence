@@ -41,11 +41,10 @@ Internet/Clients
 
 ### Step 1: Generate SSL Certificates
 ```bash
-cd /Users/roumaissaezarhoune/Desktop/test
 ./scripts/setup-ssl-certs.sh
 ```
 
-This creates self-signed certificates in `docker/nginx/certs/` for local development.
+This creates self-signed certificates in `infrastructure/nginx/certs/` for local development.
 
 ### Step 2: Enable WAF (Optional)
 ```bash
@@ -124,7 +123,7 @@ docker-compose restart nginx
 
 **Method 2: Detection-Only Mode**
 ```bash
-# Edit docker/nginx/modsec/modsecurity.conf line 13:
+# Edit infrastructure/nginx/modsec/modsecurity.conf line 13:
 SecRuleEngine DetectionOnly  # Logs but doesn't block
 
 # Rebuild and restart:
@@ -134,7 +133,7 @@ docker-compose restart nginx
 
 ### Tune ModSecurity Rules
 
-Edit `docker/nginx/modsec/modsecurity.conf`:
+Edit `infrastructure/nginx/modsec/modsecurity.conf`:
 
 **Adjust body size limits:**
 ```nginx
@@ -164,7 +163,7 @@ SecRule REQUEST_URI "@beginsWith /api/upload" \
 
 ### Nginx Tuning
 
-Edit `docker/nginx/nginx.conf` or `docker/nginx/conf.d/api-proxy.conf`:
+Edit `infrastructure/nginx/nginx.conf` or `infrastructure/nginx/conf.d/api-proxy.conf`:
 
 **Change rate limiting:**
 ```nginx
@@ -266,7 +265,7 @@ docker-compose exec nginx tail -100 /var/log/modsec_audit.log
 
 **Step 2: Test with detection-only mode**
 ```bash
-# Edit docker/nginx/modsec/modsecurity.conf
+# Edit infrastructure/nginx/modsec/modsecurity.conf
 SecRuleEngine DetectionOnly  # Change from "On"
 
 # Restart
@@ -278,7 +277,7 @@ docker-compose restart nginx
 
 **Step 3: Add exception rule**
 ```bash
-# Edit docker/nginx/modsec/modsecurity.conf
+# Edit infrastructure/nginx/modsec/modsecurity.conf
 # Add at the end:
 
 # Disable rule 942100 for /api/search endpoint
@@ -341,21 +340,21 @@ Before deploying to production:
 ### Modified:
 - ✅ `docker-compose.yml` - Added nginx service
 - ✅ `.env.example` - Added WAF_ENABLED variable
-- ✅ `docker/nginx/nginx.conf` - Added ModSecurity module loading
-- ✅ `docker/nginx/README.md` - Updated documentation
+- ✅ `infrastructure/nginx/nginx.conf` - Added ModSecurity module loading
+- ✅ `infrastructure/nginx/README.md` - Updated documentation
 
 ### Created:
 - ✅ `scripts/setup-ssl-certs.sh` - SSL certificate generation
 - ✅ `scripts/test-waf.sh` - WAF testing suite
 
 ### Already Existed (verified working):
-- ✅ `docker/nginx/Dockerfile` - Builds Nginx + ModSecurity
-- ✅ `docker/nginx/entrypoint.sh` - Dynamic WAF toggling
-- ✅ `docker/nginx/modsec/modsecurity.conf` - Main WAF config
-- ✅ `docker/nginx/modsec/modsec_enabled.conf` - Enabled state
-- ✅ `docker/nginx/modsec/modsec_disabled.conf` - Disabled state
-- ✅ `docker/nginx/conf.d/api-proxy.conf` - Reverse proxy config
-- ✅ `docker/nginx/WAF_INSTRUCTIONS.md` - Detailed WAF docs
+- ✅ `infrastructure/nginx/Dockerfile` - Builds Nginx + ModSecurity
+- ✅ `infrastructure/nginx/entrypoint.sh` - Dynamic WAF toggling
+- ✅ `infrastructure/nginx/modsec/modsecurity.conf` - Main WAF config
+- ✅ `infrastructure/nginx/modsec/modsec_enabled.conf` - Enabled state
+- ✅ `infrastructure/nginx/modsec/modsec_disabled.conf` - Disabled state
+- ✅ `infrastructure/nginx/conf.d/api-proxy.conf` - Reverse proxy config
+- ✅ `infrastructure/nginx/WAF_INSTRUCTIONS.md` - Detailed WAF docs
 
 ## Next Steps
 
@@ -407,8 +406,8 @@ docker-compose exec nginx cat /usr/local/modsecurity/lib/pkgconfig/modsecurity.p
 
 ## Support
 
-- **WAF Instructions**: [docker/nginx/WAF_INSTRUCTIONS.md](docker/nginx/WAF_INSTRUCTIONS.md)
-- **Nginx README**: [docker/nginx/README.md](docker/nginx/README.md)
+- **WAF Instructions**: [infrastructure/nginx/WAF_INSTRUCTIONS.md](infrastructure/nginx/WAF_INSTRUCTIONS.md)
+- **Nginx README**: [infrastructure/nginx/README.md](infrastructure/nginx/README.md)
 - **ModSecurity Docs**: https://github.com/SpiderLabs/ModSecurity
 - **OWASP CRS Docs**: https://coreruleset.org/docs/
 
