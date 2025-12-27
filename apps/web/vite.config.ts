@@ -36,6 +36,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: proxySecure,
         },
+        '/api/presence/ws/socket.io': {
+          target: wsTarget,
+          ws: true,
+          changeOrigin: true,
+          secure: proxySecure,
+        },
       },
     },
     build: {

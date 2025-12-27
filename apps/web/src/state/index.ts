@@ -1,5 +1,6 @@
 import Signal from '../core/signal';
 import type { GameStateOutput } from '../modules/game/types/game.types';
+import type { PresenceStatus } from '@/models/presence';
 
 // Export chat state
 export { chatState, chatStateHelpers } from './chat.state';
@@ -27,6 +28,8 @@ export interface GuestSessionState {
   createdAt: string | null;
   lastUsedAt: string | null;
 }
+
+export type PresenceMap = Record<string, PresenceStatus>;
 
 // UI state interface
 export interface UIState {
@@ -75,6 +78,7 @@ export const appState = {
     isLoading: false,
     error: null,
   }),
+  presence: new Signal<PresenceMap>({}),
 };
 
 export class AuthActions {

@@ -12,6 +12,7 @@ import {
   DashboardLeaderboardEntry,
 } from '../../models';
 import { appState } from '@/state';
+import type { PresenceStatus } from '@/models/presence';
 import { ApiError } from '@/modules/shared/services/HttpClient';
 
 // API prefix for user endpoints - empty for now but can be configured
@@ -51,7 +52,9 @@ export class UserService {
     if (!response.data) {
       throw new Error('Failed to fetch user profile');
     }
-    return this.normalizeUser(response.data);
+    const normalized = this.normalizeUser(response.data);
+    this.syncPresenceSnapshot([{ id: normalized.id, status: normalized.status ?? 'OFFLINE' }]);
+    return normalized;
   }
 
   /**
@@ -65,12 +68,14 @@ export class UserService {
       }
       const normalized = this.normalizeUser(response.data);
       const stats = await this.getUserStats(userId).catch(() => this.buildEmptyStats());
-      return {
+      const profile: UserProfile = {
         ...normalized,
         stats,
         friends: [],
         matchHistory: [],
       };
+      this.syncPresenceSnapshot([{ id: profile.id, status: profile.status ?? 'OFFLINE' }]);
+      return profile;
     }
 
     const [user, stats, friends] = await Promise.all([
@@ -79,12 +84,14 @@ export class UserService {
       this.getFriends(),
     ]);
 
-    return {
+    const profile: UserProfile = {
       ...user,
       stats,
       friends,
       matchHistory: [],
     };
+    this.syncPresenceSnapshot([{ id: profile.id, status: profile.status ?? 'OFFLINE' }]);
+    return profile;
   }
 
   /**
@@ -131,7 +138,9 @@ export class UserService {
     try {
       const response = await httpClient.get<{ friends: ApiFriend[]; totalCount: number }>(`${API_PREFIX}/friends`);
       const list = response.data?.friends ?? [];
-      return list.map((friend) => this.mapFriend(friend));
+      const friends = list.map((friend) => this.mapFriend(friend));
+      this.syncPresenceSnapshot(friends.map((friend) => ({ id: friend.id, status: friend.status })));
+      return friends;
     } catch (error) {
       console.warn('[UserService] Falling back to empty friends list', error);
       return [];
@@ -214,6 +223,7 @@ export class UserService {
       const response = await httpClient.get<User>(`${API_PREFIX}/users/${userId}`);
       if (response.data) {
         const normalized = this.normalizeUser(response.data);
+        this.syncPresenceSnapshot([{ id: normalized.id, status: normalized.status ?? 'OFFLINE' }]);
         const info = {
           username: normalized.username,
           displayName: normalized.displayName,
@@ -543,16 +553,33 @@ export class UserService {
     };
   }
 
-  /**
-   * Update user status (online, offline, in-game)
-   */
-  async updateStatus(
-    status: 'ONLINE' | 'OFFLINE' | 'INGAME',
-    config: Partial<RequestConfig> = {}
-  ): Promise<void> {
-    await httpClient.post(`${API_PREFIX}/users/presence`, { status }, config);
-  }
+  private syncPresenceSnapshot(entries: Array<{ id: string; status?: PresenceStatus }>): void {
+    if (!entries.length) {
+      return;
+    }
 
+    const current = appState.presence.get();
+    let changed = false;
+    const next: Record<string, PresenceStatus> = { ...current };
+
+    for (const entry of entries) {
+      if (!entry.id) {
+        continue;
+      }
+
+      const status = entry.status ?? 'OFFLINE';
+      if (next[entry.id] === status) {
+        continue;
+      }
+
+      next[entry.id] = status;
+      changed = true;
+    }
+
+    if (changed) {
+      appState.presence.set(next);
+    }
+  }
 
   /**
    * Delete user account
