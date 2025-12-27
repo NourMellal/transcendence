@@ -353,9 +353,12 @@ async function start() {
         console.log('🚀 ═══════════════════════════════════════════════════════');
         console.log('🎮 Transcendence API Gateway v2.0');
         console.log('═══════════════════════════════════════════════════════');
-        console.log(`📍 Gateway URL: http://localhost:${config.port}`);
-        console.log(`📚 API Docs:    http://localhost:${config.port}/api/docs/`);
-        console.log(`💚 Health:      http://localhost:${config.port}/health`);  
+        const publicHttpUrl = process.env.PUBLIC_HTTP_URL || `http://api-gateway:${config.port}`;
+        const docsUrl = `${publicHttpUrl.replace(/\/$/, '')}/api/docs`;
+        const healthUrl = `${publicHttpUrl.replace(/\/$/, '')}/health`;
+        console.log(`📍 Gateway URL: ${publicHttpUrl}`);
+        console.log(`📚 API Docs:    ${docsUrl}`);
+        console.log(`💚 Health:      ${healthUrl}`);  
         console.log(`🌐 CORS Origins: ${config.corsOrigins.join(', ')}`);
         console.log('═══════════════════════════════════════════════════════');
         console.log('📡 Proxied Services:');

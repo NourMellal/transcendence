@@ -3,7 +3,7 @@
  * Tournament bots CLI.
  *
  * Usage:
- *   npx ts-node tools/tournament-bots.ts --tournament <id> --count 7 --api-url http://localhost:3000/api --passcode <code>
+ *   npx ts-node tools/tournament-bots.ts --tournament <id> --count 7 --api-url http://api-gateway:3000/api --passcode <code>
  *
  * Dependencies (if needed):
  *   pnpm add -D ts-node socket.io-client
@@ -67,7 +67,7 @@ type JsonResult<T> = {
   error?: string;
 };
 
-const DEFAULT_API_URL = 'http://localhost:3000/api';
+const DEFAULT_API_URL = 'http://api-gateway:3000/api';
 const DEFAULT_COUNT = 7;
 const BOT_PASSWORD = 'Test1234!';
 
@@ -502,7 +502,7 @@ async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (!options.tournamentId) {
     console.error(
-      'Usage: --tournament <id> [--count 7] [--api-url http://localhost:3000/api] [--passcode <code>]'
+      'Usage: --tournament <id> [--count 7] [--api-url http://api-gateway:3000/api] [--passcode <code>]'
     );
     process.exit(1);
   }

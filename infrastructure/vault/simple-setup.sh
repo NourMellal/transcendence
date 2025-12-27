@@ -13,6 +13,8 @@ IFS=$'\n\t'
 VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
 VAULT_TOKEN="${VAULT_TOKEN:-dev-root-token}"
 SHARED_INTERNAL_KEY_PATH="secret/data/shared/internal-api-key"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SEED_FILE="${SEED_FILE:-${SCRIPT_DIR}/.seed.env}"
 
 log() {
     local level="$1"; shift
@@ -25,6 +27,14 @@ ensure_command() {
         exit 1
     fi
 }
+
+if [[ -f "${SEED_FILE}" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "${SEED_FILE}"
+    set +a
+    log "INF" "Loaded seed env from ${SEED_FILE}"
+fi
 
 vault_put() {
     local path="$1"
@@ -62,6 +72,13 @@ fi
 
 JWT_SECRET="${JWT_SECRET:-my-super-secret-jwt-key-for-signing-tokens}"
 CURRENT_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+OAUTH_42_CLIENT_ID="${OAUTH_42_CLIENT_ID:-}"
+OAUTH_42_CLIENT_SECRET="${OAUTH_42_CLIENT_SECRET:-}"
+OAUTH_42_REDIRECT_URI="${OAUTH_42_REDIRECT_URI:-https://localhost/api/auth/42/callback}"
+OAUTH_42_AUTHORIZE_URL="${OAUTH_42_AUTHORIZE_URL:-https://api.intra.42.fr/oauth/authorize}"
+OAUTH_42_TOKEN_URL="${OAUTH_42_TOKEN_URL:-https://api.intra.42.fr/oauth/token}"
+OAUTH_42_PROFILE_URL="${OAUTH_42_PROFILE_URL:-https://api.intra.42.fr/v2/me}"
+OAUTH_42_SCOPE="${OAUTH_42_SCOPE:-public}"
 
 log "INF" "Seeding shared secrets..."
 
@@ -87,20 +104,24 @@ vault_put "secret/data/jwt/auth" "$(cat <<EOF
 EOF
 )"
 
-vault_put "secret/data/api/oauth" "$(cat <<'EOF'
+if [[ -n "${OAUTH_42_CLIENT_ID}" && -n "${OAUTH_42_CLIENT_SECRET}" ]]; then
+    vault_put "secret/data/api/oauth" "$(cat <<EOF
 {
   "data": {
-    "42_client_id": "u-s4t2ud-80df82f5f03f170e85551315bc0d1f198408525f7339f44afe588b037ed41a0d",
-    "42_client_secret": "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",
-    "42_redirect_uri": "http://localhost:3000/api/auth/42/callback",
-    "42_authorize_url": "https://api.intra.42.fr/oauth/authorize",
-    "42_token_url": "https://api.intra.42.fr/oauth/token",
-    "42_profile_url": "https://api.intra.42.fr/v2/me",
-    "42_scope": "public"
+    "42_client_id": "${OAUTH_42_CLIENT_ID}",
+    "42_client_secret": "${OAUTH_42_CLIENT_SECRET}",
+    "42_redirect_uri": "${OAUTH_42_REDIRECT_URI}",
+    "42_authorize_url": "${OAUTH_42_AUTHORIZE_URL}",
+    "42_token_url": "${OAUTH_42_TOKEN_URL}",
+    "42_profile_url": "${OAUTH_42_PROFILE_URL}",
+    "42_scope": "${OAUTH_42_SCOPE}"
   }
 }
 EOF
 )"
+else
+    log "WRN" "Skipping OAuth 42 seed (set OAUTH_42_CLIENT_ID and OAUTH_42_CLIENT_SECRET to enable)."
+fi
 
 log "INF" "Seeding database configs..."
 

@@ -1,10 +1,10 @@
 import { getEnvVar, getEnvVarAsNumber, createAPIGatewayVault } from '@transcendence/shared-utils';
 
 const DEFAULT_SERVICE_URLS = {
-    user: 'http://localhost:3001',
-    game: 'http://localhost:3002',
-    chat: 'http://localhost:3003',
-    tournament: 'http://localhost:3004'
+    user: 'http://user-service:3001',
+    game: 'http://game-service:3002',
+    chat: 'http://chat-service:3003',
+    tournament: 'http://tournament-service:3004'
 } as const;
 
 const DEFAULT_CORS = ['http://localhost:5173'];

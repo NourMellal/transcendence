@@ -7,7 +7,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+.pnpm-installed
 # Environment variables and secrets
 .env
 .env.local
@@ -90,6 +90,7 @@ infrastructure/vault/data/
 infrastructure/vault/logs/
 infrastructure/vault/*.json
 infrastructure/vault/*.hcl
+infrastructure/vault/.seed.env
 
 # SSL certificates
 *.crt

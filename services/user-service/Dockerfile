@@ -1,82 +1,38 @@
-FROM node:20-alpine AS base
+# syntax=docker/dockerfile:1.7
+ARG NODE_VERSION=20.18.1
 
-# Install dependencies only when needed
+FROM node:${NODE_VERSION}-bookworm AS base
+WORKDIR /workspace
+ENV PNPM_HOME=/usr/local/share/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable \
+    && corepack prepare pnpm@9.1.0 --activate \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY docker/entrypoints /opt/entrypoints
+RUN chmod +x /opt/entrypoints/*.sh
+
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
-WORKDIR /app
-
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-COPY pnpm-workspace.yaml* ./
-COPY services/user-service/package.json ./services/user-service/
-COPY packages/shared-types/package.json ./packages/shared-types/
-COPY packages/shared-utils/package.json ./packages/shared-utils/
-COPY packages/shared-validation/package.json ./packages/shared-validation/
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile --prod=false
-
-# Build stage
-FROM base AS builder
-WORKDIR /app
-
-# Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/services/user-service/node_modules ./services/user-service/node_modules
-
-# Copy source code
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+COPY apps ./apps
+COPY services ./services
 COPY packages ./packages
-COPY services/user-service ./services/user-service
-COPY tsconfig.json ./
+COPY infrastructure ./infrastructure
+RUN pnpm install --frozen-lockfile
 
-# Build TypeScript (if you add a build script)
-# For now, we'll use tsx in production (not recommended but works)
-WORKDIR /app/services/user-service
+FROM deps AS build
+RUN pnpm --filter @transcendence/user-service build
 
-# Production stage
-FROM base AS runner
-WORKDIR /app
+FROM base AS dev
+ENV NODE_ENV=development
+ENTRYPOINT ["/opt/entrypoints/wait-for-pnpm.sh"]
+CMD ["pnpm", "--filter", "@transcendence/user-service", "dev"]
 
+FROM base AS prod
 ENV NODE_ENV=production
-ENV PORT=3001
-ENV LOG_LEVEL=info
-
-# Install production dependencies only
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Copy package files for production install
-COPY --from=deps /app/package.json /app/pnpm-lock.yaml ./
-COPY --from=deps /app/services/user-service/package.json ./services/user-service/
-COPY --from=deps /app/packages/shared-types/package.json ./packages/shared-types/
-COPY --from=deps /app/packages/shared-utils/package.json ./packages/shared-utils/
-COPY --from=deps /app/packages/shared-validation/package.json ./packages/shared-validation/
-
-# Install production dependencies
-RUN pnpm install --frozen-lockfile --prod
-
-# Copy built application
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/services/user-service/src ./services/user-service/src
-COPY --from=builder /app/services/user-service/tsconfig.json ./services/user-service/
-COPY --from=builder /app/tsconfig.json ./
-
-# Create necessary directories
-RUN mkdir -p /app/services/user-service/data && \
-    chown -R node:node /app
-
-# Switch to non-root user
-USER node
-
-WORKDIR /app/services/user-service
-
-EXPOSE 3001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Use tsx to run TypeScript directly
-CMD ["npx", "tsx", "src/server.ts"]
+WORKDIR /workspace/services/user-service
+COPY --from=build /workspace/services/user-service/dist ./dist
+COPY --from=deps /workspace/services/user-service/package.json ./
+COPY --from=deps /workspace/node_modules ./node_modules
+CMD ["node", "dist/server.js"]

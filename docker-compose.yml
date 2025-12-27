@@ -1,266 +1,430 @@
-version: "3.9"
+x-workspace-env: &workspace-env
+  PNPM_INSTALL_MARKER: .pnpm-installed
+  CHOKIDAR_USEPOLLING: "1"
+
+networks:
+  transcendence:
+    driver: bridge
 
 services:
-  # API Gateway
-  api-gateway:
+  vault:
+      build:
+        context: infrastructure/vault
+        dockerfile: docker/Dockerfile
+      container_name: transcendence-vault
+      environment:
+        VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
+        VAULT_DEV_LISTEN_ADDRESS: ${VAULT_DEV_LISTEN_ADDRESS}
+      ports:
+        - "8200:8200"
+      cap_add:
+        - IPC_LOCK
+      volumes:
+        - vault-data:/vault/data
+        - vault-logs:/vault/logs
+      networks:
+        - transcendence
+      restart: unless-stopped
+
+  pnpm-install:
     build:
       context: .
-      dockerfile: infrastructure/api-gateway/Dockerfile
-    ports:
-      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
-    environment:
-      - LOG_DIR=/var/log/transcendence
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_PRETTY=${LOG_PRETTY}
-      - GATEWAY_PORT=${GATEWAY_PORT}
-      - USER_SERVICE_URL=${USER_SERVICE_URL}
-      - GAME_SERVICE_URL=${GAME_SERVICE_URL}
-      - CHAT_SERVICE_URL=${CHAT_SERVICE_URL}
-      - TOURNAMENT_SERVICE_URL=${TOURNAMENT_SERVICE_URL}
-      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX}
-      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
-      - VAULT_ADDR=${VAULT_ADDR}
-      - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
+      dockerfile: services/user-service/Dockerfile
+      target: dev
+    entrypoint: ["/opt/entrypoints/pnpm-install.sh"]
+    command: []
+    restart: unless-stopped
     volumes:
-      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
-    depends_on:
-      - user-service
-      - game-service
-      - chat-service
-      - tournament-service
-      - vault
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
     networks:
-      - transcendence-network
+      - transcendence
 
-  # User Service
+  shared-logging:
+    build:
+      context: .
+      dockerfile: packages/shared-logging/Dockerfile
+      target: dev
+    restart: unless-stopped
+    depends_on:
+      - pnpm-install
+    environment:
+      <<: *workspace-env
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+    networks:
+      - transcendence
+
+  shared-utils:
+    build:
+      context: .
+      dockerfile: packages/shared-utils/Dockerfile
+      target: dev
+    restart: unless-stopped
+    depends_on:
+      - pnpm-install
+    environment:
+      <<: *workspace-env
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+    networks:
+      - transcendence
+
+  shared-validation:
+    build:
+      context: .
+      dockerfile: packages/shared-validation/Dockerfile
+      target: dev
+    restart: unless-stopped
+    depends_on:
+      - pnpm-install
+    environment:
+      <<: *workspace-env
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+    networks:
+      - transcendence
+
+  shared-messaging:
+    build:
+      context: .
+      dockerfile: packages/shared-messaging/Dockerfile
+      target: dev
+    restart: unless-stopped
+    depends_on:
+      - pnpm-install
+    environment:
+      <<: *workspace-env
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+    networks:
+      - transcendence
+
   user-service:
     build:
       context: .
       dockerfile: services/user-service/Dockerfile
-    ports:
-      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+      target: dev
+    env_file:
+      - .env
+      - services/user-service/.env
     environment:
-      - LOG_DIR=/var/log/transcendence
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_PRETTY=${LOG_PRETTY}
-      - USER_SERVICE_PORT=${USER_SERVICE_PORT}
-      - DB_PATH=${USER_SERVICE_DB_PATH}
-      - UPLOAD_DIR=${USER_SERVICE_UPLOAD_DIR}
-      - GAME_SERVICE_URL=${GAME_SERVICE_URL}
-      - VAULT_ADDR=${VAULT_ADDR}
-      - VAULT_SKIP_VERIFY=${VAULT_SKIP_VERIFY}
-      - RABBITMQ_URL=${RABBITMQ_URL}
-    volumes:
-      - user-data:/app/data
-      - user-uploads:/app/uploads
-      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
+      <<: *workspace-env
+      LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
-      - vault
+      - pnpm-install
       - rabbitmq
+      - vault
+      - shared-logging
+      - shared-utils
+      - shared-validation
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+      - user-service-data:/workspace/services/user-service/data
+      - user-service-uploads:/workspace/services/user-service/uploads
     networks:
-      - transcendence-network
+      - transcendence
 
-  # Game Service
   game-service:
     build:
       context: .
       dockerfile: services/game-service/Dockerfile
-    ports:
-      - "${GAME_SERVICE_PORT}:${GAME_SERVICE_PORT}"
+      target: dev
+    env_file:
+      - .env
+      - services/game-service/.env
     environment:
-      - LOG_DIR=/var/log/transcendence
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_PRETTY=${LOG_PRETTY}
-      - GAME_SERVICE_PORT=${GAME_SERVICE_PORT}
-      - GAME_SERVICE_DB_PATH=${GAME_SERVICE_DB_PATH}
-      - RABBITMQ_URL=${RABBITMQ_URL}
-    volumes:
-      - game-data:/app/data
-      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
+      <<: *workspace-env
+      LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
+      GAME_SERVICE_URL: http://game-service:3002
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
+      - pnpm-install
       - rabbitmq
+      - redis
+      - shared-logging
+      - shared-utils
+      - shared-validation
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+      - game-service-data:/workspace/services/game-service/data
     networks:
-      - transcendence-network
+      - transcendence
 
-  # Chat Service
   chat-service:
     build:
       context: .
       dockerfile: services/chat-service/Dockerfile
-    ports:
-      - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
+      target: dev
+    env_file:
+      - .env
+      - services/chat-service/.env
     environment:
-      - LOG_DIR=/var/log/transcendence
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_PRETTY=${LOG_PRETTY}
-      - CHAT_SERVICE_PORT=${CHAT_SERVICE_PORT}
-      - CHAT_SERVICE_DB_PATH=${CHAT_SERVICE_DB_PATH}
-      - RABBITMQ_URL=${RABBITMQ_URL}
-    volumes:
-      - chat-data:/app/data
-      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
+      <<: *workspace-env
+      LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
     depends_on:
+      - pnpm-install
       - rabbitmq
+      - shared-logging
+      - shared-utils
+      - shared-validation
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+      - chat-service-data:/workspace/services/chat-service/data
     networks:
-      - transcendence-network
+      - transcendence
 
-  # Tournament Service
   tournament-service:
     build:
       context: .
       dockerfile: services/tournament-service/Dockerfile
-    ports:
-      - "${TOURNAMENT_SERVICE_PORT}:${TOURNAMENT_SERVICE_PORT}"
+      target: dev
+    env_file:
+      - .env
+      - services/tournament-service/.env
     environment:
-      - LOG_DIR=/var/log/transcendence
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_PRETTY=${LOG_PRETTY}
-      - TOURNAMENT_SERVICE_PORT=${TOURNAMENT_SERVICE_PORT}
-      - TOURNAMENT_DB_PATH=${TOURNAMENT_DB_PATH}
-      - RABBITMQ_URL=${RABBITMQ_URL}
-    volumes:
-      - tournament-data:/app/data
-      - ${HOST_LOG_DIR:-./data/logs}:/var/log/transcendence
+      <<: *workspace-env
+      LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
     depends_on:
+      - pnpm-install
       - rabbitmq
+      - shared-logging
+      - shared-utils
+      - shared-validation
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+      - tournament-service-data:/workspace/services/tournament-service/data
     networks:
-      - transcendence-network
+      - transcendence
 
-  # RabbitMQ for event-driven messaging
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infrastructure/api-gateway/Dockerfile
+      target: dev
+    env_file:
+      - .env
+      - infrastructure/api-gateway/.env
+    environment:
+      <<: *workspace-env
+      LOG_DIR: /workspace/data/logs
+      VAULT_ADDR: http://vault:8200
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
+      CHAT_SERVICE_URL: http://chat-service:3003
+      TOURNAMENT_SERVICE_URL: http://tournament-service:3004
+    depends_on:
+      - vault
+      - pnpm-install
+      - user-service
+      - game-service
+      - chat-service
+      - tournament-service
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+      - logs-data:/workspace/data/logs
+    ports:
+      - "${GATEWAY_PORT:-3000}:3000"
+    networks:
+      - transcendence
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: dev
+    env_file:
+      - .env
+      - apps/web/.env
+    environment:
+      <<: *workspace-env
+      VITE_API_PROXY_TARGET: https://nginx
+      VITE_API_PROXY_WS_TARGET: wss://nginx
+    depends_on:
+      - pnpm-install
+      - api-gateway
+    volumes:
+      - .:/workspace
+      - workspace-node_modules:/workspace/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store
+    ports:
+      - "5173:5173"
+    networks:
+      - transcendence
+
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
-    container_name: transcendence-rabbitmq
-    ports:
-      - "5672:5672"    # AMQP port
-      - "15672:15672"  # Management UI
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
-      - transcendence-network
+      - transcendence
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  # Redis for caching and session storage
   redis:
     image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
-      - transcendence-network
+      - transcendence
 
-  vault:
+  nginx:
     build:
-      context: infrastructure/vault
-      dockerfile: docker/Dockerfile
-    container_name: transcendence-vault
+      context: infrastructure/nginx
+      dockerfile: Dockerfile
+    container_name: transcendence-nginx
     environment:
-      - VAULT_DEV_ROOT_TOKEN_ID=${VAULT_DEV_ROOT_TOKEN_ID}
-      - VAULT_DEV_LISTEN_ADDRESS=${VAULT_DEV_LISTEN_ADDRESS}
+      WAF_ENABLED: ${WAF_ENABLED:-false}
+    depends_on:
+      - api-gateway
     ports:
-      - "8200:8200"
-    cap_add:
-      - IPC_LOCK
+      - "80:80"
+      - "443:443"
     volumes:
-      - vault-data:/vault/data
-      - vault-logs:/vault/logs
+      - ./infrastructure/nginx/certs:/etc/nginx/certs:ro
+      - nginx-logs:/var/log/nginx
     networks:
-      - transcendence-network
+      - transcendence
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Grafana for dashboards
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3300:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-    volumes:
-      - grafana-data:/var/lib/grafana
-    networks:
-      - transcendence-network
 
-  # Elasticsearch for log storage
-  elasticsearch:
-    image: ${ELASTICSEARCH_IMAGE}
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=${ELASTICSEARCH_SECURITY_ENABLED}
-      - "ES_JAVA_OPTS=-Xms${ELASTICSEARCH_HEAP} -Xmx${ELASTICSEARCH_HEAP}"
-    ports:
-      - "${ELASTICSEARCH_PORT}:9200"
-    volumes:
-      - es-data:/usr/share/elasticsearch/data
-    networks:
-      - transcendence-network
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   ports:
+  #     - "3300:3000"
+  #   environment:
+  #     GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   networks:
+  #     - transcendence
 
-  # Logstash for log processing
-  logstash:
-    image: ${LOGSTASH_IMAGE}
-    ports:
-      - "${LOGSTASH_BEATS_PORT}:${LOGSTASH_BEATS_PORT}"
-    environment:
-      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
-      - ELASTICSEARCH_INDEX_PREFIX=${ELASTICSEARCH_INDEX_PREFIX}
-      - LOGSTASH_BEATS_PORT=${LOGSTASH_BEATS_PORT}
-    volumes:
-      - ./infrastructure/elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
-    depends_on:
-      - elasticsearch
-    networks:
-      - transcendence-network
+  # elasticsearch:
+  #   image: ${ELASTICSEARCH_IMAGE}
+  #   environment:
+  #     discovery.type: single-node
+  #     xpack.security.enabled: ${ELASTICSEARCH_SECURITY_ENABLED}
+  #     ES_JAVA_OPTS: "-Xms${ELASTICSEARCH_HEAP} -Xmx${ELASTICSEARCH_HEAP}"
+  #   ports:
+  #     - "${ELASTICSEARCH_PORT}:9200"
+  #   volumes:
+  #     - es-data:/usr/share/elasticsearch/data
+  #   networks:
+  #     - transcendence
 
-  # Kibana for log exploration
-  kibana:
-    image: ${KIBANA_IMAGE}
-    environment:
-      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOST}
-    ports:
-      - "${KIBANA_PORT}:5601"
-    depends_on:
-      - elasticsearch
-    networks:
-      - transcendence-network
+  # logstash:
+  #   image: ${LOGSTASH_IMAGE}
+  #   environment:
+  #     ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
+  #     ELASTICSEARCH_INDEX_PREFIX: ${ELASTICSEARCH_INDEX_PREFIX}
+  #     LOGSTASH_BEATS_PORT: ${LOGSTASH_BEATS_PORT}
+  #   ports:
+  #     - "${LOGSTASH_BEATS_PORT}:${LOGSTASH_BEATS_PORT}"
+  #   volumes:
+  #     - ./infrastructure/elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+  #   depends_on:
+  #     - elasticsearch
+  #   networks:
+  #     - transcendence
 
-  # Filebeat to ship service logs into Logstash
-  filebeat:
-    image: ${FILEBEAT_IMAGE}
-    user: root
-    command: ["filebeat", "-e", "--strict.perms=false"]
-    environment:
-      - FILEBEAT_LOG_DIR=${FILEBEAT_LOG_DIR}
-      - LOGSTASH_HOST=${LOGSTASH_HOST}
-    volumes:
-      - ./infrastructure/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ${HOST_LOG_DIR}:${FILEBEAT_LOG_DIR}:ro
-    depends_on:
-      - logstash
-    networks:
-      - transcendence-network
+  # kibana:
+  #   image: ${KIBANA_IMAGE}
+  #   environment:
+  #     ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_HOST}
+  #   ports:
+  #     - "${KIBANA_PORT}:5601"
+  #   depends_on:
+  #     - elasticsearch
+  #   networks:
+  #     - transcendence
 
+  # filebeat:
+  #   image: ${FILEBEAT_IMAGE}
+  #   user: root
+  #   command: ["filebeat", "-e", "--strict.perms=false"]
+  #   environment:
+  #     FILEBEAT_LOG_DIR: /var/log/transcendence
+  #     LOGSTASH_HOST: ${LOGSTASH_HOST}
+  #   volumes:
+  #     - ./infrastructure/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+  #     - logs-data:/var/log/transcendence:ro
+  #   depends_on:
+  #     - logstash
+  #   networks:
+  #     - transcendence
 
 volumes:
-  user-data:
-  user-uploads:
-  game-data:
-  chat-data:
-  tournament-data:
+  workspace-node_modules:
+  pnpm-store:
+  logs-data:
+  user-service-data:
+  user-service-uploads:
+  game-service-data:
+  chat-service-data:
+  tournament-service-data:
   redis-data:
   rabbitmq-data:
   vault-data:
   vault-logs:
-  postgres-data:
-  prometheus-data:
-  grafana-data:
+  nginx-logs:
+  # grafana-data:
   es-data:
-
-networks:
-  transcendence-network:
-    driver: bridge

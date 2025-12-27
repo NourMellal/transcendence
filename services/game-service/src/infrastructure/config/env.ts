@@ -49,7 +49,7 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
             gameRoomCapacity: gameConfig.roomCapacity ?? 2,
             gameTimeoutMinutes: gameConfig.timeoutMinutes ?? 30,
             redis: {
-                host: redisConfig.host ?? 'localhost',
+                host: redisConfig.host ?? 'redis',
                 port: redisConfig.port ?? 6379,
                 password: redisConfig.password
             },
