@@ -53,6 +53,32 @@ vault_put() {
     }
 }
 
+vault_read_field() {
+    local path="$1"
+    local field="$2"
+    local response
+    local body
+    local code
+
+    response="$(curl -sS -w "\n%{http_code}" \
+        -H "X-Vault-Token: ${VAULT_TOKEN}" \
+        "${VAULT_ADDR}/v1/${path}")" || return 1
+    code="${response##*$'\n'}"
+    body="${response%$'\n'*}"
+    if [[ "${code}" != "200" ]]; then
+        return 1
+    fi
+
+    printf '%s' "${body}" | python3 - <<PY 2>/dev/null || true
+import json,sys
+try:
+    data=json.loads(sys.stdin.read())
+    print(data.get("data", {}).get("data", {}).get("${field}", ""))
+except Exception:
+    pass
+PY
+}
+
 ensure_command curl
 ensure_command openssl
 ensure_command python3
@@ -63,14 +89,30 @@ if ! curl -sSf "${VAULT_ADDR}/v1/sys/health" >/dev/null; then
     exit 1
 fi
 
-if [[ -z "${INTERNAL_API_KEY:-}" ]]; then
-    INTERNAL_API_KEY="$(openssl rand -hex 32)"
-    GENERATED_INTERNAL_API_KEY=1
+EXISTING_INTERNAL_API_KEY="$(vault_read_field "${SHARED_INTERNAL_KEY_PATH}" "key" || true)"
+if [[ -n "${INTERNAL_API_KEY:-}" ]]; then
+    INTERNAL_API_KEY_VALUE="${INTERNAL_API_KEY}"
+    WRITE_INTERNAL_API_KEY=1
+elif [[ -n "${EXISTING_INTERNAL_API_KEY}" ]]; then
+    INTERNAL_API_KEY_VALUE="${EXISTING_INTERNAL_API_KEY}"
+    WRITE_INTERNAL_API_KEY=0
 else
-    GENERATED_INTERNAL_API_KEY=0
+    INTERNAL_API_KEY_VALUE="$(openssl rand -hex 32)"
+    WRITE_INTERNAL_API_KEY=1
 fi
 
-JWT_SECRET="${JWT_SECRET:-my-super-secret-jwt-key-for-signing-tokens}"
+EXISTING_JWT_SECRET="$(vault_read_field "secret/data/jwt/auth" "secret_key" || true)"
+if [[ -n "${JWT_SECRET:-}" ]]; then
+    JWT_SECRET_VALUE="${JWT_SECRET}"
+    WRITE_JWT_SECRET=1
+elif [[ -n "${EXISTING_JWT_SECRET}" ]]; then
+    JWT_SECRET_VALUE="${EXISTING_JWT_SECRET}"
+    WRITE_JWT_SECRET=0
+else
+    JWT_SECRET_VALUE="$(openssl rand -hex 32)"
+    WRITE_JWT_SECRET=1
+fi
+
 CURRENT_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 OAUTH_42_CLIENT_ID="${OAUTH_42_CLIENT_ID:-}"
 OAUTH_42_CLIENT_SECRET="${OAUTH_42_CLIENT_SECRET:-}"
@@ -82,27 +124,35 @@ OAUTH_42_SCOPE="${OAUTH_42_SCOPE:-public}"
 
 log "INF" "Seeding shared secrets..."
 
-vault_put "${SHARED_INTERNAL_KEY_PATH}" "$(cat <<EOF
+if [[ "${WRITE_INTERNAL_API_KEY}" -eq 1 ]]; then
+    vault_put "${SHARED_INTERNAL_KEY_PATH}" "$(cat <<EOF
 {
   "data": {
-    "key": "${INTERNAL_API_KEY}",
+    "key": "${INTERNAL_API_KEY_VALUE}",
     "source": "simple-setup",
     "generated_at": "${CURRENT_TIME}"
   }
 }
 EOF
 )"
+else
+    log "INF" "Reusing existing INTERNAL_API_KEY from Vault"
+fi
 
-vault_put "secret/data/jwt/auth" "$(cat <<EOF
+if [[ "${WRITE_JWT_SECRET}" -eq 1 ]]; then
+    vault_put "secret/data/jwt/auth" "$(cat <<EOF
 {
   "data": {
-    "secret_key": "${JWT_SECRET}",
+    "secret_key": "${JWT_SECRET_VALUE}",
     "issuer": "transcendence",
     "expiration_hours": "24"
   }
 }
 EOF
 )"
+else
+    log "INF" "Reusing existing JWT secret from Vault"
+fi
 
 if [[ -n "${OAUTH_42_CLIENT_ID}" && -n "${OAUTH_42_CLIENT_SECRET}" ]]; then
     vault_put "secret/data/api/oauth" "$(cat <<EOF
@@ -120,7 +170,13 @@ if [[ -n "${OAUTH_42_CLIENT_ID}" && -n "${OAUTH_42_CLIENT_SECRET}" ]]; then
 EOF
 )"
 else
-    log "WRN" "Skipping OAuth 42 seed (set OAUTH_42_CLIENT_ID and OAUTH_42_CLIENT_SECRET to enable)."
+    EXISTING_OAUTH_CLIENT_ID="$(vault_read_field "secret/data/api/oauth" "42_client_id" || true)"
+    EXISTING_OAUTH_CLIENT_SECRET="$(vault_read_field "secret/data/api/oauth" "42_client_secret" || true)"
+    if [[ -n "${EXISTING_OAUTH_CLIENT_ID}" && -n "${EXISTING_OAUTH_CLIENT_SECRET}" ]]; then
+        log "INF" "OAuth 42 secrets already present; skipping seed."
+    else
+        log "WRN" "Skipping OAuth 42 seed (set OAUTH_42_CLIENT_ID and OAUTH_42_CLIENT_SECRET to enable)."
+    fi
 fi
 
 log "INF" "Seeding database configs..."
@@ -215,11 +271,11 @@ else
     log "WRN" "Failed to capture Gateway token."
 fi
 
-echo "${INTERNAL_API_KEY}" > /tmp/internal-api-key.txt
+echo "${INTERNAL_API_KEY_VALUE}" > /tmp/internal-api-key.txt
 log "INF" "Internal API key stored at /tmp/internal-api-key.txt"
 
-if [[ "${GENERATED_INTERNAL_API_KEY}" -eq 1 ]]; then
-    log "INF" "Export INTERNAL_API_KEY=${INTERNAL_API_KEY} before rerunning to reuse this value."
+if [[ "${WRITE_INTERNAL_API_KEY}" -eq 1 && -z "${EXISTING_INTERNAL_API_KEY}" && -z "${INTERNAL_API_KEY:-}" ]]; then
+    log "INF" "Export INTERNAL_API_KEY=${INTERNAL_API_KEY_VALUE} before rerunning to reuse this value."
 fi
 
 log "INF" "Vault bootstrap complete ✅"
