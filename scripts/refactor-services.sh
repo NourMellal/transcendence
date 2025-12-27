@@ -5,7 +5,7 @@
 
 set -e
 
-PROJECT_ROOT="/home/nmellal/Projects/transcendence"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICES=("user-service" "game-service" "chat-service" "tournament-service")
 
 echo "🚀 Starting Transcendence services refactoring..."

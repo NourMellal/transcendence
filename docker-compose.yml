@@ -12,6 +12,8 @@ services:
         context: infrastructure/vault
         dockerfile: docker/Dockerfile
       container_name: transcendence-vault
+      env_file:
+        - infrastructure/vault/.seed.env
       environment:
         VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
         VAULT_DEV_LISTEN_ADDRESS: ${VAULT_DEV_LISTEN_ADDRESS}
@@ -129,8 +131,6 @@ services:
       RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
       USER_SERVICE_URL: http://user-service:3001
       GAME_SERVICE_URL: http://game-service:3002
-      USER_SERVICE_URL: http://user-service:3001
-      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
       - pnpm-install
       - rabbitmq
@@ -163,7 +163,6 @@ services:
       RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
       GAME_SERVICE_URL: http://game-service:3002
       USER_SERVICE_URL: http://user-service:3001
-      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
       - pnpm-install
       - rabbitmq
@@ -193,6 +192,8 @@ services:
       LOG_DIR: /workspace/data/logs
       VAULT_ADDR: http://vault:8200
       RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
+      USER_SERVICE_URL: http://user-service:3001
+      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
       - pnpm-install
       - rabbitmq
@@ -221,6 +222,7 @@ services:
       LOG_DIR: /workspace/data/logs
       VAULT_ADDR: http://vault:8200
       RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
+      GAME_SERVICE_URL: http://game-service:3002
     depends_on:
       - pnpm-install
       - rabbitmq

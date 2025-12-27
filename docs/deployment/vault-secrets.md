@@ -7,7 +7,7 @@ This page lists the vault secrets each service consumes, how to load them in dev
 | Service | Vault path | Keys / meaning | Example values |
 | --- | --- | --- | --- |
 | API Gateway | `secret/jwt/auth` | `secret_key`, `issuer`, `expiration_hours` | `secret_key: my-super-secret-jwt-key-for-signing-tokens` |
-| API Gateway | `secret/api/oauth` | `42_client_id`, `42_client_secret`, `42_callback_url` | `42_client_id: u-s4t2...` |
+| API Gateway | `secret/api/oauth` | `42_client_id`, `42_client_secret`, `42_redirect_uri` | `42_client_id: u-s4t2...` |
 | API Gateway (shared) | `secret/shared/internal-api-key` | `key` (shared gateway↔services auth) | Random 64-hex key |
 | User Service | `secret/database/user-service` | `type`, `host` | `type: sqlite`, `host: ./user-service.db` |
 | User Service | `secret/jwt/auth` | `secret_key`, `issuer`, `expiration_hours` | `secret_key: ...jwt...` |
@@ -29,9 +29,10 @@ This page lists the vault secrets each service consumes, how to load them in dev
 
 ### Development
 
-1. **Start Vault locally** via Docker Compose, then run `infrastructure/vault/simple-setup.sh` to seed deterministic dev values and generate the shared internal API key and Gateway token.
-2. **Optional overrides**: export `INTERNAL_API_KEY` or `JWT_SECRET` before running the script to reuse existing values across reruns.
-3. **Vault unavailable?** Services automatically fall back to the root `.env` file because dotenv is loaded at startup; keep this file for local only and never commit it.
+1. **Start Vault locally** via Docker Compose, then run `make seed` to load OAuth 42 credentials and seed dev defaults.
+2. **Private secrets file**: keep only `OAUTH_42_CLIENT_ID` and `OAUTH_42_CLIENT_SECRET` (optional `OAUTH_42_REDIRECT_URI`) in your private repo and run `SEED_SOURCE=/path/to/secrets.env make seed`.
+3. **Auto-generated dev secrets**: `simple-setup.sh` creates `INTERNAL_API_KEY` and JWT secrets if missing and reuses existing Vault values on reruns. No need to store them in the private secrets file.
+4. **Vault unavailable?** Services automatically fall back to the root `.env` file because dotenv is loaded at startup; keep this file for local only and never commit it.
 
 ### Production
 
