@@ -1,6 +1,7 @@
 import Component from '@/core/Component';
 import type { Friend } from '@/models';
 import { appState } from '@/state';
+import type { PresenceMap } from '@/state';
 import { userService } from '@/services/api/UserService';
 import { navigate } from '@/routes';
 import { showError, showSuccess } from '@/utils/errors';
@@ -16,6 +17,8 @@ export default class ManageFriendsPage extends Component<Record<string, never>, 
   constructor(props: Record<string, never> = {}) {
     super(props);
   }
+
+  private presenceUnsubscribe?: () => void;
 
   getInitialState(): State {
     return {
@@ -33,7 +36,13 @@ export default class ManageFriendsPage extends Component<Record<string, never>, 
       return;
     }
 
+    this.presenceUnsubscribe = appState.presence.subscribe((map) => this.applyPresence(map));
+    this.applyPresence(appState.presence.get());
     void this.loadFriends();
+  }
+
+  onUnmount(): void {
+    this.presenceUnsubscribe?.();
   }
 
   private async loadFriends(): Promise<void> {
@@ -132,13 +141,6 @@ export default class ManageFriendsPage extends Component<Record<string, never>, 
       return `
         <div class="glass-panel p-6 space-y-3">
           <p class="text-white/70">${error}</p>
-          <button
-            data-action="reload-friends"
-            class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-            style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: white;"
-          >
-            Try Again
-          </button>
         </div>
       `;
     }
@@ -163,6 +165,30 @@ export default class ManageFriendsPage extends Component<Record<string, never>, 
     `;
   }
 
+  private applyPresence(map: PresenceMap): void {
+    if (!this.state.friends.length) {
+      return;
+    }
+
+    let changed = false;
+    const friends = this.state.friends.map((friend) => {
+      const status = map[friend.id];
+      if (!status || status === friend.status) {
+        return friend;
+      }
+      changed = true;
+      return {
+        ...friend,
+        status,
+        isOnline: status === 'ONLINE' || status === 'INGAME',
+      };
+    });
+
+    if (changed) {
+      this.setState({ friends });
+    }
+  }
+
   render(): string {
     return `
       <div class="relative min-h-screen" style="background: var(--color-bg-dark);">
@@ -183,13 +209,6 @@ export default class ManageFriendsPage extends Component<Record<string, never>, 
                 style="background: rgba(255,255,255,0.08); color: white;"
               >
                 ← Dashboard
-              </button>
-              <button
-                data-action="reload-friends"
-                class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-                style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
-              >
-                Refresh
               </button>
             </div>
           </header>
@@ -220,10 +239,6 @@ export default class ManageFriendsPage extends Component<Record<string, never>, 
     bindClick('[data-nav]', (el) => {
       const path = el.getAttribute('data-nav');
       if (path) navigate(path);
-    });
-
-    bindClick('[data-action="reload-friends"]', () => {
-      void this.loadFriends();
     });
 
     bindClick('[data-action="unblock-friend"]', (el) => {

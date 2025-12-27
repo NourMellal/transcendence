@@ -1,6 +1,7 @@
 import Component from '@/core/Component';
 import { navigate } from '@/routes';
 import { appState } from '@/state';
+import type { PresenceMap } from '@/state';
 import {
   DashboardLeaderboardEntry,
   DashboardMatchSummary,
@@ -19,7 +20,6 @@ type InviteStatus = 'idle' | 'loading' | 'success' | 'error';
 
 type State = {
   isLoading: boolean;
-  isRefreshing: boolean;
   profile: DashboardProfile | null;
   friends: Friend[];
   matches: DashboardMatchSummary[];
@@ -48,6 +48,7 @@ type State = {
 export default class DashboardPage extends Component<Record<string, never>, State> {
   private leaderboardInterval?: number;
   private authUnsubscribe?: () => void;
+  private presenceUnsubscribe?: () => void;
   private feedbackTimeout?: number;
   private friendRequestFeedbackTimeout?: number;
   private lobbySocket = createGameWebSocketClient();
@@ -60,7 +61,6 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   getInitialState(): State {
     return {
       isLoading: true,
-      isRefreshing: false,
       profile: null,
       friends: [],
       matches: [],
@@ -92,6 +92,8 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
         navigate('/auth/login');
       }
     });
+    this.presenceUnsubscribe = appState.presence.subscribe((map) => this.applyPresenceMap(map));
+    this.applyPresenceMap(appState.presence.get());
 
     void this.loadDashboardData();
     this.startLeaderboardPolling();
@@ -100,6 +102,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
 
   onUnmount(): void {
     this.authUnsubscribe?.();
+    this.presenceUnsubscribe?.();
     if (this.leaderboardInterval) {
       clearInterval(this.leaderboardInterval);
       this.leaderboardInterval = undefined;
@@ -187,6 +190,41 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     this.update({});
   }
 
+  private applyPresenceMap(map: PresenceMap): void {
+    const friends = this.state.friends;
+    let friendsChanged = false;
+    const updatedFriends = friends.map((friend) => {
+      const status = map[friend.id];
+      if (!status || status === friend.status) {
+        return friend;
+      }
+      friendsChanged = true;
+      return {
+        ...friend,
+        status,
+        isOnline: status === 'ONLINE' || status === 'INGAME',
+      };
+    });
+
+    const profile = this.state.profile;
+    const profileStatus = profile?.id ? map[profile.id] : undefined;
+    const profileChanged = Boolean(
+      profile && profileStatus && profile.status !== profileStatus
+    );
+
+    if (!friendsChanged && !profileChanged) {
+      return;
+    }
+
+    this.setState({
+      friends: friendsChanged ? updatedFriends : friends,
+      profile:
+        profileChanged && profile
+          ? { ...profile, status: profileStatus }
+          : profile,
+    });
+  }
+
   private async refreshLeaderboard(): Promise<void> {
     try {
       const leaderboard = await userService.getLeaderboard(20);
@@ -200,7 +238,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     const { silent = false } = options;
     this.setState({
       error: undefined,
-      ...(silent ? { isRefreshing: true } : { isLoading: true }),
+      ...(silent ? {} : { isLoading: true })
     });
 
     const results = await Promise.allSettled([
@@ -239,9 +277,8 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       matches,
       leaderboard,
       isLoading: false,
-      isRefreshing: false,
       error: errors.length && errors.length === results.length
-        ? 'Failed to load dashboard data. Please try again.'
+        ? 'Failed to load dashboard data.'
         : errors.length
           ? `Some widgets failed to load (${errors.join(', ')}).`
           : undefined,
@@ -1210,7 +1247,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   }
 
   render(): string {
-    const { profile, isLoading, isRefreshing, error } = this.state;
+    const { profile, isLoading, error } = this.state;
 
     return `
       <div class="relative min-h-screen" style="background: var(--color-bg-dark);">
@@ -1226,13 +1263,6 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
                 <h2 class="text-2xl md:text-3xl font-semibold tracking-tight">Your command center</h2>
               </div>
               <div class="flex items-center gap-3">
-                <button
-                  data-action="refresh-dashboard"
-                  class="btn-touch px-5 py-2 rounded-xl touch-feedback text-sm"
-                  style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white;"
-                >
-                  ${isRefreshing ? 'Refreshing...' : 'Refresh'}
-                </button>
                 <button
                   data-nav="/profile"
                   class="btn-touch px-5 py-2 rounded-xl touch-feedback text-sm flex items-center gap-2"
@@ -1250,13 +1280,6 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
                     <p class="font-semibold" style="color: var(--color-error);">Something went wrong</p>
                     <p class="text-sm text-white/70 mt-1">${error}</p>
                   </div>
-                  <button
-                    data-action="refresh-dashboard"
-                    class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-                    style="background: rgba(255,255,255,0.08); color: white;"
-                  >
-                    Try Again
-                  </button>
                 </div>
               </div>
             ` : ''}
@@ -1302,10 +1325,6 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     bindClick('[data-nav]', (el) => {
       const path = el.getAttribute('data-nav');
       if (path) navigate(path);
-    });
-
-    bindClick('[data-action="refresh-dashboard"]', () => {
-      void this.loadDashboardData({ silent: true });
     });
 
     bindClick('[data-action="quick-action"]', (el) => {

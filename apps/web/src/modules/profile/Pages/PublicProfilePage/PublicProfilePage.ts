@@ -2,6 +2,7 @@ import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
 import { userService } from '../../../../services/api/UserService';
 import { appState } from '../../../../state';
+import type { PresenceMap } from '../../../../state';
 import type { User, UserStats } from '../../../../models';
 
 interface Props {
@@ -36,7 +37,13 @@ export default class PublicProfilePage extends Component<Props, State> {
   }
 
   async onMount(): Promise<void> {
+    this.presenceUnsubscribe = appState.presence.subscribe((map) => this.applyPresence(map));
+    this.applyPresence(appState.presence.get());
     await this.loadProfile();
+  }
+
+  onUnmount(): void {
+    this.presenceUnsubscribe?.();
   }
 
   private async loadProfile(): Promise<void> {
@@ -74,6 +81,25 @@ export default class PublicProfilePage extends Component<Props, State> {
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to load profile',
       });
+    }
+  }
+
+  private presenceUnsubscribe?: () => void;
+
+  private applyPresence(map: PresenceMap): void {
+    const activeUserId = this.props.userId;
+    const status = map[activeUserId];
+    if (!status) {
+      return;
+    }
+
+    const current = this.state.user;
+    if (current && current.status === status) {
+      return;
+    }
+
+    if (current) {
+      this.setState({ user: { ...current, status } });
     }
   }
 
@@ -129,13 +155,6 @@ export default class PublicProfilePage extends Component<Props, State> {
       <div class="glass-panel p-8 text-center">
         <div class="text-4xl mb-4">😕</div>
         <p class="text-white/80 mb-4">${error}</p>
-        <button
-          data-action="retry"
-          class="btn-touch px-6 py-3 rounded-xl touch-feedback"
-          style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
-        >
-          Try Again
-        </button>
       </div>
     `;
   }
@@ -318,7 +337,6 @@ export default class PublicProfilePage extends Component<Props, State> {
     };
 
     bind('[data-action="go-back"]', () => window.history.back());
-    bind('[data-action="retry"]', () => this.loadProfile());
     bind('[data-action="add-friend"]', () => this.handleAddFriend());
     bind('[data-action="remove-friend"]', () => this.handleRemoveFriend());
     bind('[data-action="accept-request"]', () => this.handleAcceptRequest());

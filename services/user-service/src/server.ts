@@ -32,7 +32,6 @@ import { registerAuthRoutes } from './infrastructure/http/routes/auth.routes';
 import { registerUserRoutes } from './infrastructure/http/routes/user.routes';
 import { registerStatsRoutes } from './infrastructure/http/routes/stats.routes';
 import { registerFriendRoutes } from './infrastructure/http/routes/friend.routes';
-import { registerPresenceRoutes } from './infrastructure/http/routes/presence.routes';
 import { initializeJWTService } from './infrastructure/services/jwt.service';
 import { createTwoFAService } from './infrastructure/services/two-fa.service';
 import { createOAuth42Service } from './infrastructure/services/oauth42.service';
@@ -43,9 +42,7 @@ import { BlockUserUseCase } from './application/use-cases/friends/block-user.use
 import { RemoveFriendUseCase } from './application/use-cases/friends/remove-friend.usecase';
 import { UnblockUserUseCase } from './application/use-cases/friends/unblock-user.usecase';
 import { CancelFriendRequestUseCase } from './application/use-cases/friends/cancel-friend-request.usecase';
-import { UpdatePresenceUseCase } from './application/use-cases/presence/update-presence.usecase';
-import { GetPresenceUseCase } from './application/use-cases/presence/get-presence.usecase';
-import { PresenceController } from './infrastructure/http/controllers/presence.controller';
+import { PresenceWebSocketServer } from './infrastructure/websocket/presence-websocket.server';
 import { FriendController } from './infrastructure/http/controllers/friend.controller';
 import { SQLiteUnitOfWork } from './infrastructure/database/sqlite-unit-of-work';
 import { PasswordHasherAdapter } from './infrastructure/adapters/security/password-hasher.adapter';
@@ -132,8 +129,6 @@ async function main() {
     const removeFriendUseCase = new RemoveFriendUseCase(friendshipRepository);
     const unblockUserUseCase = new UnblockUserUseCase(friendshipRepository);
     const cancelFriendRequestUseCase = new CancelFriendRequestUseCase(friendshipRepository);
-    const updatePresenceUseCase = new UpdatePresenceUseCase(presenceRepository);
-    const getPresenceUseCase = new GetPresenceUseCase(presenceRepository);
     const getLeaderboardUseCase = new GetLeaderboardUseCase(userRepository);
 
     // Initialize controllers
@@ -160,7 +155,6 @@ async function main() {
         unblockUserUseCase,
         cancelFriendRequestUseCase
     );
-    const presenceController = new PresenceController(updatePresenceUseCase, getPresenceUseCase);
 
     // Initialize Fastify
     const fastify = Fastify({
@@ -187,13 +181,19 @@ async function main() {
     registerUserRoutes(fastify, userController);
     registerStatsRoutes(fastify, statsController);
     registerFriendRoutes(fastify, friendController);
-    registerPresenceRoutes(fastify, presenceController);
+    
+    const presenceWebSocketServer = new PresenceWebSocketServer(fastify.server, {
+        presenceRepository,
+        jwtService,
+        logger: fastify.log
+    });
 
     // Graceful shutdown
     const shutdown = async () => {
         fastify.log.info('Shutting down...');
         await jwtService.shutdown();
         await messagingConnection.close();
+        await presenceWebSocketServer.close();
         await fastify.close();
         process.exit(0);
     };

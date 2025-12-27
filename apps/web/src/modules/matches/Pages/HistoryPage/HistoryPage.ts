@@ -134,13 +134,6 @@ export default class MatchHistoryPage extends Component<Record<string, never>, S
       return `
         <div class="glass-panel p-6 space-y-3">
           <p class="text-white/70">${error}</p>
-          <button
-            data-action="retry"
-            class="btn-touch px-4 py-2 rounded-xl touch-feedback"
-            style="background: rgba(255,255,255,0.08); color: white;"
-          >
-            Retry
-          </button>
         </div>
       `;
     }
@@ -196,13 +189,6 @@ export default class MatchHistoryPage extends Component<Record<string, never>, S
               >
                 ← Dashboard
               </button>
-              <button
-                data-action="refresh"
-                class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-                style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
-              >
-                Refresh
-              </button>
             </div>
           </header>
           ${this.renderContent()}
@@ -230,8 +216,6 @@ export default class MatchHistoryPage extends Component<Record<string, never>, S
     };
 
     bind('[data-action="go-dashboard"]', () => navigate('/dashboard'));
-    bind('[data-action="refresh"]', () => void this.loadMatches());
-    bind('[data-action="retry"]', () => void this.loadMatches());
     bind('[data-action="load-more"]', () => void this.loadMatches(true));
   }
 }

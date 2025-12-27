@@ -8,7 +8,6 @@ import { showError, showSuccess } from '@/utils/errors';
 type State = {
   tournaments: TournamentSummary[];
   isLoading: boolean;
-  isRefreshing: boolean;
   error?: string;
   joiningTournamentId?: string;
   passcodePromptId?: string;
@@ -29,7 +28,6 @@ export default class ListTournamentsPage extends Component<Record<string, never>
     return {
       tournaments: [],
       isLoading: true,
-      isRefreshing: false,
       error: undefined,
       joiningTournamentId: undefined,
       passcodePromptId: undefined,
@@ -68,19 +66,18 @@ export default class ListTournamentsPage extends Component<Record<string, never>
 
     this.setState({
       error: undefined,
-      ...(silent ? { isRefreshing: true } : { isLoading: true }),
+      ...(silent ? {} : { isLoading: true }),
     });
 
     try {
       const tournaments = await tournamentService.listTournaments({ search: search || undefined });
       tournaments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      this.setState({ tournaments, isLoading: false, isRefreshing: false });
+      this.setState({ tournaments, isLoading: false });
     } catch (error) {
       console.warn('[ListTournamentsPage] Failed to load tournaments', error);
       this.setState({
         error: 'Unable to load tournaments.',
         isLoading: false,
-        isRefreshing: false,
       });
     }
   }
@@ -125,7 +122,7 @@ export default class ListTournamentsPage extends Component<Record<string, never>
         } as TournamentSummary;
       });
       tournaments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      this.setState({ tournaments, isLoading: false, isRefreshing: false, error: undefined });
+      this.setState({ tournaments, isLoading: false, error: undefined });
       return;
     }
 
@@ -147,7 +144,7 @@ export default class ListTournamentsPage extends Component<Record<string, never>
         tournaments[index] = merged;
       }
       tournaments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      this.setState({ tournaments, isLoading: false, isRefreshing: false, error: undefined });
+      this.setState({ tournaments, isLoading: false, error: undefined });
     }
   }
 
@@ -295,13 +292,6 @@ export default class ListTournamentsPage extends Component<Record<string, never>
       return `
         <div class="glass-panel p-6 space-y-3">
           <p class="text-white/70">${error}</p>
-          <button
-            data-action="refresh-tournaments"
-            class="btn-touch px-4 py-2 rounded-xl touch-feedback"
-            style="background: rgba(255,255,255,0.08); color: white;"
-          >
-            Retry
-          </button>
         </div>
       `;
     }
@@ -513,13 +503,6 @@ export default class ListTournamentsPage extends Component<Record<string, never>
                 >
                   Clear
                 </button>
-                <button
-                  data-action="refresh-tournaments"
-                  class="btn-touch px-4 py-2 rounded-xl text-sm"
-                  style="background: rgba(255,255,255,0.08); color: white;"
-                >
-                  ${this.state.isRefreshing ? 'Refreshing...' : 'Refresh'}
-                </button>
               </div>
             </div>
             ${this.renderTournamentList()}
@@ -549,10 +532,6 @@ export default class ListTournamentsPage extends Component<Record<string, never>
 
     bindClick('[data-action="create-tournament"]', () => {
       navigate('/tournament/create');
-    });
-
-    bindClick('[data-action="refresh-tournaments"]', () => {
-      void this.loadTournaments({ silent: true });
     });
 
     bindClick('[data-action="search-tournaments"]', () => {
