@@ -1,4 +1,4 @@
-import { httpClient } from '@/modules/shared/services/HttpClient';
+import { httpClient, ApiError } from '@/modules/shared/services/HttpClient';
 import type {
   GameStateOutput,
   CreateGameRequest,
@@ -81,6 +81,10 @@ class GameService {
       console.log('[GameService] ✅ Joined game successfully');
       return response.data!;
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        console.warn('[GameService] ⚠️ Cannot join game — lobby closed');
+        throw new Error('GAME_JOIN_CONFLICT');
+      }
       console.error('[GameService] ❌ Failed to join game:', error);
       throw new Error('Failed to join game. It may be full or already started.');
     }

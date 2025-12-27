@@ -77,8 +77,13 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
           game = await gameService.joinGame(this.props.gameId);
           game = await this.enrichPlayers(game);
         } catch (error) {
-          console.error('[GameLobby] Failed to auto-join game:', error);
-          this.state.error = 'Unable to join this lobby.';
+          const isConflict = error instanceof Error && error.message === 'GAME_JOIN_CONFLICT';
+          if (!isConflict) {
+            console.error('[GameLobby] Failed to auto-join game:', error);
+          }
+          this.state.error = isConflict
+            ? 'This lobby is no longer available.'
+            : 'Unable to join this lobby.';
           this.state.isLoading = false;
           this.update({});
           return;
