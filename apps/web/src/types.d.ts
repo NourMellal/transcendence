@@ -32,6 +32,9 @@ declare module '*.svg' {
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
+  readonly VITE_WS_PRESENCE_URL?: string;
+  readonly VITE_WS_PRESENCE_PATH?: string;
+  readonly VITE_DEBUG_WS?: string;
 }
 
 interface ImportMeta {

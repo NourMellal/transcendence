@@ -49,26 +49,3 @@ UpdateUserRequest:
     password:
       type: string
       format: password
-
-PresenceUpdateRequest:
-  type: object
-  required: [status]
-  properties:
-    status:
-      type: string
-      enum: [ONLINE, OFFLINE, INGAME]
-      example: "ONLINE"
-
-UserPresence:
-  type: object
-  properties:
-    userId:
-      type: string
-      format: uuid
-    status:
-      type: string
-      enum: [ONLINE, OFFLINE, INGAME]
-    lastSeenAt:
-      type: string
-      format: date-time
-  required: [userId, status, lastSeenAt]

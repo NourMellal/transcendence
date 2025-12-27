@@ -151,11 +151,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
     };
   };
 
-  private readonly handleReloadRequest = (event: Event) => {
-    event.preventDefault();
-    void this.loadProfile();
-  };
-
   private readonly handleAvatarInputChange = (event: Event) => {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -413,9 +408,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
           <div class="profile-glass-panel rounded-3xl p-8 md:p-10 animate-fade-in-up text-center">
             <h1 class="text-2xl font-bold text-white mb-4">Profile unavailable</h1>
             <p class="text-text-secondary mb-6">We were unable to fetch your profile from the User Service.</p>
-            <button type="button" class="px-5 py-2.5 bg-white/10 text-text-primary hover:bg-white/20 text-sm font-medium rounded-lg transition-colors border border-white/10" data-action="reload-profile">
-              Retry
-            </button>
           </div>
         </main>
       `;
@@ -511,13 +503,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
         <div class="flex gap-3 mt-8 pt-6 border-t border-white/10">
           <button class="px-5 py-2.5 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30 text-sm font-medium rounded-lg transition-colors border border-blue-500/20" data-profile-action="nav-dashboard">
             Go to dashboard
-          </button>
-          <button class="px-5 py-2.5 bg-white/10 text-text-primary hover:bg-white/20 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 border border-white/10" data-action="reload-profile">
-            Refresh
-            <svg class="w-4 h-4 text-current animate-spin-slow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 12a9 9 0 1 1-3.9-7.1" />
-              <polyline points="21 3 21 9 15 9" />
-            </svg>
           </button>
         </div>
       </div>
@@ -707,14 +692,6 @@ export default class ProfilePage extends Component<Record<string, never>, State>
         input.removeEventListener('input', this.handleFieldChange)
       );
     });
-
-    const reloadBtn = this.element.querySelector('[data-action="reload-profile"]');
-    if (reloadBtn) {
-      reloadBtn.addEventListener('click', this.handleReloadRequest);
-      this.subscriptions.push(() =>
-        reloadBtn.removeEventListener('click', this.handleReloadRequest)
-      );
-    }
 
     const avatarInput = this.element.querySelector<HTMLInputElement>('input[data-action="avatar-input"]');
     if (avatarInput) {

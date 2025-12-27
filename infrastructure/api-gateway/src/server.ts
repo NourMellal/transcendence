@@ -241,6 +241,29 @@ async function createGateway() {
 
     await app.register(async (fastify) => {
         await fastify.register(proxy, {
+            upstream: config.userServiceUrl,
+            prefix: '/api/presence/ws',
+            websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
+            replyOptions: {
+                rewriteRequestHeaders: (_originalReq, headers) => {
+                    return {
+                        ...headers,
+                        'x-internal-api-key': config.internalApiKey,
+                        'x-forwarded-by': 'transcendence-gateway',
+                    };
+                }
+            }
+        });
+    });
+
+    await app.register(async (fastify) => {
+        await fastify.register(proxy, {
             upstream: config.tournamentServiceUrl,
             prefix: '/api/tournaments/ws',
             websocket: true,

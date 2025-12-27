@@ -1,26 +1,62 @@
 import { appState, type AuthStateData } from '@/state';
+import type { PresenceStatus } from '@/models/presence';
 import { authEvents } from '@/modules/shared/utils/AuthEventEmitter';
-import { userService } from '../api/UserService';
+import { WebSocketClient } from '@/modules/shared/services/WebSocketClient';
 
-export type PresenceStatus = 'ONLINE' | 'OFFLINE' | 'INGAME';
-
-const DEFAULT_HEARTBEAT_MS = 60_000;
-
-function resolveHeartbeatInterval(): number {
-  const raw = Number(import.meta.env.VITE_PRESENCE_HEARTBEAT_MS);
-  if (Number.isFinite(raw) && raw > 0) {
-    return raw;
+const DEFAULT_WS_PATH = '/api/presence/ws/socket.io';
+const PRESENCE_SOCKET_KEY = '__transcendence_presence_socket';
+const PRESENCE_MANAGER_KEY = '__transcendence_presence_manager';
+const debugPresenceLogs = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_WS === 'true');
+const logPresenceWarning = (...args: Parameters<typeof console.warn>) => {
+  if (debugPresenceLogs) {
+    console.warn(...args);
   }
-  return DEFAULT_HEARTBEAT_MS;
+};
+
+function getGlobalPresenceSocket(): WebSocketClient | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const scope = globalThis as Record<string, unknown>;
+  const existing = scope[PRESENCE_SOCKET_KEY];
+  if (existing instanceof WebSocketClient) {
+    return existing;
+  }
+
+  const socket = new WebSocketClient(resolveWebSocketHost(), resolveWebSocketPath());
+  scope[PRESENCE_SOCKET_KEY] = socket;
+  return socket;
+}
+
+function resolveWebSocketHost(): string {
+  const explicit = import.meta.env.VITE_WS_PRESENCE_URL?.trim();
+  if (explicit) {
+    return explicit;
+  }
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (apiBase && /^https?:\/\//i.test(apiBase)) {
+    return apiBase.replace(/\/?api\/?$/, '') || apiBase;
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return 'http://api-gateway:3000';
+}
+
+function resolveWebSocketPath(): string {
+  return import.meta.env.VITE_WS_PRESENCE_PATH?.trim() || DEFAULT_WS_PATH;
 }
 
 export class PresenceManager {
-  private readonly heartbeatMs = resolveHeartbeatInterval();
-  private intervalId: number | null = null;
-  private currentStatus: PresenceStatus = 'OFFLINE';
   private initialized = false;
   private lifecycleBound = false;
-  private unsubscribers: Array<() => void> = [];
+  private socket: WebSocketClient | null = null;
+  private handlersRegistered = false;
+  private connectPromise: Promise<void> | null = null;
 
   initialize(): void {
     if (this.initialized || typeof window === 'undefined') {
@@ -28,84 +64,104 @@ export class PresenceManager {
     }
 
     this.initialized = true;
-    this.unsubscribers.push(
-      appState.auth.subscribe((authState) => this.handleAuthChange(authState)),
-      authEvents.on('logout', () => {
-        void this.flushStatus('OFFLINE', true);
-      })
-    );
+    appState.auth.subscribe((authState) => this.handleAuthChange(authState));
+    authEvents.on('logout', () => {
+      this.disconnect();
+      appState.presence.set({});
+    });
     this.handleAuthChange(appState.auth.get());
     this.bindLifecycleListeners();
   }
 
-  async setStatus(status: PresenceStatus): Promise<void> {
-    this.currentStatus = status;
-    if (!this.intervalId && this.canSend()) {
-      this.startTimer();
-    }
-    await this.flushStatus(status);
-  }
-
-  async markInGame(isPlaying: boolean): Promise<void> {
-    await this.setStatus(isPlaying ? 'INGAME' : 'ONLINE');
-  }
-
-  private handleAuthChange(authState: AuthStateData): void {
-    if (authState.isAuthenticated && authState.user?.id) {
-      if (this.currentStatus === 'OFFLINE') {
-        this.currentStatus = 'ONLINE';
-      }
-      this.startTimer();
-      void this.flushCurrentStatus();
+  private async handleAuthChange(authState: AuthStateData): Promise<void> {
+    if (authState.isAuthenticated && authState.token && authState.user?.id) {
+      await this.ensureSocket();
     } else {
-      this.stopTracking();
+      this.disconnect();
+      appState.presence.set({});
     }
   }
 
-  private startTimer(): void {
-    if (this.intervalId || typeof window === 'undefined') {
+  private async ensureSocket(): Promise<void> {
+    if (!this.socket) {
+      this.socket = getGlobalPresenceSocket();
+      this.handlersRegistered = false;
+    }
+
+    if (!this.socket) {
       return;
     }
 
-    this.intervalId = window.setInterval(() => {
-      void this.flushCurrentStatus();
-    }, this.heartbeatMs);
-  }
-
-  private stopTracking(): void {
-    if (this.intervalId && typeof window !== 'undefined') {
-      window.clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (!this.handlersRegistered) {
+      this.registerSocketHandlers(this.socket);
+      this.handlersRegistered = true;
     }
 
-    if (this.currentStatus !== 'OFFLINE') {
-      this.currentStatus = 'OFFLINE';
-    }
-
-    void this.flushStatus('OFFLINE');
-  }
-
-  private async flushCurrentStatus(): Promise<void> {
-    await this.flushStatus(this.currentStatus);
-  }
-
-  private async flushStatus(status: PresenceStatus, keepAlive = false): Promise<void> {
-    if (!this.canSend()) {
+    const state = this.socket.getState();
+    if (state === 'connected' || state === 'connecting') {
       return;
     }
 
-    try {
-      await userService.updateStatus(status, keepAlive ? { keepalive: true } : undefined);
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.warn('[PresenceManager] Failed to update presence', error);
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+
+    this.connectPromise = this.socket
+      .connect()
+      .catch((error) => {
+        logPresenceWarning('[PresenceManager] Failed to connect presence socket', error);
+      })
+      .finally(() => {
+        this.connectPromise = null;
+      });
+
+    return this.connectPromise;
+  }
+
+  private registerSocketHandlers(client: WebSocketClient): void {
+    client.on<{ userId: string }>('user_online', (payload) => {
+      if (payload && typeof payload === 'object' && typeof payload.userId === 'string') {
+        this.updatePresence(payload.userId, 'ONLINE');
       }
+    });
+
+    client.on<{ userId: string }>('user_offline', (payload) => {
+      if (payload && typeof payload === 'object' && typeof payload.userId === 'string') {
+        this.updatePresence(payload.userId, 'OFFLINE');
+      }
+    });
+  }
+
+  private updatePresence(userId: string, status: PresenceStatus): void {
+    if (!userId) return;
+
+    const currentMap = appState.presence.get();
+    if (currentMap[userId] === status) {
+      return;
+    }
+
+    appState.presence.set({
+      ...currentMap,
+      [userId]: status,
+    });
+
+    const auth = appState.auth.get();
+    if (auth.user?.id === userId && auth.user.status !== status) {
+      appState.auth.set({
+        ...auth,
+        user: {
+          ...auth.user,
+          status,
+        },
+      });
     }
   }
 
-  private canSend(): boolean {
-    const auth = appState.auth.get();
-    return Boolean(auth.isAuthenticated && auth.user?.id && auth.token);
+  private disconnect(): void {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.handlersRegistered = false;
+    }
   }
 
   private bindLifecycleListeners(): void {
@@ -119,8 +175,14 @@ export class PresenceManager {
   }
 
   private handleUnload = (): void => {
-    void this.flushStatus('OFFLINE', true);
+    this.disconnect();
   };
+
 }
 
-export const presenceManager = new PresenceManager();
+const scope = globalThis as Record<string, unknown>;
+const existingManager = scope[PRESENCE_MANAGER_KEY];
+const sharedManager = existingManager instanceof PresenceManager ? existingManager : new PresenceManager();
+scope[PRESENCE_MANAGER_KEY] = sharedManager;
+
+export const presenceManager = sharedManager;
