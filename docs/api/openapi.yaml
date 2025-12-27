@@ -132,10 +132,6 @@ paths:
   # User endpoints
   /users/me:
     $ref: './paths/users.yaml#/~1users~1me'
-  /users/presence:
-    $ref: './paths/users.yaml#/~1users~1presence'
-  /users/{userId}/presence:
-    $ref: './paths/users.yaml#/~1users~1{userId}~1presence'
   /users/{userId}:
     $ref: './paths/users.yaml#/~1users~1{userId}'
   /users/by-username/{username}:
