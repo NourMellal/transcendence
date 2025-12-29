@@ -38,7 +38,8 @@ export class PresenceWebSocketServer {
         this.presenceRepository = deps.presenceRepository;
         this.jwtService = deps.jwtService;
         this.logger = deps.logger;
-        this.cachedInternalApiKey = deps.internalApiKey ?? process.env.INTERNAL_API_KEY ?? null;
+        // Keep WS auth consistent with HTTP middleware: prefer Vault over env fallback.
+        this.cachedInternalApiKey = deps.internalApiKey ?? null;
 
         this.io = new SocketIOServer(httpServer, {
             transports: ['websocket'],

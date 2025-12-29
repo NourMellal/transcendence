@@ -243,6 +243,7 @@ async function createGateway() {
         await fastify.register(proxy, {
             upstream: config.userServiceUrl,
             prefix: '/api/presence/ws',
+            rewritePrefix: '/api/presence/ws',
             websocket: true,
             wsClientOptions: {
                 headers: {
@@ -285,7 +286,7 @@ async function createGateway() {
         });
     });
 
-    app.log.info('📡 WebSocket proxies registered: /api/games/ws, /api/chat/ws, /api/tournaments/ws');
+    app.log.info('📡 WebSocket proxies registered: /api/games/ws, /api/chat/ws, /api/presence/ws, /api/tournaments/ws');
 
     // Health check endpoint
     app.get('/health', async (request, reply) => {
