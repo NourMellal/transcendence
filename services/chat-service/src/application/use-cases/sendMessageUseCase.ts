@@ -36,7 +36,7 @@ export class SendMessageUseCase implements ISendMessageUseCase {
     }
 
     let gameParticipants: [string, string] | undefined;
-
+    
     if (type === MessageType.GAME) {
       if (!dto.gameId) {
         throw new Error('gameId is required for GAME messages');
@@ -93,7 +93,6 @@ export class SendMessageUseCase implements ISendMessageUseCase {
       return Conversation.createDirect(dto.senderId, dto.recipientId!);
     }
 
-    // GAME
     const existing = await this.conversationRepository.findByGameId(dto.gameId!);
     if (existing) {
       return existing;
@@ -125,6 +124,7 @@ export class SendMessageUseCase implements ISendMessageUseCase {
       recipientId: message.recipientId,
       gameId: message.gameId,
       createdAt: message.createdAt.toISOString()
-    };
+    } 
+    ;
   }
 }

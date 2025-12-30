@@ -41,8 +41,8 @@ export class CreateGameUseCase {
         await this.eventPublisher.publishGameCreated(game);
 
         return {
-            id: game.id,
-            status: game.status,
+          id: game.id,
+          status: game.status,
           mode: game.mode,
           players: game.players,
           score: {player1: game.score.player1, player2: game.score.player2},

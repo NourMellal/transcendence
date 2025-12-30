@@ -60,7 +60,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
 
     const repository = new SQLiteGameRepository(db);
     const messagingConnection = new RabbitMQConnection({
-        uri: config.messaging.uri,
+        uri: config.messaging.uri, 
         exchange: config.messaging.exchange,
     });
     const serializer = new EventSerializer();
