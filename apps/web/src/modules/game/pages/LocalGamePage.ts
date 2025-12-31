@@ -80,22 +80,13 @@ export default class LocalGamePage extends Component<Record<string, never>, Loca
     if (container) {
       // Mount game canvas in local mode (no gameId = local play)
       // GameCanvas handles its own score display, so no callback needed
-      const leftLabel = this.state.guestAlias ?? 'Player 1';
-      this.gameCanvas = new GameCanvas({
-        playerLabels: {
-          left: leftLabel,
-          right: 'Player 2',
-        },
-      });
+      this.gameCanvas = new GameCanvas({});
       this.gameCanvas.mount(container);
     }
 
     this.guestUnsubscribe = appState.guest.subscribe(() => {
       const guest = appState.guest.get();
       this.setState({ guestAlias: guest.alias });
-      if (this.gameCanvas) {
-        this.gameCanvas.setPlayerLabels({ left: guest.alias ?? 'Player 1' });
-      }
     });
   }
 

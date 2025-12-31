@@ -64,13 +64,23 @@ export class GameRenderer {
     this.ctx.setLineDash([]);
   }
 
-  drawPaddle(paddle: Paddle, isLeftPaddle: boolean = true): void {
-    const color = isLeftPaddle 
-      ? getComputedStyle(document.documentElement).getPropertyValue('--color-brand-secondary').trim() || '#ffcc66'
-      : getComputedStyle(document.documentElement).getPropertyValue('--color-brand-accent').trim() || '#ff8800';
+  drawPaddle(paddle: Paddle): void {
+    const color = '#ffffff';
+    const radius = 6; // Rounded corner radius
+
+    // Add glow effect
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = 'rgba(255, 255, 255, 0.3)';
 
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+    
+    // Draw rounded rectangle
+    this.ctx.beginPath();
+    this.ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, radius);
+    this.ctx.fill();
+
+    // Reset shadow
+    this.ctx.shadowBlur = 0;
   }
 
   drawBall(ball: Ball): void {
@@ -110,9 +120,8 @@ export class GameRenderer {
     this.clear();
     this.drawBorders();
     this.drawNet();
-    this.drawPaddle(player1, true);
-    this.drawPaddle(player2, false);
+    this.drawPaddle(player1);
+    this.drawPaddle(player2);
     this.drawBall(ball);
-    this.drawScore(player1.score, player2.score);
   }
 }

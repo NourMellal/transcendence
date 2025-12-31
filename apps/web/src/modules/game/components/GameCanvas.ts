@@ -134,69 +134,85 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   render(): string {
     return `
-      <div class="game-canvas-wrapper space-y-4 sm:space-y-6 relative">
+      <div class="game-canvas-wrapper flex flex-col gap-6 sm:gap-8 relative w-full max-w-[800px] mx-auto">
         ${this.renderEndModal()}
-        <!-- Canvas Container -->
-        <div class="glass-panel-mobile sm:glass-panel relative rounded-xl sm:rounded-2xl overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1);">
-          <div class="game-area rounded-lg sm:rounded-xl overflow-hidden" style="background: var(--color-bg-dark); aspect-ratio: 4 / 3;">
-            <canvas
-              id="game-canvas"
-              class="w-full h-full"
-              style="display: block; image-rendering: crisp-edges;"
-            ></canvas>
+        
+        <!-- Game Canvas -->
+        <div class="relative w-full group">
+          <!-- Glass card container -->
+          <div class="relative rounded-[2rem] p-1 overflow-hidden" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08);">
+            
+            <!-- Inner game area -->
+            <div class="relative rounded-[1.8rem] w-full overflow-hidden flex flex-col" style="background: #050505; border: 1px solid rgba(255, 255, 255, 0.05); aspect-ratio: 4 / 3; box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);">
+              
+              <!-- Score Overlay on Canvas -->
+              <div class="absolute top-6 sm:top-8 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none select-none">
+                <div class="relative">
+                  <!-- Score glow -->
+                  <div class="absolute -inset-1 rounded-full opacity-30" style="background: rgba(255, 0, 110, 0.5); filter: blur(8px);"></div>
+                  <!-- Score card -->
+                  <div class="relative rounded-full px-4 sm:px-6 py-1.5 sm:py-2 flex items-center justify-center gap-4 sm:gap-6" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+                    <span id="player1-score" class="text-lg sm:text-xl font-bold text-white tabular-nums drop-shadow-md">0</span>
+                    <div class="h-1.5 w-1.5 rounded-full" style="background: rgba(255, 0, 110, 0.8); box-shadow: 0 0 8px rgba(255, 0, 110, 0.6);"></div>
+                    <span id="player2-score" class="text-lg sm:text-xl font-bold text-white tabular-nums drop-shadow-md">0</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Canvas -->
+              <canvas
+                id="game-canvas"
+                class="w-full h-full"
+                style="display: block; image-rendering: crisp-edges;"
+              ></canvas>
+            </div>
           </div>
         </div>
 
-        <!-- Control Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center px-4 sm:px-0">
-          <button
-            id="start-stop-btn"
-            data-action="start-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback hover:scale-105 flex items-center justify-center gap-2"
-            style="background: linear-gradient(135deg, #00b3d9 0%, #0095b8 100%); color: white; box-shadow: 0 4px 16px rgba(0, 179, 217, 0.25); border: 1px solid rgba(255, 255, 255, 0.1);"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><g data-name="play circle"><path d="M12 0a12 12 0 1 0 12 12A12 12 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10 10 0 0 1-10 10z"/><path d="M17.49 11.13c-9.58-5.32-9.31-5.4-10-5S7 6.41 7 17a1 1 0 0 0 1 1c.37 0-.29.3 9.49-5.13a1 1 0 0 0 0-1.74zM9 15.3V8.7l5.94 3.3z"/></g></svg>
-            Start Game
-          </button>
-
-          <button
-            id="restart-btn"
-            data-action="restart-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback hover:scale-105 flex items-center justify-center gap-2"
-            style="border: 1.5px solid rgba(255, 255, 255, 0.15); color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px);"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><g data-name="repeat circle"><path d="M12 0a12 12 0 1 0 12 12A12 12 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10 10 0 0 1-10 10z"/><path d="M18 10a1 1 0 0 0-1 1 5 5 0 0 1-5 5h-1.59l.3-.29a1 1 0 0 0-1.42-1.42c-2.08 2.09-2.1 2.06-2.21 2.33a1 1 0 0 0 .21 1.09C9.47 19.89 9.46 20 10 20a1 1 0 0 0 .71-1.71l-.3-.29H12c6.4 0 8.51-8 6-8zM12 8h1.59l-.3.29A1 1 0 0 0 14 10c.54 0 .56-.15 2.71-2.29a1 1 0 0 0 .21-1.09c-.1-.26-.05-.17-2.21-2.33a1 1 0 0 0-1.42 1.42l.3.29H12c-6.4 0-8.51 8-6 8a1 1 0 0 0 1-1 5 5 0 0 1 5-5z"/></g></svg>
-            Restart
-          </button>
-        </div>
-
-        <!-- Score Display -->
-        <div class="relative overflow-hidden rounded-xl sm:rounded-2xl" style="background: linear-gradient(135deg, rgba(13, 17, 23, 0.95) 0%, rgba(27, 31, 35, 0.95) 100%); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
-          <!-- Subtle animated background accent -->
-          <div class="absolute inset-0 opacity-5" style="background: radial-gradient(circle at 30% 50%, var(--color-brand-primary), transparent 70%), radial-gradient(circle at 70% 50%, var(--color-brand-secondary), transparent 70%);"></div>
-
-          <div class="relative grid grid-cols-2 gap-6 sm:gap-12 text-center px-6 sm:px-12 py-5 sm:py-8">
-            <!-- Player 1 Score -->
-            <div class="space-y-1 sm:space-y-2">
-              <div class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider" style="color: rgba(255, 255, 255, 0.4); letter-spacing: 0.1em;">Player 1</div>
-              <div class="relative">
-                <div class="text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums transition-all duration-300" style="color: #ffffff; text-shadow: 0 2px 8px rgba(0, 179, 217, 0.3), 0 0 20px rgba(0, 179, 217, 0.1);">
-                  <span id="player1-score">0</span>
-                </div>
+        <!-- Bottom Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+          
+          <!-- Score Panel -->
+          <div class="relative group">
+            <!-- Glow -->
+            <div class="absolute -inset-0.5 rounded-2xl opacity-20 transition duration-500" style="background: rgba(255, 0, 110, 0.5); filter: blur(12px);"></div>
+            <!-- Glass card -->
+            <div class="relative rounded-2xl p-6 flex justify-between items-center h-full" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08);">
+              <div class="flex flex-col items-center flex-1 border-r border-white/10">
+                <span class="text-[10px] font-bold tracking-[0.2em] text-gray-500 uppercase mb-1">Player 1</span>
+                <span id="player1-score-panel" class="text-3xl font-light text-white">0</span>
+              </div>
+              <div class="flex flex-col items-center flex-1">
+                <span class="text-[10px] font-bold tracking-[0.2em] text-gray-500 uppercase mb-1">Player 2</span>
+                <span id="player2-score-panel" class="text-3xl font-light text-white">0</span>
               </div>
             </div>
+          </div>
 
-            <!-- Center Divider -->
-            <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-px h-12 sm:h-16" style="background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1), transparent);"></div>
+          <!-- Control Buttons Panel -->
+          <div class="relative group">
+            <!-- Glow -->
+            <div class="absolute -inset-0.5 rounded-2xl opacity-20 transition duration-500" style="background: rgba(255, 0, 110, 0.5); filter: blur(12px);"></div>
+            <!-- Glass card -->
+            <div class="relative rounded-2xl p-6 flex gap-4 items-center justify-center h-full" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08);">
+              <button
+                id="start-stop-btn"
+                data-action="start-game"
+                class="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-medium transition-all duration-200 transform active:scale-95 hover:bg-gray-100"
+                style="background: white; color: black; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon></svg>
+                <span>Start Game</span>
+              </button>
 
-            <!-- Player 2 Score -->
-            <div class="space-y-1 sm:space-y-2">
-              <div class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider" style="color: rgba(255, 255, 255, 0.4); letter-spacing: 0.1em;">Player 2</div>
-              <div class="relative">
-                <div class="text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums transition-all duration-300" style="color: #ffffff; text-shadow: 0 2px 8px rgba(255, 0, 110, 0.3), 0 0 20px rgba(255, 0, 110, 0.1);">
-                  <span id="player2-score">0</span>
-                </div>
-              </div>
+              <button
+                id="restart-btn"
+                data-action="restart-game"
+                class="flex-none flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all duration-200 transform active:scale-95 hover:bg-white/10"
+                style="background: rgba(255, 255, 255, 0.05); color: white; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px);"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -648,9 +664,13 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private updateScoreDisplay(): void {
     const player1ScoreEl = this.element?.querySelector('#player1-score');
     const player2ScoreEl = this.element?.querySelector('#player2-score');
+    const player1ScorePanelEl = this.element?.querySelector('#player1-score-panel');
+    const player2ScorePanelEl = this.element?.querySelector('#player2-score-panel');
 
     if (player1ScoreEl) player1ScoreEl.textContent = String(this.player1.score);
     if (player2ScoreEl) player2ScoreEl.textContent = String(this.player2.score);
+    if (player1ScorePanelEl) player1ScorePanelEl.textContent = String(this.player1.score);
+    if (player2ScorePanelEl) player2ScorePanelEl.textContent = String(this.player2.score);
   }
 
   private resizeCanvas(): void {
@@ -713,6 +733,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.lastInputSentAt = 0;
     this.isRunning = true;
     this.setState({ isGameRunning: true });
+    // Update score display after setState re-rendered the HTML
+    this.updateScoreDisplay();
     this.runFrame();
   }
 
@@ -726,6 +748,11 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+
+    // Re-render to keep game objects visible when stopped
+    this.renderer.render(this.ball, this.player1, this.player2);
+    // Update score display after setState re-rendered the HTML
+    this.updateScoreDisplay();
   }
 
   private runFrame(): void {
@@ -792,6 +819,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private resetGame(): void {
     this.player1.score = 0;
     this.player2.score = 0;
+    this.player1.y = this.BASE_HEIGHT / 2 - this.player1.height / 2;
+    this.player2.y = this.BASE_HEIGHT / 2 - this.player2.height / 2;
     this.resetBall();
     this.updateScoreDisplay();
     this.renderer.render(this.ball, this.player1, this.player2);
