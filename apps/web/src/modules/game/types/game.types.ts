@@ -46,10 +46,13 @@ export interface PlayerInfo {
   isConnected?: boolean;
 }
 
+export type GameApiMode = 'CLASSIC' | 'TOURNAMENT' | 'RANKED' | 'CUSTOM';
+
 export interface GameStateOutput {
   id: string;
   players?: PlayerInfo[];
   status: 'WAITING' | 'IN_PROGRESS' | 'PLAYING' | 'FINISHED' | 'CANCELLED';
+  mode?: GameApiMode;
   score: {
     player1: number;
     player2: number;
@@ -57,6 +60,15 @@ export interface GameStateOutput {
   config?: GameSettings;
   createdAt: string | Date;
   finishedAt?: string | Date;
+}
+
+export interface PublicGameSummary {
+  gameId: string;
+  creatorId?: string;
+  creatorUsername?: string;
+  gameType: GameApiMode | string;
+  createdAt: string;
+  playersWaiting: number;
 }
 
 // ===== Gameplay Canvas Types =====
@@ -173,6 +185,12 @@ export interface GameEndEvent {
     left: number;
     right: number;
   };
+  winnerUsername?: string;
+  finishedAt?: string;
+}
+
+export interface GameLobbyUpdatedEvent {
+  games: PublicGameSummary[];
 }
 
 export interface PlayerJoinedEvent {

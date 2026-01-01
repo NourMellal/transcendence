@@ -8,6 +8,7 @@ export interface UserRepository {
     findByUsername(username: string): Promise<User | null>;
     findByDisplayName(displayName: string): Promise<User | null>;
     search(query: string, limit?: number): Promise<User[]>;
+    listAll(limit: number, offset: number): Promise<User[]>;
     save(user: User): Promise<void>;
     update(id: string, updates: Partial<User>): Promise<void>;
     delete(id: string): Promise<void>;

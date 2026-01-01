@@ -110,8 +110,11 @@ export namespace UserDTOs {
   }
 
   export interface Enable2FARequest {
-    secret: string;
-    code: string;
+    token: string;
+  }
+
+  export interface Disable2FARequest {
+    token: string;
   }
 
   export interface AddFriendRequest {

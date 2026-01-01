@@ -27,26 +27,6 @@ function resolveDatabaseFilePath(): string {
     return process.env.GAME_SERVICE_DB_PATH || process.env.GAME_DB_PATH || join(process.cwd(), 'var', 'game-service.db');
 }
 
-function buildEnvFallback(): GameServiceConfig {
-    return {
-        port: getEnvVarAsNumber('GAME_SERVICE_PORT', 3002),
-        scoreLimit: getEnvVarAsNumber('SCORE_LIMIT', 11),
-        ballSpeed: getEnvVarAsNumber('BALL_SPEED', 5),
-        paddleSpeed: getEnvVarAsNumber('PADDLE_SPEED', 8),
-        gameRoomCapacity: getEnvVarAsNumber('GAME_ROOM_CAPACITY', 2),
-        gameTimeoutMinutes: getEnvVarAsNumber('GAME_TIMEOUT_MINUTES', 30),
-        redis: {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: getEnvVarAsNumber('REDIS_PORT', 6379),
-            password: process.env.REDIS_PASSWORD
-        },
-        databaseFile: resolveDatabaseFilePath(),
-        internalApiKey: process.env.INTERNAL_API_KEY,
-        userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
-        messaging: createMessagingConfig()
-    };
-}
-
 export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
     try {
         const vault = createGameServiceVault();
@@ -58,7 +38,7 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
         ]);
 
         if (!internalApiKey) {
-            console.warn('[game-service] INTERNAL_API_KEY not found in Vault or environment.');
+            throw new Error('INTERNAL_API_KEY not found in Vault. Run: pnpm vault:setup');
         }
 
         return {
@@ -69,18 +49,19 @@ export async function loadGameServiceConfig(): Promise<GameServiceConfig> {
             gameRoomCapacity: gameConfig.roomCapacity ?? 2,
             gameTimeoutMinutes: gameConfig.timeoutMinutes ?? 30,
             redis: {
-                host: redisConfig.host ?? 'localhost',
+                host: redisConfig.host ?? 'redis',
                 port: redisConfig.port ?? 6379,
                 password: redisConfig.password
             },
             databaseFile: resolveDatabaseFilePath(),
-            internalApiKey: internalApiKey ?? undefined,
+            internalApiKey,
             userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
             messaging: createMessagingConfig()
         };
     } catch (error) {
         const err = error as Error;
-        console.warn('Vault not available, falling back to environment variables:', err.message);
-        return buildEnvFallback();
+        console.error('[game-service] CRITICAL: Failed to load config from Vault:', err.message);
+        console.error('Run: pnpm vault:setup');
+        throw error;
     }
 }

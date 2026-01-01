@@ -4,7 +4,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { createTournamentSchema, tournamentIdParamSchema } from '@transcendence/shared-validation';
+import { createTournamentSchema, tournamentIdParamSchema, tournamentMatchParamSchema } from '@transcendence/shared-validation';
 import { validateRequestBody, validateRequestParams } from '../middleware/validation.middleware';
 import { requireAuth, getUser } from '../middleware/auth.middleware';
 
@@ -92,33 +92,6 @@ export async function registerTournamentRoutes(
     });
 
     /**
-     * DELETE /api/tournaments/:tournamentId
-     * Protected - Delete tournament
-     */
-    fastify.delete('/api/tournaments/:tournamentId', {
-        preHandler: [
-            requireAuth,
-            validateRequestParams(tournamentIdParamSchema)
-        ]
-    }, async (request, reply) => {
-        const user = getUser(request);
-        const { tournamentId } = request.params as { tournamentId: string };
-
-        const response = await fetch(`${tournamentServiceUrl}/tournaments/${tournamentId}`, {
-            method: 'DELETE',
-            headers: {
-                'x-internal-api-key': internalApiKey,
-                'x-request-id': request.id,
-                'x-user-id': user?.userId || user?.sub || '',
-                'Authorization': request.headers.authorization || '',
-            },
-        });
-
-        const data = await response.json();
-        return reply.code(response.status).send(data);
-    });
-
-    /**
      * POST /api/tournaments/:tournamentId/join
      * Protected - Join tournament
      */
@@ -130,8 +103,9 @@ export async function registerTournamentRoutes(
     }, async (request, reply) => {
         const user = getUser(request);
         const { tournamentId } = request.params as { tournamentId: string };
+        const queryString = new URL(request.url, `http://${request.headers.host}`).search;
 
-        const response = await fetch(`${tournamentServiceUrl}/tournaments/${tournamentId}/join`, {
+        const response = await fetch(`${tournamentServiceUrl}/tournaments/${tournamentId}/join${queryString}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -140,6 +114,65 @@ export async function registerTournamentRoutes(
                 'x-user-id': user?.userId || user?.sub || '',
                 'Authorization': request.headers.authorization || '',
             },
+            body: JSON.stringify(request.body ?? {}),
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
+     * POST /api/tournaments/:tournamentId/start
+     * Protected - Start tournament (creator only)
+     */
+    fastify.post('/api/tournaments/:tournamentId/start', {
+        preHandler: [
+            requireAuth,
+            validateRequestParams(tournamentIdParamSchema)
+        ]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { tournamentId } = request.params as { tournamentId: string };
+
+        const response = await fetch(`${tournamentServiceUrl}/tournaments/${tournamentId}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+            body: JSON.stringify(request.body ?? {}),
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
+     * POST /api/tournaments/:tournamentId/matches/:matchId/play
+     * Protected - Start a tournament match by creating a game
+     */
+    fastify.post('/api/tournaments/:tournamentId/matches/:matchId/play', {
+        preHandler: [
+            requireAuth,
+            validateRequestParams(tournamentMatchParamSchema)
+        ]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { tournamentId, matchId } = request.params as { tournamentId: string; matchId: string };
+
+        const response = await fetch(`${tournamentServiceUrl}/tournaments/${tournamentId}/matches/${matchId}/play`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'Authorization': request.headers.authorization || '',
+            },
+            body: JSON.stringify(request.body ?? {}),
         });
 
         const data = await response.json();
@@ -168,6 +201,7 @@ export async function registerTournamentRoutes(
                 'x-user-id': user?.userId || user?.sub || '',
                 'Authorization': request.headers.authorization || '',
             },
+            body: JSON.stringify(request.body ?? {}),
         });
 
         if (response.status === 204) {
@@ -213,7 +247,8 @@ export async function registerTournamentRoutes(
         preHandler: [requireAuth]
     }, async (request, reply) => {
         const user = getUser(request);
-        const response = await fetch(`${tournamentServiceUrl}/tournaments/my-tournaments`, {
+        const queryString = new URL(request.url, `http://${request.headers.host}`).search;
+        const response = await fetch(`${tournamentServiceUrl}/tournaments/my-tournaments${queryString}`, {
             method: 'GET',
             headers: {
                 'x-internal-api-key': internalApiKey,

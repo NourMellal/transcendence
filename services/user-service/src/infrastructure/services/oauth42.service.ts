@@ -18,6 +18,7 @@ interface OAuth42Config {
 export class OAuth42Service implements OAuthService {
     private readonly vaultHelper = createUserServiceVault();
     private initialized = false;
+    private enabled = false;
     private config!: OAuth42Config;
 
     constructor() { }
@@ -34,29 +35,43 @@ export class OAuth42Service implements OAuthService {
         }
 
         const apiConfig = await this.vaultHelper.getAPIConfig();
-        const resolveConfigValue = (envKey: string, vaultKey: string): string | undefined =>
-            process.env[envKey] ?? apiConfig?.[vaultKey];
-        const requireConfigValue = (envKey: string, vaultKey: string): string => {
-            const value = resolveConfigValue(envKey, vaultKey);
-            if (!value) {
-                throw new Error(`[OAuth42Service] Missing configuration: set ${envKey} or Vault key ${vaultKey}`);
-            }
-            return value;
-        };
+        const pickValue = (value?: string): string | undefined =>
+            typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+        const resolveConfigValue = (envKey: string, vaultKey: string, fallback?: string): string | undefined =>
+            pickValue(apiConfig?.[vaultKey]) ?? pickValue(process.env[envKey]) ?? fallback;
+
+        const clientId = resolveConfigValue('OAUTH_42_CLIENT_ID', '42_client_id');
+        const clientSecret = resolveConfigValue('OAUTH_42_CLIENT_SECRET', '42_client_secret');
+        const redirectUri = resolveConfigValue('OAUTH_42_REDIRECT_URI', '42_redirect_uri');
 
         this.config = {
-            clientId: requireConfigValue('OAUTH_42_CLIENT_ID', '42_client_id'),
-            clientSecret: requireConfigValue('OAUTH_42_CLIENT_SECRET', '42_client_secret'),
-            redirectUri: requireConfigValue('OAUTH_42_REDIRECT_URI', '42_redirect_uri'),
-            authorizeUrl: requireConfigValue('OAUTH_42_AUTHORIZE_URL', '42_authorize_url'),
-            tokenUrl: requireConfigValue('OAUTH_42_TOKEN_URL', '42_token_url'),
-            profileUrl: requireConfigValue('OAUTH_42_PROFILE_URL', '42_profile_url'),
-            scope: requireConfigValue('OAUTH_42_SCOPE', '42_scope'),
+            clientId: clientId ?? '',
+            clientSecret: clientSecret ?? '',
+            redirectUri: redirectUri ?? '',
+            authorizeUrl: resolveConfigValue(
+                'OAUTH_42_AUTHORIZE_URL',
+                '42_authorize_url',
+                'https://api.intra.42.fr/oauth/authorize'
+            ) ?? '',
+            tokenUrl: resolveConfigValue(
+                'OAUTH_42_TOKEN_URL',
+                '42_token_url',
+                'https://api.intra.42.fr/oauth/token'
+            ) ?? '',
+            profileUrl: resolveConfigValue(
+                'OAUTH_42_PROFILE_URL',
+                '42_profile_url',
+                'https://api.intra.42.fr/v2/me'
+            ) ?? '',
+            scope: resolveConfigValue('OAUTH_42_SCOPE', '42_scope', 'public') ?? '',
         };
         this.initialized = true;
+        this.enabled = Boolean(clientId && clientSecret && redirectUri);
 
-        if (!this.config.clientId || !this.config.clientSecret) {
-            console.warn('[OAuth42Service] Client ID/Secret missing. OAuth login will fail until configured.');
+        if (!this.enabled) {
+            console.warn(
+                '[OAuth42Service] OAuth 42 is disabled. Set 42_client_id/42_client_secret/42_redirect_uri in Vault.'
+            );
         }
     }
 
@@ -122,6 +137,9 @@ export class OAuth42Service implements OAuthService {
     private ensureInitialized(): void {
         if (!this.initialized) {
             throw new Error('OAuth42Service not initialized');
+        }
+        if (!this.enabled) {
+            throw new Error('OAuth42Service not configured');
         }
     }
 }

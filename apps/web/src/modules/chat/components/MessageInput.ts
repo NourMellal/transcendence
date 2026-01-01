@@ -3,6 +3,7 @@ import Component from '@/core/Component';
 interface MessageInputProps {
   onSend: (content: string) => void;
   onTyping: () => void;
+  onInvite?: () => void;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -49,6 +50,7 @@ export default class MessageInput extends Component<MessageInputProps, MessageIn
 
     const textarea = this.element.querySelector('.message-input__field') as HTMLTextAreaElement;
     const sendBtn = this.element.querySelector('.message-input__send-btn');
+    const inviteBtn = this.element.querySelector('.message-input__invite-btn');
 
     if (textarea) {
       // Handle input changes
@@ -96,6 +98,20 @@ export default class MessageInput extends Component<MessageInputProps, MessageIn
       sendBtn.addEventListener('click', handleSendClick);
       this.subscriptions.push(() => {
         sendBtn.removeEventListener('click', handleSendClick);
+      });
+    }
+
+    if (inviteBtn) {
+      const handleInviteClick = () => {
+        if (this.props.disabled) return;
+        if (this.props.onInvite) {
+          this.props.onInvite();
+        }
+      };
+
+      inviteBtn.addEventListener('click', handleInviteClick);
+      this.subscriptions.push(() => {
+        inviteBtn.removeEventListener('click', handleInviteClick);
       });
     }
   }
@@ -188,6 +204,17 @@ export default class MessageInput extends Component<MessageInputProps, MessageIn
     return `
       <div class="message-input">
         <div class="message-input__container">
+          <button 
+            class="message-input__invite-btn" 
+            title="Invite to game"
+            aria-label="Invite to game"
+            ${disabled ? 'disabled' : ''}
+          >
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <span class="message-input__invite-label">Invite to game</span>
+          </button>
           <textarea 
             class="message-input__field" 
             placeholder="${placeholder}"

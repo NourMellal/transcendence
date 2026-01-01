@@ -57,7 +57,8 @@ export class RabbitMQGameEventPublisher implements IGameEventPublisher {
             duration: durationMs / 1000,
             finishedAt,
             gameType: game.mode === 'TOURNAMENT' ? 'tournament' : 'classic',
-            tournamentId: game.tournamentId
+            tournamentId: game.tournamentId,
+            matchId: game.matchId
         });
         await this.publish('game.finished', event);
     }

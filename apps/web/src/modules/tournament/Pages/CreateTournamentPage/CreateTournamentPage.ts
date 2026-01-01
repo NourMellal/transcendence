@@ -1,17 +1,14 @@
 import Component from '@/core/Component';
 import { navigate } from '@/routes';
-import type { TournamentDTOs, TournamentSettings } from '@/models';
+import type { TournamentDTOs } from '@/models';
 import { tournamentService } from '@/services/api/TournamentService';
+import { validateTournamentName } from '@/utils/validation';
 
 type State = {
   form: {
     name: string;
-    description: string;
-    type: TournamentDTOs.CreateTournamentRequest['type'];
-    maxParticipants: number;
     isPublic: boolean;
-    isPowerUpsEnabled: boolean;
-    maxScore: number;
+    privatePasscode: string;
   };
   isSubmitting: boolean;
   error?: string;
@@ -27,12 +24,8 @@ export default class CreateTournamentPage extends Component<Record<string, never
     return {
       form: {
         name: '',
-        description: '',
-        type: 'single_elimination',
-        maxParticipants: 8,
         isPublic: true,
-        isPowerUpsEnabled: false,
-        maxScore: 11,
+        privatePasscode: '',
       },
       isSubmitting: false,
       error: undefined,
@@ -42,35 +35,27 @@ export default class CreateTournamentPage extends Component<Record<string, never
 
   private buildRequest(): TournamentDTOs.CreateTournamentRequest {
     const { form } = this.state;
-    const settings: TournamentSettings = {
-      gameSettings: {
-        maxScore: form.maxScore,
-        paddleSpeed: 8,
-        ballSpeed: 6,
-        powerUpsEnabled: form.isPowerUpsEnabled,
-      },
-      matchDuration: null,
-      breakBetweenMatches: 2,
-      isPublic: form.isPublic,
-      requiresApproval: false,
-    };
-
+    const privatePasscode = form.isPublic ? null : form.privatePasscode.trim() || null;
     return {
       name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      type: form.type,
-      maxParticipants: form.maxParticipants,
-      settings,
       isPublic: form.isPublic,
-      registrationDeadline: undefined,
+      privatePasscode,
+      bracketType: 'single_elimination',
+      maxParticipants: 8,
+      minParticipants: 4,
     };
   }
 
   private async handleSubmit(): Promise<void> {
     if (this.state.isSubmitting) return;
     const request = this.buildRequest();
-    if (!request.name) {
-      this.setState({ error: 'Tournament name is required.' });
+    const nameValidation = validateTournamentName(request.name);
+    if (!nameValidation.isValid) {
+      this.setState({ error: nameValidation.errors[0] });
+      return;
+    }
+    if (!request.isPublic && !request.privatePasscode) {
+      this.setState({ error: 'Passcode is required for private tournaments.' });
       return;
     }
 
@@ -80,11 +65,11 @@ export default class CreateTournamentPage extends Component<Record<string, never
       const response = await tournamentService.createTournament(request);
       this.setState({
         isSubmitting: false,
-        success: `Tournament "${response.tournament.name}" created.`,
+        success: `Tournament "${response.name}" created.`,
         form: {
           ...this.state.form,
           name: '',
-          description: '',
+          privatePasscode: '',
         },
       });
     } catch (error) {
@@ -122,13 +107,6 @@ export default class CreateTournamentPage extends Component<Record<string, never
               >
                 ← Dashboard
               </button>
-              <button
-                data-action="go-games"
-                class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-                style="background: rgba(255,255,255,0.08); color: white;"
-              >
-                Browse Games
-              </button>
             </div>
           </header>
           ${error ? `
@@ -141,73 +119,53 @@ export default class CreateTournamentPage extends Component<Record<string, never
               <p class="text-sm" style="color: var(--color-success);">${success}</p>
             </div>
           ` : ''}
-          <form data-action="create-tournament" class="glass-panel p-6 space-y-5">
+          <form data-action="create-tournament" class="glass-panel p-8 space-y-6">
             <div>
-              <label class="text-sm text-white/70">Tournament Name</label>
+              <label class="block text-sm font-medium mb-3" style="color: var(--color-text-secondary);">Tournament Name</label>
               <input
                 type="text"
                 name="name"
                 value="${form.name}"
-                class="glass-input w-full rounded-xl mt-2"
+                class="glass-input w-full rounded-xl px-5 py-4 text-base"
+                style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);"
                 placeholder="Neon Legends Cup"
                 required
               />
             </div>
-            <div>
-              <label class="text-sm text-white/70">Description</label>
-              <textarea
-                name="description"
-                rows="3"
-                class="glass-input w-full rounded-xl mt-2"
-                placeholder="Optional details, rules, or theme."
-              >${form.description}</textarea>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="text-sm text-white/70">Bracket Type</label>
-                <select name="type" class="glass-input w-full rounded-xl mt-2">
-                  <option value="single_elimination" ${form.type === 'single_elimination' ? 'selected' : ''}>Single Elimination</option>
-                  <option value="double_elimination" ${form.type === 'double_elimination' ? 'selected' : ''}>Double Elimination</option>
-                  <option value="round_robin" ${form.type === 'round_robin' ? 'selected' : ''}>Round Robin</option>
-                </select>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="rounded-xl p-5" style="background: var(--color-panel-bg); border: 1px solid var(--color-panel-border);">
+                <p class="text-xs uppercase tracking-widest text-white/60">Bracket</p>
+                <p class="text-lg font-semibold mt-2">Single Elimination</p>
+                <p class="text-xs text-white/50 mt-1">4 players to start · 8 total slots</p>
               </div>
+              <div class="rounded-xl p-5" style="background: var(--color-panel-bg); border: 1px solid var(--color-panel-border);">
+                <p class="text-xs uppercase tracking-widest text-white/60">Start Rules</p>
+                <p class="text-lg font-semibold mt-2">Ready at 4</p>
+                <p class="text-xs text-white/50 mt-1">Auto-start at 8 or after timeout</p>
+              </div>
+            </div>
+            <label class="flex items-center gap-3 px-5 py-4 rounded-xl cursor-pointer transition-all" style="background: var(--color-panel-bg); border: 1px solid var(--color-panel-border);">
+              <input type="checkbox" name="isPublic" ${form.isPublic ? 'checked' : ''} class="w-5 h-5 rounded" style="accent-color: var(--color-brand-primary);" />
+              <span class="text-sm" style="color: var(--color-text-primary);">Public tournament (shareable access code)</span>
+            </label>
+            ${form.isPublic ? '' : `
               <div>
-                <label class="text-sm text-white/70">Max Participants</label>
+                <label class="block text-sm font-medium mb-3" style="color: var(--color-text-secondary);">Private Passcode</label>
                 <input
-                  type="number"
-                  name="maxParticipants"
-                  min="4"
-                  max="64"
-                  value="${form.maxParticipants}"
-                  class="glass-input w-full rounded-xl mt-2"
+                  type="password"
+                  name="privatePasscode"
+                  value="${form.privatePasscode}"
+                  class="glass-input w-full rounded-xl px-5 py-4 text-base"
+                  style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);"
+                  placeholder="Enter a passcode for private invites"
                 />
+                <p class="text-xs text-white/50 mt-2">Players will need this passcode to join.</p>
               </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label class="flex items-center gap-3 text-sm text-white/70">
-                <input type="checkbox" name="isPublic" ${form.isPublic ? 'checked' : ''} class="rounded" />
-                Public tournament (listed in discovery)
-              </label>
-              <label class="flex items-center gap-3 text-sm text-white/70">
-                <input type="checkbox" name="isPowerUpsEnabled" ${form.isPowerUpsEnabled ? 'checked' : ''} class="rounded" />
-                Enable power-ups
-              </label>
-            </div>
-            <div>
-              <label class="text-sm text-white/70">Max Score per match</label>
-              <input
-                type="number"
-                name="maxScore"
-                min="5"
-                max="21"
-                value="${form.maxScore}"
-                class="glass-input w-full rounded-xl mt-2"
-              />
-            </div>
+            `}
             <button
               type="submit"
-              class="btn-touch w-full py-3 rounded-2xl touch-feedback font-semibold"
-              style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
+              class="btn-touch w-full py-4 rounded-xl touch-feedback font-semibold text-lg transition-all duration-300 hover:scale-[1.02]"
+              style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white; border: 1px solid rgba(255, 255, 255, 0.1);"
               ${isSubmitting ? 'disabled' : ''}
             >
               ${isSubmitting ? 'Creating...' : 'Create Tournament'}
@@ -231,12 +189,8 @@ export default class CreateTournamentPage extends Component<Record<string, never
         const updatedForm: State['form'] = {
           ...this.state.form,
           name: (data.get('name') as string) ?? '',
-          description: (data.get('description') as string) ?? '',
-          type: (data.get('type') as string) as State['form']['type'],
-          maxParticipants: Number(data.get('maxParticipants')) || 8,
           isPublic: data.get('isPublic') === 'on',
-          isPowerUpsEnabled: data.get('isPowerUpsEnabled') === 'on',
-          maxScore: Number(data.get('maxScore')) || 11,
+          privatePasscode: (data.get('privatePasscode') as string) ?? '',
         };
         this.setState({
           form: updatedForm,
@@ -247,6 +201,21 @@ export default class CreateTournamentPage extends Component<Record<string, never
       };
       form.addEventListener('submit', submitHandler);
       this.subscriptions.push(() => form.removeEventListener('submit', submitHandler));
+    }
+
+    const publicToggle = this.element.querySelector<HTMLInputElement>('input[name="isPublic"]');
+    if (publicToggle) {
+      const toggleHandler = () => {
+        this.setState({
+          form: {
+            ...this.state.form,
+            isPublic: publicToggle.checked,
+            privatePasscode: publicToggle.checked ? '' : this.state.form.privatePasscode,
+          },
+        });
+      };
+      publicToggle.addEventListener('change', toggleHandler);
+      this.subscriptions.push(() => publicToggle.removeEventListener('change', toggleHandler));
     }
 
     const bind = (selector: string, handler: () => void) => {
@@ -261,6 +230,5 @@ export default class CreateTournamentPage extends Component<Record<string, never
     };
 
     bind('[data-action="go-dashboard"]', () => navigate('/dashboard'));
-    bind('[data-action="go-games"]', () => navigate('/game'));
   }
 }

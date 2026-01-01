@@ -1,4 +1,4 @@
-// Inline ApiResponse type (removed shared-types dependency)
+// Type definitions
 export interface ApiResponse<T = unknown> {
     success: boolean;
     data?: T;

@@ -18,6 +18,11 @@ export const routes = [
     component: OAuthCallbackPage,
     props: {},
   },
+  {
+    path: '/auth/callback',
+    component: OAuthCallbackPage,
+    props: {},
+  },
 ];
 
 export default routes;

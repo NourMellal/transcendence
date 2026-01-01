@@ -80,13 +80,6 @@ export default class LeaderboardPage extends Component<Record<string, never>, St
       return `
         <div class="glass-panel p-6 space-y-3">
           <p class="text-white/70">${error}</p>
-          <button
-            data-action="retry"
-            class="btn-touch px-4 py-2 rounded-xl touch-feedback"
-            style="background: rgba(255,255,255,0.08); color: white;"
-          >
-            Retry
-          </button>
         </div>
       `;
     }
@@ -156,13 +149,6 @@ export default class LeaderboardPage extends Component<Record<string, never>, St
               >
                 ← Dashboard
               </button>
-              <button
-                data-action="refresh"
-                class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-                style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
-              >
-                Refresh
-              </button>
             </div>
           </header>
           ${this.state.lastUpdated ? `
@@ -194,8 +180,6 @@ export default class LeaderboardPage extends Component<Record<string, never>, St
       });
     };
 
-    bind('[data-action="refresh"]', () => void this.loadLeaderboard());
-    bind('[data-action="retry"]', () => void this.loadLeaderboard());
     bind('[data-action="go-dashboard"]', () => navigate('/dashboard'));
   }
 }

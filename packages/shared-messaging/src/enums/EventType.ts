@@ -6,7 +6,6 @@ export enum EventType {
     // User Events
     USER_REGISTERED = 'user.registered',
     USER_PROFILE_UPDATED = 'user.profile.updated',
-    USER_DELETED = 'user.deleted',
     USER_AUTHENTICATED = 'user.authenticated',
 
     // Game Events

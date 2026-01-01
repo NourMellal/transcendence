@@ -11,6 +11,7 @@ export function createGameValidator(payload: unknown, playerId?: string): Create
 
     return {
         playerId,
+      opponentId: parsed.opponentId ?? undefined,
       mode: parsed.gameMode as CreateGameInput['mode'],
       isPrivate: parsed.isPrivate,
       config: {
@@ -20,6 +21,7 @@ export function createGameValidator(payload: unknown, playerId?: string): Create
         paddleSpeed: config.paddleSpeed,
         ballSpeed: config.ballSpeed
       },
-      tournamentId: undefined
+      tournamentId: parsed.tournamentId,
+      matchId: parsed.matchId
     };
 }

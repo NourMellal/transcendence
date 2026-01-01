@@ -1,5 +1,6 @@
 import Signal from '../core/signal';
 import type { GameStateOutput } from '../modules/game/types/game.types';
+import type { PresenceStatus } from '@/models/presence';
 
 // Export chat state
 export { chatState, chatStateHelpers } from './chat.state';
@@ -19,6 +20,16 @@ export interface AuthStateData {
   oauthProvider?: '42' | 'google' | 'github' | null;
   oauthInProgress?: boolean;
 }
+
+// Guest session state – tracks temporary alias play when no account is used
+export interface GuestSessionState {
+  alias: string | null;
+  status: 'idle' | 'alias_selected';
+  createdAt: string | null;
+  lastUsedAt: string | null;
+}
+
+export type PresenceMap = Record<string, PresenceStatus>;
 
 // UI state interface
 export interface UIState {
@@ -46,8 +57,16 @@ const createInitialAuthState = (): AuthStateData => ({
   oauthInProgress: false,
 });
 
+export const createInitialGuestState = (): GuestSessionState => ({
+  alias: null,
+  status: 'idle',
+  createdAt: null,
+  lastUsedAt: null,
+});
+
 export const appState = {
   auth: new Signal<AuthStateData>(createInitialAuthState()),
+  guest: new Signal<GuestSessionState>(createInitialGuestState()),
   ui: new Signal<UIState>({
     twoFAModalVisible: false,
     twoFAError: undefined,
@@ -59,6 +78,23 @@ export const appState = {
     isLoading: false,
     error: null,
   }),
+  presence: new Signal<PresenceMap>({}),
+};
+
+export const notificationHelpers = {
+  addNotification(message: string) {
+    const current = appState.notifications.get();
+    appState.notifications.set([...current, message]);
+  },
+  
+  removeNotification(index: number) {
+    const current = appState.notifications.get();
+    appState.notifications.set(current.filter((_, i) => i !== index));
+  },
+  
+  clearNotifications() {
+    appState.notifications.set([]);
+  }
 };
 
 export class AuthActions {

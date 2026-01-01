@@ -7,16 +7,14 @@ export async function startGameService(): Promise<void> {
     try {
         const config = await loadGameServiceConfig();
         const container = await createContainer(config);
-        const userEventsQueue = `${config.messaging.queuePrefix}.user-events`;
-        await container.messaging.userEventsHandler.start(userEventsQueue, config.messaging.exchange);
-        logger.info(`📨 Subscribed to user events queue "${userEventsQueue}"`);
 
         const app = createHttpServer({
             routes: {
                 gameController: container.controllers.gameController,
                 healthController: container.controllers.healthController
             },
-            internalApiKey: config.internalApiKey
+            internalApiKey: config.internalApiKey,
+            logger
         });
 
         const websocketServer = new GameWebSocketServer(app.server, {
@@ -29,6 +27,7 @@ export async function startGameService(): Promise<void> {
         });
 
         container.useCases.updateGameState.setBroadcaster(websocketServer);
+        container.useCases.forfeitGame.setBroadcaster(websocketServer);
 
         const shutdown = async () => {
             logger.info('Shutting down Game Service...');

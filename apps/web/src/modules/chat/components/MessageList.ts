@@ -10,6 +10,8 @@ interface MessageListProps {
   isLoading: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  onAcceptInvite?: (messageId: string) => void;
+  onDeclineInvite?: (messageId: string) => void;
 }
 
 interface MessageListState {
@@ -120,6 +122,9 @@ export default class MessageList extends Component<MessageListProps, MessageList
     const messagesContainer = document.createElement('div');
     messagesContainer.className = 'message-list__messages';
 
+    // Clear any existing content to prevent duplicates
+    messagesContainer.innerHTML = '';
+
     if (isLoading && messages.length === 0) {
       messagesContainer.innerHTML = `
         <div class="message-list__loading">
@@ -172,6 +177,8 @@ export default class MessageList extends Component<MessageListProps, MessageList
             message: messageWithOwn,
             isOwn,
             showAvatar,
+            onAcceptInvite: this.props.onAcceptInvite,
+            onDeclineInvite: this.props.onDeclineInvite,
           });
 
           const bubbleElement = document.createElement('div');
@@ -181,6 +188,7 @@ export default class MessageList extends Component<MessageListProps, MessageList
           } else {
             bubbleElement.appendChild(rendered);
           }
+          bubble.mount(bubbleElement);
           messagesContainer.appendChild(bubbleElement);
         });
       });

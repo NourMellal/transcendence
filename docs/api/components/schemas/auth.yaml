@@ -86,8 +86,8 @@ TwoFactorSecret:
 Enable2FARequest:
   type: object
   properties:
-    code:
+    token:
       type: string
       example: "123456"
       description: TOTP code
-  required: [code]
+  required: [token]
