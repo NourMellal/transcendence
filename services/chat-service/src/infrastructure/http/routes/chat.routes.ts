@@ -13,4 +13,12 @@ export async function chatRoutes(fastify: FastifyInstance, controller: ChatContr
   fastify.get('/conversations', async (request, reply) => {
     return controller.getConversations(request, reply);
   });
+
+  fastify.post('/invites/:inviteId/accept', async (request, reply) => {
+    return controller.acceptInvite(request, reply);
+  });
+
+  fastify.post('/invites/:inviteId/decline', async (request, reply) => {
+    return controller.declineInvite(request, reply);
+  });
 }

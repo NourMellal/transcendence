@@ -55,9 +55,13 @@ export async function startChatService(): Promise<void> {
             sendMessageHandler: container.websocket.sendMessageHandler,
             disconnectHandler: container.websocket.disconnectHandler,
             typingHandler: container.websocket.typingHandler,
+            inviteResponseHandler: container.websocket.inviteResponseHandler,
             authService: container.websocket.authService,
             internalApiKey: config.internalApiKey
         });
+
+        // Wire Socket.IO server to the HTTP controller for invite events
+        container.controllers.chatController.setSocketServer(wsServer.getSocketServer());
 
         logger.info('✅ WebSocket server initialized');
 

@@ -8,6 +8,7 @@ interface ChatWebSocketServerDeps {
     readonly sendMessageHandler: any;
     readonly disconnectHandler: any;
     readonly typingHandler: any;
+    readonly inviteResponseHandler: any;
     readonly authService: any;
     readonly internalApiKey?: string;
 }
@@ -24,6 +25,10 @@ export class ChatWebSocketServer {
         });
         this.deps = deps;
         this.configure();
+    }
+
+    getSocketServer(): SocketIOServer {
+        return this.io;
     }
 
     private configure(): void {
@@ -47,6 +52,9 @@ export class ChatWebSocketServer {
         if (this.deps.typingHandler.setServer) {
             this.deps.typingHandler.setServer(this.io);
         }
+        if (this.deps.inviteResponseHandler.setServer) {
+            this.deps.inviteResponseHandler.setServer(this.io);
+        }
 
         this.io.on('connection', (socket) => {
             const userId = socket.data.userId;
@@ -57,6 +65,7 @@ export class ChatWebSocketServer {
             this.deps.connectionHandler.register(socket);
             this.deps.sendMessageHandler.register(socket);
             this.deps.typingHandler.register(socket);
+            this.deps.inviteResponseHandler.register(socket);
             this.deps.disconnectHandler.register(socket);
         });
     }

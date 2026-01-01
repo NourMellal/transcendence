@@ -44,6 +44,26 @@ export class SQLiteMessageRepository implements IMessageRepository {
     });
   }
 
+  async findById(id: string): Promise<Message | null> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM messages
+        WHERE id = ?
+        LIMIT 1
+      `;
+
+      this.db.get(query, [id], (err, row: any) => {
+        if (err) {
+          reject(new Error(`Failed to find message: ${err.message}`));
+        } else if (!row) {
+          resolve(null);
+        } else {
+          resolve(this.mapRowToMessage(row));
+        }
+      });
+    });
+  }
+
   async findByConversationId(
     conversationId: string,
     options: { limit: number; before?: Date }
@@ -83,6 +103,32 @@ export class SQLiteMessageRepository implements IMessageRepository {
       this.db.get(query, [conversationId], (err, row: any) => {
         if (err) {
           reject(new Error(`Failed to find latest message: ${err.message}`));
+        } else if (!row) {
+          resolve(null);
+        } else {
+          resolve(this.mapRowToMessage(row));
+        }
+      });
+    });
+  }
+
+  async findResponseToInvite(conversationId: string, inviteId: string): Promise<Message | null> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM messages
+        WHERE conversation_id = ?
+          AND (type = ? OR type = ?)
+          AND content LIKE ?
+        ORDER BY created_at ASC
+        LIMIT 1
+      `;
+
+      const searchPattern = `%"inviteId":"${inviteId}"%`;
+      const params = [conversationId, MessageType.INVITE_ACCEPTED, MessageType.INVITE_DECLINED, searchPattern];
+
+      this.db.get(query, params, (err, row: any) => {
+        if (err) {
+          reject(new Error(`Failed to find invite response: ${err.message}`));
         } else if (!row) {
           resolve(null);
         } else {

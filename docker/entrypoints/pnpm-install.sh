@@ -6,6 +6,6 @@ cd "$WORKSPACE_DIR"
 if [ -f "$MARKER_FILE" ]; then
   rm -f "$MARKER_FILE"
 fi
-pnpm install --frozen-lockfile
+pnpm install --no-frozen-lockfile
 printf '%s\n' "$(date --iso-8601=seconds)" > "$MARKER_FILE"
 exec tail -f /dev/null

@@ -25,7 +25,8 @@ export class SendMessageHandler {
                     content: data.content,
                     type: type,
                     recipientId: data.recipientId,
-                    gameId: data.gameId
+                    gameId: data.gameId,
+                    invitePayload: data.invitePayload
                 });
 
                 if (this.io) {
@@ -38,12 +39,24 @@ export class SendMessageHandler {
                         type: result.type,
                         recipientId: result.recipientId,
                         gameId: result.gameId,
+                        invitePayload: result.invitePayload,
                         createdAt: result.createdAt
                     };
 
-                    if (result.type === 'DIRECT' && result.recipientId) {
+                    if (result.recipientId && result.type !== 'GAME') {
                         this.io.to(`user:${result.senderId}`).emit('new_message', messagePayload);
                         this.io.to(`user:${result.recipientId}`).emit('new_message', messagePayload);
+                        
+                        // Send specific invite notification for INVITE type
+                        if (result.type === 'INVITE') {
+                            this.io.to(`user:${result.recipientId}`).emit('invite_received', {
+                                inviteId: result.id,
+                                from: result.senderId,
+                                fromUsername: result.senderUsername,
+                                invitePayload: result.invitePayload,
+                                conversationId: result.conversationId
+                            });
+                        }
                     } else if (result.type === 'GAME' && result.gameId) {
                         socket.join(`game:${result.gameId}`);
                         this.io.to(`game:${result.gameId}`).emit('new_message', messagePayload);

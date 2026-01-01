@@ -4,8 +4,11 @@ import { GameServiceClient } from '../../infrastructure/external/GameServiceClie
 
 export class FriendshipPolicy implements IFriendshipPolicy {
   constructor(private readonly userServiceClient: UserServiceClient) {}
-
-  async ensureCanDirectMessage(senderId: string, recipientId: string): Promise<void> {
+  async ensureCanDirectMessage(senderId: string, recipientId: string): Promise<void> {   
+    const blocked = await this.userServiceClient.isBlocked(senderId, recipientId);
+    if (blocked) {
+      throw new Error('You cannot send messages because one of the users has blocked the other');
+    }
     await this.userServiceClient.ensureFriendship(senderId, recipientId);
   }
 }

@@ -28,9 +28,9 @@ export class SendMessageUseCase implements ISendMessageUseCase {
   async execute(dto: SendMessageRequestDTO): Promise<SendMessageResponseDTO> {
     const type = this.normalizeType(dto.type);
 
-    if (type === MessageType.DIRECT) {
+    if (MessageType.isDirectLike(type)) {
       if (!dto.recipientId) {
-        throw new Error('recipientId is required for DIRECT messages');
+        throw new Error('recipientId is required for this message type');
       }
       await this.friendshipPolicy.ensureCanDirectMessage(dto.senderId, dto.recipientId);
     }
@@ -50,11 +50,13 @@ export class SendMessageUseCase implements ISendMessageUseCase {
 
     const conversation = await this.resolveConversation(dto, type, gameParticipants);
 
+    const contentToPersist = this.serializeContent(type, dto.content, dto.invitePayload);
+
     const message = Message.create({
       conversationId: conversation.id.toString(),
       senderId: dto.senderId,
       senderUsername: dto.senderUsername,
-      content: dto.content,
+      content: contentToPersist,
       type,
       recipientId: dto.recipientId,
       gameId: dto.gameId
@@ -65,7 +67,7 @@ export class SendMessageUseCase implements ISendMessageUseCase {
     conversation.updateLastMessageTime();
     await this.conversationRepository.save(conversation);
 
-    return this.toResponseDTO(message);
+    return this.toResponseDTO(message, dto.invitePayload);
   }
 
   private normalizeType(raw: MessageType | string): MessageType {
@@ -81,7 +83,7 @@ export class SendMessageUseCase implements ISendMessageUseCase {
     type: MessageType,
     gameParticipants?: [string, string]
   ): Promise<Conversation> {
-    if (type === MessageType.DIRECT) {
+    if (MessageType.isDirectLike(type)) {
       const existing = await this.conversationRepository.findByParticipants(
         dto.senderId,
         dto.recipientId!,
@@ -113,7 +115,31 @@ export class SendMessageUseCase implements ISendMessageUseCase {
     await this.conversationRepository.save(conversation);
   }
 
-  private toResponseDTO(message: Message): SendMessageResponseDTO {
+  private serializeContent(type: MessageType, content: string, invitePayload?: any): string {
+    if (type === MessageType.INVITE || type === MessageType.INVITE_ACCEPTED || type === MessageType.INVITE_DECLINED) {
+      const note = (content ?? '').trim();
+      const payload = invitePayload && Object.keys(invitePayload).length > 0 ? invitePayload : undefined;
+      return JSON.stringify({ kind: type, note: note || undefined, invitePayload: payload });
+    }
+    return content;
+  }
+
+  private tryExtractInvitePayload(message: Message): any {
+    if (message.type !== MessageType.INVITE && message.type !== MessageType.INVITE_ACCEPTED && message.type !== MessageType.INVITE_DECLINED) {
+      return undefined;
+    }
+    try {
+      const parsed = JSON.parse(message.content.getValue());
+      if (parsed && typeof parsed === 'object' && 'invitePayload' in parsed) {
+        return parsed.invitePayload;
+      }
+    } catch (_err) {
+      return undefined;
+    }
+    return undefined;
+  }
+
+  private toResponseDTO(message: Message, invitePayload?: any): SendMessageResponseDTO {
     return {
       id: message.id.toString(),
       conversationId: message.conversationId,
@@ -123,6 +149,7 @@ export class SendMessageUseCase implements ISendMessageUseCase {
       type: message.type,
       recipientId: message.recipientId,
       gameId: message.gameId,
+      invitePayload: invitePayload ?? this.tryExtractInvitePayload(message),
       createdAt: message.createdAt.toISOString()
     } 
     ;

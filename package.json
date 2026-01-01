@@ -30,7 +30,7 @@
     "husky": "^8.0.3",
     "js-yaml": "^4.1.0",
     "lint-staged": "^16.2.6",
-    "pnpm": "^10.23.0",
+    "pnpm": "^10.26.2",
     "prettier": "^3.6.2",
     "sass": "^1.94.0",
     "sass-embedded": "^1.93.3",
