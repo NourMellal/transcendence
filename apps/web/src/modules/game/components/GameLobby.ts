@@ -43,6 +43,7 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   private timeoutInterval?: number;
   private wsUnsubscribes: Array<() => void> = [];
   private lobbyChat?: LobbyChatPanel;
+  private refreshDebounceTimer?: number;
 
   constructor(props: GameLobbyProps) {
     super(props);
@@ -68,8 +69,23 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
       // Fetch initial lobby state via GameService
       let game = await gameService.getGame(this.props.gameId);
+      console.log('[GameLobby] Raw game data from API:', JSON.stringify(game, null, 2));
       game = await this.enrichPlayers(game);
-      console.log('[GameLobby] Fetched game:', game);
+      console.log('[GameLobby] Enriched game:', {
+        id: game.id,
+        status: game.status,
+        playerCount: game.players?.length,
+        players: game.players
+      });
+
+      // Check if game is already finished or cancelled
+      if (game.status === 'FINISHED' || game.status === 'CANCELLED') {
+        console.log('[GameLobby] Game is already finished or cancelled:', game.status);
+        this.state.error = 'This game has ended.';
+        this.state.isLoading = false;
+        this.update({});
+        return;
+      }
 
       const isParticipant = !!this.state.currentUserId && game.players?.some((p) => p.id === this.state.currentUserId);
       if (!isParticipant && this.state.currentUserId) {
@@ -107,9 +123,23 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
       // Subscribe to global game state updates for real-time sync
         this.unsubscribeGame = appState.game.subscribe((gameState) => {
-        if (!gameState.current || gameState.current.id !== this.props.gameId) return;
+        if (!gameState.current || gameState.current.id !== this.props.gameId) {
+          return;
+        }
 
         this.state.game = gameState.current;
+
+        // If game was cancelled or finished, show error and stop
+        if (gameState.current.status === 'CANCELLED' || gameState.current.status === 'FINISHED') {
+          console.log('[GameLobby] Game ended:', gameState.current.status);
+          this.stopTimeout();
+          this.state.error = gameState.current.status === 'CANCELLED' 
+            ? 'This game was cancelled.' 
+            : 'This game has ended.';
+          this.update({});
+          return;
+        }
+
         this.stopTimeoutIfOpponentJoined(gameState.current);
 
         // Restart timeout if opponent left
@@ -118,8 +148,9 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         }
 
         // Auto-navigate when game starts
-        if (gameState.current.status === 'IN_PROGRESS' || gameState.current.status === 'PLAYING') {
-          console.log('[GameLobby] Game started! Navigating to play screen...');
+        const hasTwoPlayers = Array.isArray(gameState.current.players) && gameState.current.players.length >= 2;
+        if (hasTwoPlayers && (gameState.current.status === 'IN_PROGRESS' || gameState.current.status === 'PLAYING')) {
+          console.log('[GameLobby] Game started with two players. Navigating to play screen...');
           this.teardownLobbyChat();
           this.navigateTo(`/game/play/${gameState.current.id}`);
         }
@@ -131,7 +162,8 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       this.startTimeout();
 
       // If game already in progress, go to play screen
-      if (game.status === 'IN_PROGRESS' || game.status === 'PLAYING') {
+      const hasTwoPlayersInitial = Array.isArray(game.players) && game.players.length >= 2;
+      if (hasTwoPlayersInitial && (game.status === 'IN_PROGRESS' || game.status === 'PLAYING')) {
         this.navigateTo(`/game/play/${game.id}`);
         return;
       }
@@ -155,23 +187,24 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   render(): string {
-    const { game, isReady, isLoading, error, timeRemaining, currentUserId, connectionStatus } = this.state;
+    try {
+      const { game, isReady, isLoading, error, timeRemaining, currentUserId, connectionStatus } = this.state;
 
-    if (isLoading) {
-      return this.renderLoading();
-    }
+      if (isLoading) {
+        return this.renderLoading();
+      }
 
-    if (error || !game) {
-      return this.renderError(error || 'Lobby not found');
-    }
+      if (error || !game) {
+        return this.renderError(error || 'Lobby not found');
+      }
 
-    if (!currentUserId) {
-      return this.renderError('You must be logged in to join a game lobby.');
-    }
+      if (!currentUserId) {
+        return this.renderError('You must be logged in to join a game lobby.');
+      }
 
-    const players = game.players ?? [];
-    const currentPlayer = players.find((p) => p.id === currentUserId);
-    const opponent = players.find((p) => p.id !== currentUserId);
+      const players = game.players ?? [];
+      const currentPlayer = players.find((p) => p.id === currentUserId);
+      const opponent = players.find((p) => p.id !== currentUserId);
     const hasOpponent = opponent !== undefined;
     const config = game.config;
     const scoreLimit = config?.scoreLimit;
@@ -180,7 +213,6 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
     // Connection status indicator
     const connectionIndicator = this.renderConnectionStatus(connectionStatus);
-
     return `
       <div class="min-h-screen flex items-center justify-center p-4" style="background: var(--color-brand-dark);">
         <div class="w-full max-w-2xl">
@@ -258,6 +290,10 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         </div>
       </div>
     `;
+    } catch (err) {
+      console.error('[GameLobby] Render error:', err);
+      return this.renderError('An error occurred while rendering the lobby');
+    }
   }
 
   private renderPlayerCard(player: PlayerInfo, label: string, ready: boolean): string {
@@ -429,6 +465,11 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
       if (this.state.timeRemaining <= 0) {
         this.handleTimeout();
       } else {
+        // Check if component is still mounted before updating
+        if (!this.element || !document.body.contains(this.element)) {
+          this.stopTimeout();
+          return;
+        }
         this.update({});
       }
     }, 1000);
@@ -461,18 +502,50 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
   private mountLobbyChat(): void {
     if (this.lobbyChat) return;
+    
+    // Safety check: ensure we're still mounted
+    if (!this.element || !document.body.contains(this.element)) {
+      return;
+    }
+    
+    // Create a container for the chat panel to avoid clearing document.body
+    let chatContainer = document.getElementById('lobby-chat-container');
+    if (!chatContainer) {
+      chatContainer = document.createElement('div');
+      chatContainer.id = 'lobby-chat-container';
+      document.body.appendChild(chatContainer);
+    }
+    
     this.lobbyChat = new LobbyChatPanel({ gameId: this.props.gameId });
-    this.lobbyChat.mount(document.body);
+    this.lobbyChat.mount(chatContainer);
   }
 
   private teardownLobbyChat(): void {
-    if (this.lobbyChat && typeof (this.lobbyChat as any).dispose === 'function') {
-      (this.lobbyChat as any).dispose();
-    } else {
-      this.lobbyChat?.unmount();
+    if (!this.lobbyChat) return;
+    
+    try {
+      if (typeof (this.lobbyChat as any).dispose === 'function') {
+        (this.lobbyChat as any).dispose();
+      } else {
+        this.lobbyChat?.unmount();
+      }
+    } catch (error) {
+      console.error('[GameLobby] Error tearing down lobby chat:', error);
     }
+    
     this.lobbyChat = undefined;
-    lobbyChatService.disconnect();
+    
+    try {
+      lobbyChatService.disconnect();
+    } catch (error) {
+      console.error('[GameLobby] Error disconnecting lobby chat service:', error);
+    }
+    
+    // Remove the container
+    const chatContainer = document.getElementById('lobby-chat-container');
+    if (chatContainer) {
+      chatContainer.remove();
+    }
   }
 
   private async setupWebSocket(): Promise<void> {
@@ -483,32 +556,26 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
 
     this.wsUnsubscribes.push(
       gameWS.on('connect', () => {
-        console.log('[GameLobby] ✅ Connected to game socket');
         updateConnectionStatus('connected');
         gameWS.send('join_game', { gameId: this.props.gameId });
       }),
-      gameWS.on('disconnect', (reason?: string) => {
-        console.warn('[GameLobby] 🔌 Disconnected from game socket', reason);
+      gameWS.on('disconnect', () => {
         updateConnectionStatus('disconnected');
       }),
       gameWS.on('connect_error', (error) => {
-        console.error('[GameLobby] ❌ Connection error:', error);
+        console.error('[GameLobby] Connection error:', error);
         updateConnectionStatus('error');
       }),
-      gameWS.on('player_joined', (data: any) => {
-        console.log('[GameLobby] Player joined', data);
-        this.handlePlayerEvent(data);
+      gameWS.on('player_joined', () => {
+        this.handlePlayerEvent();
       }),
-      gameWS.on('player_left', (data: any) => {
-        console.log('[GameLobby] Player left', data);
-        this.handlePlayerEvent(data);
+      gameWS.on('player_left', () => {
+        this.handlePlayerEvent();
       }),
       gameWS.on('player_ready', (data: any) => {
-        console.log('[GameLobby] Player ready', data);
         this.handlePlayerReady(data);
       }),
       gameWS.on('game_start', (data: any) => {
-        console.log('[GameLobby] Game started:', data);
         const targetGameId = data?.gameId ?? this.props.gameId;
         if (!targetGameId) return;
         this.handleGameStart(targetGameId);
@@ -530,22 +597,31 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   private refreshGameState(): void {
-    gameService
-      .getGame(this.props.gameId)
-      .then((game) => {
-        this.enrichPlayers(game).then((enriched) => {
-          this.state.game = enriched;
-        appState.game.set({
-            current: enriched,
-          isLoading: false,
-          error: null,
+    // Debounce refresh calls to prevent excessive re-renders
+    if (this.refreshDebounceTimer) {
+      clearTimeout(this.refreshDebounceTimer);
+    }
+    
+    this.refreshDebounceTimer = window.setTimeout(() => {
+      this.refreshDebounceTimer = undefined;
+      
+      gameService
+        .getGame(this.props.gameId)
+        .then((game) => {
+          this.enrichPlayers(game).then((enriched) => {
+            // Update appState only - the subscription will handle the local state and render
+            appState.game.set({
+              current: enriched,
+              isLoading: false,
+              error: null,
+            });
+            // Don't call this.update({}) here - let the subscription handle it to avoid double renders
+          }).catch(() => {});
+        })
+        .catch((error) => {
+          console.error('[GameLobby] Failed to refresh game state:', error);
         });
-        this.update({});
-        }).catch(() => {});
-      })
-      .catch((error) => {
-        console.error('[GameLobby] Failed to refresh game state:', error);
-      });
+    }, 300); // 300ms debounce
   }
 
   private formatTime(seconds: number): string {
@@ -584,47 +660,17 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     return { ...game, players: updated };
   }
 
-  private handlePlayerEvent(data?: { players?: PlayerInfo[]; playerId?: string }): void {
-    const current = this.state.game;
-
-    if (current) {
-      // Apply payload directly when available
-      if (data?.players && data.players.length > 0) {
-        const merged = data.players.map((p) => {
-          const cached = this.playerCache.get(p.id);
-          const existing = current.players?.find((pl) => pl.id === p.id);
-          return cached ?? existing ?? p;
-        });
-        this.state.game = { ...current, players: merged };
-      } else if (data?.playerId) {
-        // Remove/adjust based on playerId when roster not included
-        const filtered = (current.players ?? []).filter((p) => p.id !== data.playerId);
-        this.state.game = { ...current, players: filtered };
-      }
-
-      appState.game.set({
-        current: this.state.game,
-        isLoading: false,
-        error: null,
-      });
-      this.update({});
-
-      // If opponent left, restart the timeout countdown
-      if (!this.state.game?.players || this.state.game.players.length < 2) {
-        this.resetTimeout();
-      }
-    }
-
-    // Always refresh to pull full profile/ready state from backend
+  private handlePlayerEvent(): void {
+    // Refresh from API to get the full accurate state
     this.refreshGameState();
   }
 
   private handlePlayerReady(data?: { playerId?: string }): void {
-    if (!data?.playerId || !this.state.game) {
+    if (!data?.playerId || !this.state.game || !this.state.game.players) {
       return;
     }
 
-    const updatedPlayers = (this.state.game.players ?? []).map((p) =>
+    const updatedPlayers = this.state.game.players.map((p) =>
       p.id === data.playerId ? { ...p, ready: true } : p
     );
 
@@ -638,7 +684,15 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
   }
 
   private handleGameStart(gameId: string): void {
-    // Keep local and global state in sync before navigation
+    if (!gameId) {
+      console.error('[GameLobby] handleGameStart called without gameId');
+      return;
+    }
+
+    // Teardown chat before navigation
+    this.teardownLobbyChat();
+
+    // Update state
     if (this.state.game) {
       this.state.game = { ...this.state.game, status: 'IN_PROGRESS' };
       appState.game.set({
@@ -646,19 +700,9 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
         isLoading: false,
         error: null,
       });
-      this.update({});
-    } else {
-      const current = appState.game.get().current;
-      appState.game.set({
-        current: current ? { ...current, id: current.id ?? gameId, status: 'IN_PROGRESS' } : null,
-        isLoading: false,
-        error: null,
-      });
     }
 
-    this.teardownLobbyChat();
-
-    // Navigate immediately; Router will unmount this component
+    // Navigate to game play
     const targetPath = `/game/play/${gameId}`;
     if (window.location.pathname !== targetPath) {
       this.navigateTo(targetPath);
@@ -669,16 +713,25 @@ export class GameLobby extends Component<GameLobbyProps, GameLobbyState> {
     navigate(path);
   }
 
+
+
   onUnmount(): void {
+    // Clean up subscriptions
     this.unsubscribeGame?.();
     this.teardownLobbyChat();
     this.stopTimeout();
+    
+    // Clear refresh debounce timer
+    if (this.refreshDebounceTimer) {
+      clearTimeout(this.refreshDebounceTimer);
+      this.refreshDebounceTimer = undefined;
+    }
 
+    // Clean up WebSocket listeners
     this.wsUnsubscribes.forEach((unsubscribe) => unsubscribe());
     this.wsUnsubscribes = [];
 
     // Disconnect WebSocket
-    console.log('[GameLobby] Disconnecting WebSocket...');
     gameWS.disconnect();
   }
 }

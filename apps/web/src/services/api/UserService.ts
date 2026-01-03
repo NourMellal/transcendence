@@ -311,10 +311,16 @@ export class UserService {
    * Send a game invite to a friend
    */
   async sendGameInvite(friendId: string, gameType: '1v1' | 'tournament'): Promise<void> {
+    const invitePayload = {
+      mode: gameType === 'tournament' ? 'TOURNAMENT' : 'CLASSIC',
+      config: {}
+    };
+    
     await httpClient.post(`${API_PREFIX}/chat/messages`, {
       recipientId: friendId,
-      content: gameType === 'tournament' ? 'Join my tournament?' : 'Want to play 1v1?',
-      type: 'GAME',
+      content: 'Game invite',
+      type: 'INVITE',
+      invitePayload,
     });
   }
 

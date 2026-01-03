@@ -83,10 +83,10 @@ export class Message {
     if (!params.senderUsername || params.senderUsername.trim() === '') {
       throw new Error('senderUsername is required');
     }
-    if (params.type === MessageType.DIRECT && !params.recipientId) {
-      throw new Error('DIRECT messages require a recipientId');
+    if (MessageType.requiresRecipient(params.type) && !params.recipientId) {
+      throw new Error('RecipientId is required for this message type');
     }
-    if (params.type === MessageType.GAME && !params.gameId) {
+    if (MessageType.requiresGameId(params.type) && !params.gameId) {
       throw new Error('GAME messages require a gameId');
     }
   }
@@ -128,7 +128,7 @@ export class Message {
   }
 
   isDirect(): boolean {
-    return this._type === MessageType.DIRECT;
+    return MessageType.isDirectLike(this._type);
   }
 
   isGameMessage(): boolean {

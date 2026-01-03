@@ -109,6 +109,8 @@ export default abstract class Component<P = {}, S = {}> {
     const raw = this.render();
     const content = this.buildContent(raw);
 
+    // Clear existing content to prevent duplicates on re-mount
+    mountTarget.innerHTML = '';
     mountTarget.appendChild(content);
     this.element = content;
 
@@ -124,7 +126,9 @@ export default abstract class Component<P = {}, S = {}> {
 
     this.props = { ...this.props, ...newProps };
 
-    if (!this.element) return;
+    if (!this.element) {
+      return;
+    }
 
     if (this.shouldUpdate(newProps as P, this.state)) {
       const parent = this.element.parentElement;
@@ -134,7 +138,8 @@ export default abstract class Component<P = {}, S = {}> {
         parent.replaceChild(content, this.element);
         this.element = content;
       } else {
-        this.mount(this.element);
+        // Element is detached from DOM - skip update
+        return;
       }
 
       this.attachEventListeners();

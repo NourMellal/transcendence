@@ -9,6 +9,7 @@ import { userService } from '@/services/api/UserService';
 import ConversationList from '../../components/ConversationList';
 import MessageList from '../../components/MessageList';
 import MessageInput from '../../components/MessageInput';
+import { navigate } from '@/routes';
 
 type State = {
   conversations: Conversation[];
@@ -30,6 +31,8 @@ export default class ChatPage extends Component<Record<string, never>, State> {
   private typingTimeouts: Map<string, number> = new Map();
   private scrollSchedule?: number;
   private lastTypingReceived: Map<string, number> = new Map();
+  private shownNotifications: Set<string> = new Set(); // Track shown notifications to prevent duplicates
+  private isSendingInvite = false; // Track invite send state to prevent duplicates
 
   constructor(props: Record<string, never> = {}) {
     super(props);
@@ -134,6 +137,7 @@ export default class ChatPage extends Component<Record<string, never>, State> {
     this.typingTimeouts.forEach((timeout) => clearTimeout(timeout));
     this.typingTimeouts.clear();
     this.lastTypingReceived.clear();
+    this.shownNotifications.clear();
 
     if (this.scrollSchedule) {
       cancelAnimationFrame(this.scrollSchedule);
@@ -294,6 +298,98 @@ export default class ChatPage extends Component<Record<string, never>, State> {
       chatWebSocketService.onError((error: { message: string }) => {
         console.error('[ChatPage] WebSocket error:', error);
         chatStateHelpers.setError(error.message);
+      })
+    );
+
+    // Listen for invite accepted
+    this.unsubscribers.push(
+      chatWebSocketService.onInviteAccepted((data: { inviteId: string; gameId: string; acceptedBy: string; acceptedByUsername: string }) => {
+        console.log('[ChatPage] ========================================');
+        console.log('[ChatPage] ✅ INVITE ACCEPTED EVENT RECEIVED!');
+        console.log('[ChatPage] Data:', JSON.stringify(data, null, 2));
+        console.log('[ChatPage] Current userId:', this.state.currentUserId);
+        console.log('[ChatPage] Acceptor userId:', data.acceptedBy);
+        console.log('[ChatPage] Acceptor username:', data.acceptedByUsername);
+        console.log('[ChatPage] Game ID:', data.gameId);
+        console.log('[ChatPage] ========================================');
+        
+        // Prevent duplicate notifications
+        const notificationKey = `accepted:${data.inviteId}`;
+        if (this.shownNotifications.has(notificationKey)) {
+          console.log('[ChatPage] Skipping duplicate notification for invite:', data.inviteId);
+          return;
+        }
+        this.shownNotifications.add(notificationKey);
+        
+        // Show success notification
+        this.showInviteNotification(
+          'success',
+          `<strong>${data.acceptedByUsername}</strong> accepted your game invite!`,
+          data.gameId
+        );
+
+        // Immediately send inviter to the game lobby (only if not already there)
+        const targetPath = `/game/lobby/${data.gameId}`;
+        if (!window.location.pathname.startsWith('/game/lobby/')) {
+          navigate(targetPath);
+        }
+      })
+    );
+
+    // Listen for invite declined
+    this.unsubscribers.push(
+      chatWebSocketService.onInviteDeclined((data: { inviteId: string; declinedBy: string; declinedByUsername: string }) => {
+        console.log('[ChatPage] ========================================');
+        console.log('[ChatPage] ❌ INVITE DECLINED EVENT RECEIVED!');
+        console.log('[ChatPage] Data:', JSON.stringify(data, null, 2));
+        console.log('[ChatPage] Current userId:', this.state.currentUserId);
+        console.log('[ChatPage] Decliner userId:', data.declinedBy);
+        console.log('[ChatPage] Decliner username:', data.declinedByUsername);
+        console.log('[ChatPage] ========================================');
+        
+        // Prevent duplicate notifications
+        const notificationKey = `declined:${data.inviteId}`;
+        if (this.shownNotifications.has(notificationKey)) {
+          console.log('[ChatPage] Skipping duplicate notification for invite:', data.inviteId);
+          return;
+        }
+        this.shownNotifications.add(notificationKey);
+        
+        // Show info notification
+        this.showInviteNotification(
+          'info',
+          `<strong>${data.declinedByUsername}</strong> declined your game invite.`
+        );
+      })
+    );
+
+    // Listen for invite accept success (when YOU accept an invite)
+    this.unsubscribers.push(
+      chatWebSocketService.onInviteAcceptedSuccess((data: { success: boolean; gameId: string }) => {
+        console.log('[ChatPage] Invite accept success:', data);
+
+        // Show success notification to the accepter
+        this.showInviteNotification(
+          'success',
+          'You accepted the game invite!',
+          data.gameId
+        );
+
+        // Immediately send acceptor to the game lobby (only if not already there)
+        const targetPath = `/game/lobby/${data.gameId}`;
+        if (!window.location.pathname.startsWith('/game/lobby/')) {
+          navigate(targetPath);
+        }
+      })
+    );
+
+    // Listen for invite errors
+    this.unsubscribers.push(
+      chatWebSocketService.onInviteError((data: { error: string }) => {
+        console.error('[ChatPage] Invite error:', data.error);
+
+        // Show error
+        chatStateHelpers.setError(data.error);
       })
     );
   }
@@ -600,6 +696,112 @@ export default class ChatPage extends Component<Record<string, never>, State> {
     // We don't add it here to avoid duplicates - wait for server confirmation
   }
 
+  private showInviteNotification(type: 'success' | 'info', message: string, gameId?: string): void {
+    console.log(`[ChatPage] Creating ${type} notification:`, message);
+    
+    const notification = document.createElement('div');
+    notification.className = `chat-notification chat-notification--${type}`;
+    
+    // Build notification content
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'chat-notification__body';
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'chat-notification__message';
+    messageDiv.innerHTML = message;
+    contentDiv.appendChild(messageDiv);
+    
+    if (gameId) {
+      const actionBtn = document.createElement('button');
+      actionBtn.className = 'chat-notification__action';
+      actionBtn.textContent = 'Join Game';
+      actionBtn.onclick = () => {
+        if (!window.location.pathname.startsWith('/game/lobby/')) {
+          navigate(`/game/lobby/${gameId}`);
+        }
+      };
+      contentDiv.appendChild(actionBtn);
+    }
+    
+    notification.appendChild(contentDiv);
+    
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'chat-notification__close';
+    closeBtn.innerHTML = '✕';
+    closeBtn.onclick = () => {
+      notification.classList.remove('chat-notification--show');
+      setTimeout(() => notification.remove(), 300);
+    };
+    notification.appendChild(closeBtn);
+    
+    document.body.appendChild(notification);
+    console.log('[ChatPage] Notification appended to body');
+    
+    // Show with delay for animation
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        notification.classList.add('chat-notification--show');
+        console.log('[ChatPage] Notification shown');
+      });
+    });
+    
+    // Auto-hide after duration
+    const duration = type === 'success' ? 8000 : 5000;
+    const hideTimeout = setTimeout(() => {
+      notification.classList.remove('chat-notification--show');
+      setTimeout(() => notification.remove(), 300);
+      console.log('[ChatPage] Notification removed');
+    }, duration);
+    
+    // Clear timeout on manual close
+    closeBtn.addEventListener('click', () => clearTimeout(hideTimeout), { once: true });
+  }
+
+  private async handleInvite(): Promise<void> {
+    if (this.isSendingInvite) {
+      console.log('[ChatPage] Already sending invite, ignoring duplicate click');
+      return;
+    }
+
+    const recipientId = this.state.newChatRecipientId
+      ? this.state.newChatRecipientId
+      : this.state.conversations.find((c) => c.conversationId === this.state.selectedConversationId)?.recipientId;
+
+    if (!recipientId) {
+      console.warn('[ChatPage] Cannot send invite: no recipient');
+      return;
+    }
+
+    this.isSendingInvite = true;
+    console.log('[ChatPage] Sending invite to:', recipientId);
+
+    // Backend expects uppercase enum values (CLASSIC | TOURNAMENT)
+    const invitePayload = { mode: 'CLASSIC' } as Record<string, unknown>;
+
+    try {
+      if (this.state.isConnected) {
+        console.log('[ChatPage] Sending invite via WebSocket');
+        chatWebSocketService.sendInvite(recipientId, invitePayload);
+      } else {
+        console.log('[ChatPage] WebSocket unavailable, sending invite via HTTP');
+        await chatService.sendMessage({
+          type: 'INVITE',
+          content: 'Game invite',
+          recipientId,
+          invitePayload,
+        });
+      }
+    } catch (error) {
+      console.error('[ChatPage] Failed to send invite', error);
+    } finally {
+      // Reset the flag after a delay to avoid duplicate invites on slow responses
+      setTimeout(() => {
+        this.isSendingInvite = false;
+      }, 2000);
+    }
+  }
+
   private handleTyping(): void {
     if (!this.state.selectedConversationId || !this.state.isConnected) {
       return;
@@ -614,6 +816,95 @@ export default class ChatPage extends Component<Record<string, never>, State> {
     }
 
     chatWebSocketService.sendTyping(conversation.recipientId, conversation.gameId);
+  }
+
+  private handleAcceptInvite(inviteId: string, retryCount = 0): void {
+    const maxRetries = 2;
+    console.log('[ChatPage] Accepting invite:', inviteId, 'retry:', retryCount);
+    
+    // Always use HTTP accept so backend handles game creation and emits events
+    chatService.acceptInvite(inviteId)
+      .then((response) => {
+        // Check if response contains an error (backend handled gracefully)
+        if ((response as any).error) {
+          throw new Error((response as any).error);
+        }
+        
+        console.log('[ChatPage] Invite accepted via HTTP:', response);
+        
+        // Verify we got a valid game ID
+        if (!response.gameId) {
+          throw new Error('Game ID missing from response');
+        }
+        
+        this.showInviteNotification(
+          'success',
+          'You accepted the game invite!',
+          response.gameId
+        );
+
+        // Ensure the accepter is redirected even if the WS event is missed (only if not already there)
+        const targetPath = `/game/lobby/${response.gameId}`;
+        if (!window.location.pathname.startsWith('/game/lobby/')) {
+          navigate(targetPath);
+        }
+      })
+      .catch((error) => {
+        console.error('[ChatPage] Failed to accept invite:', error);
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Determine if we should retry
+        const shouldRetry = retryCount < maxRetries && 
+                           (errorMessage.includes('timeout') || 
+                            errorMessage.includes('network') ||
+                            errorMessage.includes('unavailable'));
+        
+        if (shouldRetry) {
+          // Exponential backoff: 1s, 2s
+          const backoffMs = 1000 * Math.pow(2, retryCount);
+          chatStateHelpers.setError(`Connection issue. Retrying in ${backoffMs / 1000}s...`);
+          
+          setTimeout(() => {
+            chatStateHelpers.setError('');
+            this.handleAcceptInvite(inviteId, retryCount + 1);
+          }, backoffMs);
+        } else {
+          // All retries exhausted or non-retryable error
+          let userMessage = 'Failed to accept invite. ';
+          if (errorMessage.includes('timeout')) {
+            userMessage += 'The server took too long to respond. Please try sending a new invite.';
+          } else if (errorMessage.includes('already been responded')) {
+            userMessage += 'This invite has already been accepted or declined.';
+          } else if (errorMessage.includes('network') || errorMessage.includes('unavailable')) {
+            userMessage += 'Please check your connection and try again.';
+          } else {
+            userMessage += errorMessage;
+          }
+          
+          chatStateHelpers.setError(userMessage);
+        }
+      });
+  }
+
+  private handleDeclineInvite(inviteId: string): void {
+    console.log('[ChatPage] Declining invite:', inviteId);
+    
+    if (this.state.isConnected) {
+      chatWebSocketService.declineInvite(inviteId);
+    } else {
+      // Fallback to HTTP if WebSocket not connected
+      console.log('[ChatPage] WebSocket not connected, using HTTP to decline invite');
+      chatService.declineInvite(inviteId)
+        .then((response) => {
+          console.log('[ChatPage] Invite declined via HTTP:', response);
+          alert('Invite declined.');
+        })
+        .catch((error) => {
+          console.error('[ChatPage] Failed to decline invite:', error);
+          alert('Failed to decline invite. Please try again.');
+        });
+    }
   }
 
   render(): string | HTMLElement {
@@ -742,6 +1033,8 @@ export default class ChatPage extends Component<Record<string, never>, State> {
         typingUsername,
         isLoading: isLoadingMessages,
         hasMore: false, // TODO: Implement pagination
+        onAcceptInvite: (messageId) => this.handleAcceptInvite(messageId),
+        onDeclineInvite: (messageId) => this.handleDeclineInvite(messageId),
       });
 
       const messageListContainer = document.createElement('div');
@@ -753,6 +1046,7 @@ export default class ChatPage extends Component<Record<string, never>, State> {
       const messageInput = new MessageInput({
         onSend: (content) => this.handleSendMessage(content),
         onTyping: () => this.handleTyping(),
+        onInvite: () => this.handleInvite(),
         disabled: !isConnected,
         placeholder: isConnected ? 'Type a message...' : 'Connecting...',
       });

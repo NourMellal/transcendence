@@ -78,7 +78,8 @@ export class AuthController {
             } else if (
                 error.message.includes('required') ||
                 error.message.includes('Invalid') ||
-                error.message.includes('must be')
+                error.message.includes('must be') ||
+                error.message.includes('must include')
             ) {
                 reply.code(400).send({
                     error: 'Bad Request',

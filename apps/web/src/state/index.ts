@@ -81,6 +81,22 @@ export const appState = {
   presence: new Signal<PresenceMap>({}),
 };
 
+export const notificationHelpers = {
+  addNotification(message: string) {
+    const current = appState.notifications.get();
+    appState.notifications.set([...current, message]);
+  },
+  
+  removeNotification(index: number) {
+    const current = appState.notifications.get();
+    appState.notifications.set(current.filter((_, i) => i !== index));
+  },
+  
+  clearNotifications() {
+    appState.notifications.set([]);
+  }
+};
+
 export class AuthActions {
   static async login(_email: string, _password: string) {
     appState.auth.set({

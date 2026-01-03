@@ -13,21 +13,31 @@ interface LobbyPageProps {
  */
 export class LobbyPage extends Component<LobbyPageProps, {}> {
   private lobby?: GameLobby;
+  private mounted = false;
 
   getInitialState() {
     return {};
   }
 
-  render(): string {
-    return `<div id="lobby-container"></div>`;
+  render(): string {  
+    return `<div id="lobby-container" class="lobby-page-container" style="min-height: 100vh; width: 100%;"></div>`;
   }
 
   protected attachEventListeners(): void {
     // Event listeners are managed by GameLobby component
   }
 
+  // Override shouldUpdate to prevent re-renders that would destroy GameLobby
+  shouldUpdate(): boolean {
+    return false;
+  }
+
   onMount(): void {
-    // Our render returns the container itself, so use this.element directly
+    if (this.mounted) {
+      return;
+    }
+    this.mounted = true;
+    
     const container = this.element as HTMLElement | null;
     if (container) {
       this.lobby = new GameLobby({ gameId: this.props.id });
@@ -36,6 +46,7 @@ export class LobbyPage extends Component<LobbyPageProps, {}> {
   }
 
   onUnmount(): void {
+    this.mounted = false;
     this.lobby?.onUnmount?.();
   }
 }

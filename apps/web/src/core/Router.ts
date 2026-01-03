@@ -86,7 +86,9 @@ navigate(path: string): void  {
      if (!path) return;
      const url = new URL(path, window.location.origin);
      const targetPath = url.pathname;
-     if (targetPath === this._location) return;
+     if (targetPath === this._location) {
+       return;
+     }
      
      // Check auth guards before proceeding
      if (!this.checkAuthGuards(path)) {

@@ -1,11 +1,16 @@
 import { Database } from 'sqlite3';
 import { promisify } from 'util';
-import { ChatServiceConfig, logger } from '../infrastructure/config';
+import { ChatServiceConfig } from '../infrastructure/config';
+import { createLogger } from '@transcendence/shared-logging';
+
+const logger = createLogger('ChatServiceContainer');
 import { SQLiteMessageRepository } from '../infrastructure/database/repositories/sqlite-message.repository';
 import { SQLiteConversationRepository } from '../infrastructure/database/repositories/sqlite-conversation.repository';
 import { SendMessageUseCase } from '../application/use-cases/sendMessageUseCase';
 import { GetMessagesUseCase } from '../application/use-cases/get-messages.usecase';
 import { GetConversationsUseCase } from '../application/use-cases/get-conversation.usecase';
+import { RespondInviteUseCase } from '../application/use-cases/respond-invite.usecase';
+import { InviteErrorHandler } from '../application/services/invite-error-handler';
 import { ChatController } from '../infrastructure/http/controllers/chat.contoller';
 import { HealthController } from '../infrastructure/http/controllers/health.controller';
 import { RoomManager } from '../infrastructure/websocket/RoomManager';
@@ -13,12 +18,15 @@ import { ConnectionHandler } from '../infrastructure/websocket/handlers/Connecti
 import { SendMessageHandler } from '../infrastructure/websocket/handlers/SendMessageHandler';
 import { DisconnectHandler } from '../infrastructure/websocket/handlers/DisconnectHandler';
 import { TypingHandler } from '../infrastructure/websocket/handlers/TypingHandler';
+import { InviteResponseHandler } from '../infrastructure/websocket/handlers/InviteResponseHandler';
 import { WebSocketAuthService } from '../infrastructure/websocket/services/WebSocketAuthService';
 import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
 import { GameServiceClient } from '../infrastructure/external/GameServiceClient';
 import { FriendshipPolicy, GameChatPolicy } from '../application/services/chat-policies';
+import { EventBus } from '../domain/events/EventBus';
 
 export interface ChatServiceContainer {
+    readonly eventBus: EventBus;
     readonly repositories: {
         readonly messageRepository: SQLiteMessageRepository;
         readonly conversationRepository: SQLiteConversationRepository;
@@ -27,6 +35,7 @@ export interface ChatServiceContainer {
         readonly sendMessageUseCase: SendMessageUseCase;
         readonly getMessagesUseCase: GetMessagesUseCase;
         readonly getConversationsUseCase: GetConversationsUseCase;
+        readonly respondInviteUseCase: RespondInviteUseCase;
     };
     readonly controllers: {
         readonly chatController: ChatController;
@@ -38,6 +47,7 @@ export interface ChatServiceContainer {
         readonly sendMessageHandler: SendMessageHandler;
         readonly disconnectHandler: DisconnectHandler;
         readonly typingHandler: TypingHandler;
+        readonly inviteResponseHandler: InviteResponseHandler;
         readonly authService: WebSocketAuthService;
     };
 }
@@ -96,25 +106,42 @@ async function initializeDatabase(dbPath: string): Promise<Database> {
 export async function createContainer(config: ChatServiceConfig): Promise<ChatServiceContainer> {
     const db = await initializeDatabase(config.databasePath);
 
+    // Create EventBus early - it's needed by use cases
+    const eventBus = new EventBus();
+
     const messageRepository = new SQLiteMessageRepository(db);
     const conversationRepository = new SQLiteConversationRepository(db);
     const userServiceClient = new UserServiceClient(config.userServiceBaseUrl, config.internalApiKey);
     const gameServiceClient = new GameServiceClient(config.gameServiceBaseUrl, config.internalApiKey);
     const friendshipPolicy = new FriendshipPolicy(userServiceClient);
     const gameChatPolicy = new GameChatPolicy(gameServiceClient);
+    
+    // Create error handler for invite processing
+    const inviteErrorHandler = new InviteErrorHandler(messageRepository, conversationRepository);
+    
+    // Inject EventBus into use cases
+    const respondInviteUseCase = new RespondInviteUseCase(
+        messageRepository,
+        conversationRepository,
+        gameServiceClient,
+        eventBus,
+        inviteErrorHandler
+    );
 
     const sendMessageUseCase = new SendMessageUseCase(
         messageRepository,
         conversationRepository,
         friendshipPolicy,
-        gameChatPolicy
+        gameChatPolicy,
+        eventBus
     );
     const getMessagesUseCase = new GetMessagesUseCase(messageRepository, conversationRepository);
     const getConversationsUseCase = new GetConversationsUseCase(conversationRepository, messageRepository);
     const chatController = new ChatController(
         sendMessageUseCase,
         getMessagesUseCase,
-        getConversationsUseCase
+        getConversationsUseCase,
+        respondInviteUseCase
     );
     const healthController = new HealthController(); 
 
@@ -123,11 +150,13 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     const connectionHandler = new ConnectionHandler(roomManager, gameChatPolicy);
     const sendMessageHandler = new SendMessageHandler(sendMessageUseCase);
     const disconnectHandler = new DisconnectHandler(roomManager);
-    const typingHandler = new TypingHandler(gameChatPolicy, roomManager);
+    const typingHandler = new TypingHandler();
+    const inviteResponseHandler = new InviteResponseHandler(respondInviteUseCase);
 
     logger.info('🔧 Dependency injection container created');
 
     return {
+        eventBus,
         repositories: {
             messageRepository,
             conversationRepository
@@ -135,7 +164,8 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
         useCases: {
             sendMessageUseCase,
             getMessagesUseCase,
-            getConversationsUseCase
+            getConversationsUseCase,
+            respondInviteUseCase
         },
         controllers: {
             chatController,
@@ -147,6 +177,7 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
             sendMessageHandler,
             disconnectHandler,
             typingHandler,
+            inviteResponseHandler,
             authService
         }
     };
