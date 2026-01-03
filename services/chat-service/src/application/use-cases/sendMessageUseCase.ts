@@ -4,6 +4,9 @@ import { IMessageRepository } from 'src/domain/repositories/message.respository'
 import { MessageType } from 'src/domain/value-objects/messageType';
 import { SendMessageRequestDTO, SendMessageResponseDTO } from '../dto/send-message.dto';
 import { IconversationRepository } from 'src/domain/repositories/conversation-repository';
+import { IEventBus } from '../../domain/events/IeventBus';
+import { MessageSentEvent } from '../../domain/events/MessageSentEvent';
+import { InviteCreatedEvent } from '../../domain/events/InviteCreatedEvent';
 
 export interface IFriendshipPolicy {
   ensureCanDirectMessage(senderId: string, recipientId: string): Promise<void>;
@@ -22,7 +25,8 @@ export class SendMessageUseCase implements ISendMessageUseCase {
     private readonly messageRepository: IMessageRepository,
     private readonly conversationRepository: IconversationRepository,
     private readonly friendshipPolicy: IFriendshipPolicy,
-    private readonly gameChatPolicy: IGameChatPolicy
+    private readonly gameChatPolicy: IGameChatPolicy,
+    private readonly eventBus: IEventBus
   ) {}
 
   async execute(dto: SendMessageRequestDTO): Promise<SendMessageResponseDTO> {
@@ -66,6 +70,31 @@ export class SendMessageUseCase implements ISendMessageUseCase {
 
     conversation.updateLastMessageTime();
     await this.conversationRepository.save(conversation);
+
+    // Publish domain event - decouples from infrastructure
+    await this.eventBus.publish(new MessageSentEvent(
+      message.id.toString(),
+      conversation.id.toString(),
+      message.senderId,
+      message.senderUsername,
+      message.content.getValue(),
+      message.type,
+      message.recipientId,
+      message.gameId
+    ));
+
+    // Publish invite-specific event if it's an INVITE message
+    if (type === MessageType.INVITE && dto.recipientId) {
+      await this.eventBus.publish(new InviteCreatedEvent(
+        message.id.toString(),
+        conversation.id.toString(),
+        message.senderId,
+        message.senderUsername,
+        dto.recipientId,
+        '', // recipientUsername - could be added to DTO if needed
+        MessageType.INVITE
+      ));
+    }
 
     return this.toResponseDTO(message, dto.invitePayload);
   }

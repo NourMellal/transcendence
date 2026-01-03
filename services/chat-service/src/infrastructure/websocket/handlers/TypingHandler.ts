@@ -1,5 +1,7 @@
 import { Socket, Server as SocketIOServer } from 'socket.io';
-import { logger } from '../../config';
+import { createLogger } from '@transcendence/shared-logging';
+
+const logger = createLogger('TypingHandler');
 
 export class TypingHandler {
     private io: SocketIOServer | null = null;

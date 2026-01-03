@@ -115,7 +115,7 @@ services/*/*.sqlite*
 # Nginx configuration with sensitive data
 infrastructure/nginx-modsecurity/nginx.conf
 infrastructure/nginx-modsecurity/ssl/
-
+infrastructure/vault/.seed.env
 # Test databases and temporary test files
 test-*.db
 test-*.sqlite*

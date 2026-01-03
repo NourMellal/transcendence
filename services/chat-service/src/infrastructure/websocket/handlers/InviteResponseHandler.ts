@@ -1,15 +1,12 @@
-import { Socket, Server as SocketIOServer } from 'socket.io';
+import { Socket } from 'socket.io';
 import { RespondInviteUseCase } from '../../../application/use-cases/respond-invite.usecase';
-import { logger } from '../../config';
+import { createLogger } from '@transcendence/shared-logging';
+import { InviteErrorCategorizer, InviteErrorType } from '../../../application/dto/invite-error.dto';
+
+const logger = createLogger('InviteResponseHandler');
 
 export class InviteResponseHandler {
-    private io: SocketIOServer | null = null;
-
     constructor(private readonly respondInviteUseCase: RespondInviteUseCase) {}
-
-    setServer(io: SocketIOServer): void {
-        this.io = io;
-    }
 
     register(socket: Socket): void {
         socket.on('accept_invite', async (data) => {
@@ -19,7 +16,11 @@ export class InviteResponseHandler {
                 const inviteId = data?.inviteId;
 
                 if (!inviteId) {
-                    throw new Error('inviteId is required');
+                    socket.emit('invite_error', { 
+                        error: 'inviteId is required',
+                        errorType: InviteErrorType.INVALID_REQUEST
+                    });
+                    return;
                 }
 
                 const result = await this.respondInviteUseCase.accept({
@@ -30,67 +31,28 @@ export class InviteResponseHandler {
 
                 // Check if result contains an error (from error handler)
                 if ((result as any).error) {
+                    const errorType = InviteErrorCategorizer.categorize(
+                        new Error((result as any).error)
+                    );
+                    
                     socket.emit('invite_error', { 
                         error: (result as any).error,
-                        errorType: (result as any).errorType,
+                        errorType,
                         inviteId 
                     });
                     return;
                 }
 
-                if (this.io && result.recipientId) {
-                    const responsePayload = {
-                        id: result.id,
-                        conversationId: result.conversationId,
-                        senderId: result.senderId,
-                        senderUsername: result.senderUsername,
-                        content: result.content,
-                        type: result.type,
-                        recipientId: result.recipientId,
-                        gameId: result.gameId,
-                        invitePayload: result.invitePayload,
-                        createdAt: result.createdAt
-                    };
-
-                    // Check if original sender is in the room
-                    const senderRoom = this.io.sockets.adapter.rooms.get(`user:${result.recipientId}`);
-                    logger.info(`[InviteResponseHandler] Original sender room user:${result.recipientId} has ${senderRoom?.size || 0} sockets`);
-
-                    // Notify both users about the new message
-                    this.io.to(`user:${result.senderId}`).emit('new_message', responsePayload);
-                    this.io.to(`user:${result.recipientId}`).emit('new_message', responsePayload);
-                    
-                    // Send specific invite_accepted event to the ORIGINAL SENDER (recipientId in the response message)
-                    // result.recipientId is the original invite sender
-                    // result.senderId is the one who accepted (responder)
-                    const inviteAcceptedPayload = {
-                        inviteId,
-                        gameId: result.gameId,
-                        acceptedBy: result.senderId,
-                        acceptedByUsername: result.senderUsername
-                    };
-                    logger.info(`[InviteResponseHandler] Emitting invite_accepted to user:${result.recipientId}`, inviteAcceptedPayload);
-                    this.io.to(`user:${result.recipientId}`).emit('invite_accepted', inviteAcceptedPayload);
-                }
-
-                socket.emit('invite_accepted_success', { 
-                    success: true, 
-                    gameId: result.gameId,
-                    message: result 
+                // Simple ACK - EventBus will broadcast invite_accepted to all clients
+                socket.emit('command_ack', { 
+                    command: 'accept_invite',
+                    inviteId
                 });
             } catch (error) {
                 const err = error as Error;
-                logger.error(`Failed to accept invite: ${err.message}`);
+                const errorType = InviteErrorCategorizer.categorize(err);
                 
-                // Determine error type for better client-side handling
-                let errorType = 'UNKNOWN';
-                if (err.message.includes('timeout')) {
-                    errorType = 'TIMEOUT';
-                } else if (err.message.includes('game')) {
-                    errorType = 'GAME_CREATION_FAILED';
-                } else if (err.message.includes('already been responded')) {
-                    errorType = 'ALREADY_RESPONDED';
-                }
+                logger.error({ error: err.message, errorType }, 'Failed to accept invite');
                 
                 socket.emit('invite_error', { 
                     error: err.message,
@@ -107,7 +69,11 @@ export class InviteResponseHandler {
                 const inviteId = data?.inviteId;
 
                 if (!inviteId) {
-                    throw new Error('inviteId is required');
+                    socket.emit('invite_error', { 
+                        error: 'inviteId is required',
+                        errorType: InviteErrorType.INVALID_REQUEST
+                    });
+                    return;
                 }
 
                 const result = await this.respondInviteUseCase.decline({
@@ -116,42 +82,36 @@ export class InviteResponseHandler {
                     responderUsername: username,
                 });
 
-                if (this.io && result.recipientId) {
-                    const responsePayload = {
-                        id: result.id,
-                        conversationId: result.conversationId,
-                        senderId: result.senderId,
-                        senderUsername: result.senderUsername,
-                        content: result.content,
-                        type: result.type,
-                        recipientId: result.recipientId,
-                        gameId: result.gameId,
-                        invitePayload: result.invitePayload,
-                        createdAt: result.createdAt
-                    };
-
-                    // Notify both users about the new message
-                    this.io.to(`user:${result.senderId}`).emit('new_message', responsePayload);
-                    this.io.to(`user:${result.recipientId}`).emit('new_message', responsePayload);
+                // Check if result contains an error (from error handler)
+                if ((result as any).error) {
+                    const errorType = InviteErrorCategorizer.categorize(
+                        new Error((result as any).error)
+                    );
                     
-                    // Send specific invite_declined event to the ORIGINAL SENDER (recipientId in the response message)
-                    const inviteDeclinedPayload = {
-                        inviteId,
-                        declinedBy: result.senderId,
-                        declinedByUsername: result.senderUsername
-                    };
-                    logger.info(`[InviteResponseHandler] Emitting invite_declined to user:${result.recipientId}`, inviteDeclinedPayload);
-                    this.io.to(`user:${result.recipientId}`).emit('invite_declined', inviteDeclinedPayload);
+                    socket.emit('invite_error', { 
+                        error: (result as any).error,
+                        errorType,
+                        inviteId 
+                    });
+                    return;
                 }
 
-                socket.emit('invite_declined_success', { 
-                    success: true, 
-                    message: result 
+                // Simple ACK - EventBus will broadcast invite_declined to all clients
+                socket.emit('command_ack', { 
+                    command: 'decline_invite',
+                    inviteId
                 });
             } catch (error) {
                 const err = error as Error;
-                logger.error(`Failed to decline invite: ${err.message}`);
-                socket.emit('invite_error', { error: err.message });
+                const errorType = InviteErrorCategorizer.categorize(err);
+                
+                logger.error({ error: err.message, errorType }, 'Failed to decline invite');
+                
+                socket.emit('invite_error', { 
+                    error: err.message,
+                    errorType,
+                    inviteId: data?.inviteId
+                });
             }
         });
     }

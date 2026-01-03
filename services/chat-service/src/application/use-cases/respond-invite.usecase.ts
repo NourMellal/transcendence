@@ -5,7 +5,13 @@ import { MessageType } from '../../domain/value-objects/messageType';
 import { SendMessageResponseDTO, InvitePayload } from '../dto/send-message.dto';
 import { GameServiceClient } from '../../infrastructure/external/GameServiceClient';
 import { InviteErrorHandler } from '../services/invite-error-handler';
-import { logger } from '../../infrastructure/config';
+import { createLogger } from '@transcendence/shared-logging';
+import { IEventBus } from '../../domain/events/IeventBus';
+import { InviteAcceptedEvent } from '../../domain/events/InviteAcceptedEvent';
+import { InviteDeclinedEvent } from '../../domain/events/inviteDeclinedEvent';
+import { MessageSentEvent } from '../../domain/events/MessageSentEvent';
+
+const logger = createLogger('RespondInviteUseCase');
 
 export interface RespondInviteRequestDTO {
   inviteId: string;
@@ -28,6 +34,7 @@ export class RespondInviteUseCase {
     private readonly messageRepository: IMessageRepository,
     private readonly conversationRepository: IconversationRepository,
     private readonly gameServiceClient: GameServiceClient,
+    private readonly eventBus: IEventBus,
     private readonly errorHandler?: InviteErrorHandler
   ) {}
 
@@ -147,6 +154,37 @@ export class RespondInviteUseCase {
     } catch (error) {
       logger.error({ error }, '[RespondInviteUseCase] Failed to update conversation');
       // Don't throw here - message is saved, conversation update is less critical
+    }
+
+    // Step 6.5: Publish domain events
+    await this.eventBus.publish(new MessageSentEvent(
+      responseMessage.id.toString(),
+      responseMessage.conversationId,
+      responseMessage.senderId,
+      responseMessage.senderUsername,
+      responseMessage.content.getValue(),
+      responseMessage.type,
+      responseMessage.recipientId,
+      responseMessage.gameId
+    ));
+
+    if (accept && gameId) {
+      await this.eventBus.publish(new InviteAcceptedEvent(
+        dto.inviteId,
+        conversation.id.toString(),
+        dto.responderId,
+        dto.responderUsername,
+        gameId,
+        inviterId
+      ));
+    } else if (!accept) {
+      await this.eventBus.publish(new InviteDeclinedEvent(
+        dto.inviteId,
+        conversation.id.toString(),
+        dto.responderId,
+        dto.responderUsername,
+        inviterId
+      ));
     }
 
     // Step 7: Verify persistence

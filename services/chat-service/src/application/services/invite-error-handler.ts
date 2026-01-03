@@ -2,7 +2,9 @@ import { IMessageRepository } from '../../domain/repositories/message.respositor
 import { IconversationRepository } from '../../domain/repositories/conversation-repository';
 import { Message } from '../../domain/entities/message.entity';
 import { MessageType } from '../../domain/value-objects/messageType';
-import { logger } from '../../infrastructure/config';
+import { createLogger } from '@transcendence/shared-logging';
+
+const logger = createLogger('InviteErrorHandler');
 
 export interface InviteErrorContext {
   inviteId: string;

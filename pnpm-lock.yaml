@@ -248,6 +248,9 @@ importers:
       '@fastify/websocket':
         specifier: ^10.0.1
         version: 10.0.1
+      '@transcendence/shared-logging':
+        specifier: workspace:*
+        version: link:../../packages/shared-logging
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging

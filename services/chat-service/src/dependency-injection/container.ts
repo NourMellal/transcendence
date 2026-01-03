@@ -1,6 +1,9 @@
 import { Database } from 'sqlite3';
 import { promisify } from 'util';
-import { ChatServiceConfig, logger } from '../infrastructure/config';
+import { ChatServiceConfig } from '../infrastructure/config';
+import { createLogger } from '@transcendence/shared-logging';
+
+const logger = createLogger('ChatServiceContainer');
 import { SQLiteMessageRepository } from '../infrastructure/database/repositories/sqlite-message.repository';
 import { SQLiteConversationRepository } from '../infrastructure/database/repositories/sqlite-conversation.repository';
 import { SendMessageUseCase } from '../application/use-cases/sendMessageUseCase';
@@ -20,8 +23,10 @@ import { WebSocketAuthService } from '../infrastructure/websocket/services/WebSo
 import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
 import { GameServiceClient } from '../infrastructure/external/GameServiceClient';
 import { FriendshipPolicy, GameChatPolicy } from '../application/services/chat-policies';
+import { EventBus } from '../domain/events/EventBus';
 
 export interface ChatServiceContainer {
+    readonly eventBus: EventBus;
     readonly repositories: {
         readonly messageRepository: SQLiteMessageRepository;
         readonly conversationRepository: SQLiteConversationRepository;
@@ -101,6 +106,9 @@ async function initializeDatabase(dbPath: string): Promise<Database> {
 export async function createContainer(config: ChatServiceConfig): Promise<ChatServiceContainer> {
     const db = await initializeDatabase(config.databasePath);
 
+    // Create EventBus early - it's needed by use cases
+    const eventBus = new EventBus();
+
     const messageRepository = new SQLiteMessageRepository(db);
     const conversationRepository = new SQLiteConversationRepository(db);
     const userServiceClient = new UserServiceClient(config.userServiceBaseUrl, config.internalApiKey);
@@ -111,11 +119,12 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     // Create error handler for invite processing
     const inviteErrorHandler = new InviteErrorHandler(messageRepository, conversationRepository);
     
-    // Inject error handler into RespondInviteUseCase
+    // Inject EventBus into use cases
     const respondInviteUseCase = new RespondInviteUseCase(
         messageRepository,
         conversationRepository,
         gameServiceClient,
+        eventBus,
         inviteErrorHandler
     );
 
@@ -123,7 +132,8 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
         messageRepository,
         conversationRepository,
         friendshipPolicy,
-        gameChatPolicy
+        gameChatPolicy,
+        eventBus
     );
     const getMessagesUseCase = new GetMessagesUseCase(messageRepository, conversationRepository);
     const getConversationsUseCase = new GetConversationsUseCase(conversationRepository, messageRepository);
@@ -146,6 +156,7 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     logger.info('🔧 Dependency injection container created');
 
     return {
+        eventBus,
         repositories: {
             messageRepository,
             conversationRepository

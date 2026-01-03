@@ -1,16 +1,12 @@
-import { Socket, Server as SocketIOServer } from 'socket.io';
+import { Socket } from 'socket.io';
 import { SendMessageUseCase } from '../../../application/use-cases/sendMessageUseCase';
-import { logger } from '../../config';
+import { createLogger } from '@transcendence/shared-logging';
 import { MessageType } from '../../../domain/value-objects/messageType';
 
+const logger = createLogger('SendMessageHandler');
+
 export class SendMessageHandler {
-    private io: SocketIOServer | null = null;
-
     constructor(private readonly sendMessageUseCase: SendMessageUseCase) {}
-
-    setServer(io: SocketIOServer): void {
-        this.io = io;
-    }
 
     register(socket: Socket): void {
         socket.on('send_message', async (data) => {
@@ -29,44 +25,11 @@ export class SendMessageHandler {
                     invitePayload: data.invitePayload
                 });
 
-                if (this.io) {
-                    const messagePayload = {
-                        id: result.id,
-                        conversationId: result.conversationId,
-                        senderId: result.senderId,
-                        senderUsername: result.senderUsername,
-                        content: result.content,
-                        type: result.type,
-                        recipientId: result.recipientId,
-                        gameId: result.gameId,
-                        invitePayload: result.invitePayload,
-                        createdAt: result.createdAt
-                    };
-
-                    if (result.recipientId && result.type !== 'GAME') {
-                        this.io.to(`user:${result.senderId}`).emit('new_message', messagePayload);
-                        this.io.to(`user:${result.recipientId}`).emit('new_message', messagePayload);
-                        
-                        // Send specific invite notification for INVITE type
-                        if (result.type === 'INVITE') {
-                            this.io.to(`user:${result.recipientId}`).emit('invite_received', {
-                                inviteId: result.id,
-                                from: result.senderId,
-                                fromUsername: result.senderUsername,
-                                invitePayload: result.invitePayload,
-                                conversationId: result.conversationId
-                            });
-                        }
-                    } else if (result.type === 'GAME' && result.gameId) {
-                        socket.join(`game:${result.gameId}`);
-                        this.io.to(`game:${result.gameId}`).emit('new_message', messagePayload);
-                    }
-                }
-
+                // Only acknowledge to sender - broadcasting is handled by EventBus
                 socket.emit('message_sent', { success: true, message: result });
             } catch (error) {
                 const err = error as Error;
-                logger.error(`Failed to send message: ${err.message}`);
+                logger.error({ error: err.message }, 'Failed to send message');
                 socket.emit('message_error', { error: err.message });
             }
         });

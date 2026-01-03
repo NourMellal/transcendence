@@ -1,6 +1,8 @@
 import { Socket } from 'socket.io';
-import { logger } from '../../config';
+import { createLogger } from '@transcendence/shared-logging';
 import { IGameChatPolicy } from '../../../application/use-cases/sendMessageUseCase';
+
+const logger = createLogger('ConnectionHandler');
 
 export class ConnectionHandler {
     constructor(

@@ -53,6 +53,6 @@ export async function loadChatServiceConfig(): Promise<ChatServiceConfig> {
     } catch (error) {
         const err = error as Error;
         console.warn('Vault not available, falling back to environment variables:', err.message);
-        return buildEnvFallback();
+        throw error;
     }
 }
