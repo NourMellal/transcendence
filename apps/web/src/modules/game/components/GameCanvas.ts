@@ -540,7 +540,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     if (this.isTournamentGame) {
       return 'Return to Tournaments';
     }
-    return 'Return to Home';
+    return 'Return to Dashboard';
   }
 
   private getReturnPath(): string {
@@ -550,7 +550,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     if (this.isTournamentGame) {
       return '/tournament/list';
     }
-    return '/home';
+    return '/dashboard';
   }
 
   private emitPaddleSet(y: number): void {
