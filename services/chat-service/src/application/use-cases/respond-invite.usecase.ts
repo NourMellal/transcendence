@@ -3,7 +3,7 @@ import { IconversationRepository } from 'src/domain/repositories/conversation-re
 import { Message } from '../../domain/entities/message.entity';
 import { MessageType } from '../../domain/value-objects/messageType';
 import { SendMessageResponseDTO, InvitePayload } from '../dto/send-message.dto';
-import { GameServiceClient } from '../../infrastructure/external/GameServiceClient';
+import { IGameServiceClient } from '../ports/game-service-client';
 import { InviteErrorHandler } from '../services/invite-error-handler';
 import { createLogger } from '@transcendence/shared-logging';
 import { IEventBus } from '../../domain/events/IeventBus';
@@ -33,7 +33,7 @@ export class RespondInviteUseCase {
   constructor(
     private readonly messageRepository: IMessageRepository,
     private readonly conversationRepository: IconversationRepository,
-    private readonly gameServiceClient: GameServiceClient,
+    private readonly gameServiceClient: IGameServiceClient,
     private readonly eventBus: IEventBus,
     private readonly errorHandler?: InviteErrorHandler
   ) {}

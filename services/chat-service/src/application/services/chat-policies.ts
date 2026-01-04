@@ -1,9 +1,9 @@
 import { IFriendshipPolicy, IGameChatPolicy } from '../use-cases/sendMessageUseCase';
-import { UserServiceClient } from '../../infrastructure/external/UserServiceClient';
-import { GameServiceClient } from '../../infrastructure/external/GameServiceClient';
+import { IUserServiceClient } from '../ports/user-service-client';
+import { IGameServiceClient } from '../ports/game-service-client';
 
 export class FriendshipPolicy implements IFriendshipPolicy {
-  constructor(private readonly userServiceClient: UserServiceClient) {}
+  constructor(private readonly userServiceClient: IUserServiceClient) {}
   async ensureCanDirectMessage(senderId: string, recipientId: string): Promise<void> {   
     const blocked = await this.userServiceClient.isBlocked(senderId, recipientId);
     if (blocked) {
@@ -14,7 +14,7 @@ export class FriendshipPolicy implements IFriendshipPolicy {
 }
 
 export class GameChatPolicy implements IGameChatPolicy {
-  constructor(private readonly gameServiceClient: GameServiceClient) {}
+  constructor(private readonly gameServiceClient: IGameServiceClient) {}
 
   async ensureCanChatInGame(gameId: string, userId: string): Promise<{ participants: [string, string] }> {
     const participants = await this.gameServiceClient.ensureUserInGame(gameId, userId);

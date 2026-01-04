@@ -15,8 +15,9 @@ private generateEventId(): string {
         return  { 
             eventId : this.eventId,   
             eventName : this.eventName,
-            occruredAt : this.occurredAt,
-            aggregateId : this.getAggregateId()
+            occurredAt : this.occurredAt.toISOString(),
+            aggregateId : this.getAggregateId(),
+            data: this.getEventData()
         }
   }
   protected abstract getEventData() :Record<string ,  any>  ;   

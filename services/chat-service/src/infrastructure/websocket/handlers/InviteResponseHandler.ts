@@ -30,23 +30,24 @@ export class InviteResponseHandler {
                 });
 
                 // Check if result contains an error (from error handler)
-                if ((result as any).error) {
+                if (result.error) {
                     const errorType = InviteErrorCategorizer.categorize(
-                        new Error((result as any).error)
+                        new Error(result.error)
                     );
                     
                     socket.emit('invite_error', { 
-                        error: (result as any).error,
+                        error: result.error,
                         errorType,
                         inviteId 
                     });
                     return;
                 }
 
-                // Simple ACK - EventBus will broadcast invite_accepted to all clients
-                socket.emit('command_ack', { 
-                    command: 'accept_invite',
-                    inviteId
+                socket.emit('invite_accepted_success', {
+                    success: true,
+                    inviteId,
+                    gameId: result.gameId,
+                    message: result
                 });
             } catch (error) {
                 const err = error as Error;
@@ -83,13 +84,13 @@ export class InviteResponseHandler {
                 });
 
                 // Check if result contains an error (from error handler)
-                if ((result as any).error) {
+                if (result.error) {
                     const errorType = InviteErrorCategorizer.categorize(
-                        new Error((result as any).error)
+                        new Error(result.error)
                     );
                     
                     socket.emit('invite_error', { 
-                        error: (result as any).error,
+                        error: result.error,
                         errorType,
                         inviteId 
                     });

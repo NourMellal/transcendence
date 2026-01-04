@@ -1,3 +1,5 @@
+import { CreateGameOptions, IGameServiceClient } from '../../application/ports/game-service-client';
+
 interface GameSummary {
   id: string;
   player1: string | null;
@@ -5,18 +7,11 @@ interface GameSummary {
   players?: { id: string }[];
 }
 
-interface CreateGameOptions {
-  mode?: string;
-  config?: Record<string, unknown>;
-  timeoutMs?: number;
-  retries?: number;
-}
-
 /**
  * Client for communicating with the Game Service
  * Handles game creation with timeout, retry logic, and proper error handling
  */
-export class GameServiceClient {
+export class GameServiceClient implements IGameServiceClient {
   private readonly DEFAULT_TIMEOUT_MS = 10000; // 10 seconds
   private readonly DEFAULT_RETRIES = 2;
 

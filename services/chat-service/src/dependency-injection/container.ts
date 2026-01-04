@@ -17,7 +17,6 @@ import { RoomManager } from '../infrastructure/websocket/RoomManager';
 import { ConnectionHandler } from '../infrastructure/websocket/handlers/ConnectionHandler';
 import { SendMessageHandler } from '../infrastructure/websocket/handlers/SendMessageHandler';
 import { DisconnectHandler } from '../infrastructure/websocket/handlers/DisconnectHandler';
-import { TypingHandler } from '../infrastructure/websocket/handlers/TypingHandler';
 import { InviteResponseHandler } from '../infrastructure/websocket/handlers/InviteResponseHandler';
 import { WebSocketAuthService } from '../infrastructure/websocket/services/WebSocketAuthService';
 import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
@@ -46,7 +45,6 @@ export interface ChatServiceContainer {
         readonly connectionHandler: ConnectionHandler;
         readonly sendMessageHandler: SendMessageHandler;
         readonly disconnectHandler: DisconnectHandler;
-        readonly typingHandler: TypingHandler;
         readonly inviteResponseHandler: InviteResponseHandler;
         readonly authService: WebSocketAuthService;
     };
@@ -150,7 +148,6 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     const connectionHandler = new ConnectionHandler(roomManager, gameChatPolicy);
     const sendMessageHandler = new SendMessageHandler(sendMessageUseCase);
     const disconnectHandler = new DisconnectHandler(roomManager);
-    const typingHandler = new TypingHandler();
     const inviteResponseHandler = new InviteResponseHandler(respondInviteUseCase);
 
     logger.info('🔧 Dependency injection container created');
@@ -176,7 +173,6 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
             connectionHandler,
             sendMessageHandler,
             disconnectHandler,
-            typingHandler,
             inviteResponseHandler,
             authService
         }

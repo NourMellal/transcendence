@@ -14,7 +14,6 @@ interface ChatWebSocketServerDeps {
     readonly connectionHandler: any;
     readonly sendMessageHandler: any;
     readonly disconnectHandler: any;
-    readonly typingHandler: any;
     readonly inviteResponseHandler: any;
     readonly authService: any;
     readonly eventBus: IEventBus;
@@ -54,11 +53,6 @@ export class ChatWebSocketServer {
             }
         });
 
-        // Only typing handler still needs Socket.IO server reference for broadcasting typing indicators
-        if (this.deps.typingHandler.setServer) {
-            this.deps.typingHandler.setServer(this.io);
-        }
-
         this.io.on('connection', (socket) => {
             const userId = socket.data.userId;
             const username = socket.data.username;
@@ -67,7 +61,6 @@ export class ChatWebSocketServer {
 
             this.deps.connectionHandler.register(socket);
             this.deps.sendMessageHandler.register(socket);
-            this.deps.typingHandler.register(socket);
             this.deps.inviteResponseHandler.register(socket);
             this.deps.disconnectHandler.register(socket);
         });

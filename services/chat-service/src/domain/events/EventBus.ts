@@ -1,4 +1,3 @@
-import { resolve } from "path";
 import { DomainEvent } from "./DomainEvent";
 import { EventHandler , IEventBus } from "./IeventBus";
 

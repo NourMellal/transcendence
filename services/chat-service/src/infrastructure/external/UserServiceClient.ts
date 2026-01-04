@@ -1,4 +1,6 @@
-export class UserServiceClient {
+import { IUserServiceClient } from '../../application/ports/user-service-client';
+
+export class UserServiceClient implements IUserServiceClient {
   constructor(
     private readonly baseUrl: string,
     private readonly internalApiKey?: string
