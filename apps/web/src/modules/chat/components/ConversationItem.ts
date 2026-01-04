@@ -54,10 +54,36 @@ export default class ConversationItem extends Component<ConversationItemProps, C
     if (!lastMessage) return 'No messages yet';
     
     const maxLength = 40;
-    const content = lastMessage.content;
+    const invitePreview = this.getInvitePreview(lastMessage);
+    const content = invitePreview ?? lastMessage.content;
     return content.length > maxLength 
       ? content.substring(0, maxLength) + '...' 
       : content;
+  }
+
+  private getInvitePreview(message: { type?: string; content?: string }): string | null {
+    const messageType = message.type;
+    if (messageType === 'INVITE') {
+      try {
+        const parsed = typeof message.content === 'string'
+          ? JSON.parse(message.content)
+          : message.content;
+        const mode = parsed?.invitePayload?.mode;
+        return mode ? `Game invite (${String(mode).toLowerCase()})` : 'Game invite';
+      } catch (_error) {
+        return 'Game invite';
+      }
+    }
+
+    if (messageType === 'INVITE_ACCEPTED') {
+      return 'Invite accepted';
+    }
+
+    if (messageType === 'INVITE_DECLINED') {
+      return 'Invite declined';
+    }
+
+    return null;
   }
 
   /**

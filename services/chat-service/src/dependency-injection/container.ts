@@ -23,6 +23,10 @@ import { UserServiceClient } from '../infrastructure/external/UserServiceClient'
 import { GameServiceClient } from '../infrastructure/external/GameServiceClient';
 import { FriendshipPolicy, GameChatPolicy } from '../application/services/chat-policies';
 import { EventBus } from '../domain/events/EventBus';
+import { createMessagingConfig } from '../infrastructure/messaging/config/messaging.config';
+import { RabbitMQConnection } from '../infrastructure/messaging/connection';
+import { EventSerializer } from '../infrastructure/messaging/serialization/EventSerializer';
+import { GameEventHandler } from '../infrastructure/messaging/subscribers/GameEventHandler';
 
 export interface ChatServiceContainer {
     readonly eventBus: EventBus;
@@ -47,6 +51,10 @@ export interface ChatServiceContainer {
         readonly disconnectHandler: DisconnectHandler;
         readonly inviteResponseHandler: InviteResponseHandler;
         readonly authService: WebSocketAuthService;
+    };
+    readonly messaging: {
+        readonly connection: RabbitMQConnection;
+        readonly gameEventHandler: GameEventHandler | null;
     };
 }
 
@@ -103,6 +111,7 @@ async function initializeDatabase(dbPath: string): Promise<Database> {
 
 export async function createContainer(config: ChatServiceConfig): Promise<ChatServiceContainer> {
     const db = await initializeDatabase(config.databasePath);
+    const messagingConfig = createMessagingConfig();
 
     // Create EventBus early - it's needed by use cases
     const eventBus = new EventBus();
@@ -150,6 +159,31 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     const disconnectHandler = new DisconnectHandler(roomManager);
     const inviteResponseHandler = new InviteResponseHandler(respondInviteUseCase);
 
+    const messagingConnection = new RabbitMQConnection({
+        uri: messagingConfig.uri,
+        exchange: messagingConfig.exchange
+    });
+    const serializer = new EventSerializer();
+    const queueName = `${messagingConfig.queuePrefix}.game-events`;
+    let gameEventHandler: GameEventHandler | null = null;
+
+    try {
+        const channel = await messagingConnection.getChannel();
+        gameEventHandler = new GameEventHandler(
+            channel,
+            serializer,
+            conversationRepository,
+            messageRepository
+        );
+        await gameEventHandler.start(queueName, messagingConfig.exchange);
+        logger.info({ queue: queueName }, 'Chat service messaging consumer started');
+    } catch (error) {
+        logger.warn(
+            { error: error instanceof Error ? error.message : 'unknown' },
+            'Messaging not available, continuing without RabbitMQ'
+        );
+    }
+
     logger.info('🔧 Dependency injection container created');
 
     return {
@@ -175,6 +209,10 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
             disconnectHandler,
             inviteResponseHandler,
             authService
+        },
+        messaging: {
+            connection: messagingConnection,
+            gameEventHandler
         }
     };
 }

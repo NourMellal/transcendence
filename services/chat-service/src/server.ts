@@ -69,6 +69,7 @@ export async function startChatService(): Promise<void> {
             logger.info('🛑 Shutting down Chat Service...');
             await app.close();
             httpServer.close();
+            await container.messaging.connection.close();
             process.exit(0);
         };
 

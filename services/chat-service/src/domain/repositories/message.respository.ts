@@ -3,6 +3,7 @@ import { Message } from "../entities/message.entity";
 export interface IMessageRepository {
     save(message: Message): Promise<void>;
     findById(id: string): Promise<Message | null>;
+    deleteByConversationId(conversationId: string): Promise<void>;
     findByConversationId(
         conversationId: string,
         options: {
