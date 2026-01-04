@@ -23,8 +23,8 @@ ChatMessage:
       maxLength: 500
     type:
       type: string
-      enum: [DIRECT, GAME]
-      description: Type of message - DIRECT for private DMs, GAME for game room chat
+      enum: [DIRECT, GAME, INVITE, INVITE_ACCEPTED, INVITE_DECLINED]
+      description: Type of message - DIRECT for private DMs, GAME for game room chat, INVITE for game invite messages
       example: DIRECT
     recipientId:
       type: string
@@ -38,6 +38,22 @@ ChatMessage:
       description: Game ID (for GAME messages)
       nullable: true
       example: "game-789abc"
+    invitePayload:
+      type: object
+      description: Optional invite metadata for INVITE messages
+      properties:
+        mode:
+          type: string
+          example: CLASSIC
+        map:
+          type: string
+          example: default
+        notes:
+          type: string
+          example: "First to 5"
+        config:
+          type: object
+      nullable: true
     conversationId:
       type: string
       format: uuid
@@ -62,8 +78,8 @@ SendMessageRequest:
       maxLength: 500
     type:
       type: string
-      enum: [DIRECT, GAME]
-      description: Message type - DIRECT for private message to a user, GAME for game room message
+      enum: [DIRECT, GAME, INVITE]
+      description: Message type - DIRECT for private message to a user, GAME for game room message, INVITE for a game invite
       example: DIRECT
     recipientId:
       type: string
@@ -77,6 +93,21 @@ SendMessageRequest:
       description: Game ID (required for GAME messages)
       nullable: true
       example: "game-789abc"
+    invitePayload:
+      type: object
+      description: Optional invite metadata for INVITE messages
+      properties:
+        mode:
+          type: string
+          example: CLASSIC
+        map:
+          type: string
+          example: default
+        notes:
+          type: string
+          example: "First to 5"
+        config:
+          type: object
   required: [content, type]
 
 Conversation:

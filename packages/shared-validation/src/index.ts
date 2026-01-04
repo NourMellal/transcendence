@@ -133,12 +133,18 @@ export const sendMessageSchema = z.object({
     content: z.string()
         .min(1, 'Message content is required')
         .max(500, 'Message must not exceed 500 characters'),
-    type: z.enum(['DIRECT', 'GAME']),
+    type: z.enum(['DIRECT', 'GAME', 'INVITE']),
     recipientId: z.string().uuid().optional(),
-    gameId: z.string().optional()
+    gameId: z.string().optional(),
+    invitePayload: z.object({
+        mode: z.string().optional(),
+        map: z.string().optional(),
+        notes: z.string().optional(),
+        config: z.record(z.unknown()).optional(),
+    }).optional()
 }).superRefine((val, ctx) => {
-    if (val.type === 'DIRECT' && !val.recipientId) {
-        ctx.addIssue({ code: 'custom', message: 'recipientId is required for DIRECT messages' });
+    if ((val.type === 'DIRECT' || val.type === 'INVITE') && !val.recipientId) {
+        ctx.addIssue({ code: 'custom', message: 'recipientId is required for DIRECT and INVITE messages' });
     }
     if (val.type === 'GAME' && !val.gameId) {
         ctx.addIssue({ code: 'custom', message: 'gameId is required for GAME messages' });

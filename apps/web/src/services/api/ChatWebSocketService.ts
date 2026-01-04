@@ -451,6 +451,10 @@ export class ChatWebSocketService {
       callback();
     };
 
+    if (this.socket.connected) {
+      queueMicrotask(() => handler());
+    }
+
     this.socket.on('connect', handler);
     
     return () => {

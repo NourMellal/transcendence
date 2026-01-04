@@ -122,10 +122,9 @@ export class ChatController {
         });
       }
 
-      // 202 Accepted - EventBus will broadcast notification to all clients
-      return reply.code(202).send({ 
-        accepted: true,
-        inviteId
+      return reply.code(200).send({ 
+        gameId: result.gameId,
+        message: result
       });
     } catch (error: any) {
       const errorType = InviteErrorCategorizer.categorize(error);
@@ -171,10 +170,8 @@ export class ChatController {
         });
       }
 
-      // 202 Accepted - EventBus will broadcast notification to all clients
-      return reply.code(202).send({ 
-        accepted: true,
-        inviteId
+      return reply.code(200).send({ 
+        message: result
       });
     } catch (error: any) {
       const errorType = InviteErrorCategorizer.categorize(error);
