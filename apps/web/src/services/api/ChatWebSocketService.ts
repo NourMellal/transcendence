@@ -28,10 +28,19 @@ export class ChatWebSocketService {
       return;
     }
 
+    // Cleanup existing socket if any
+    if (this.socket) {
+      console.log('[ChatWS] Cleaning up existing disconnected socket');
+      // Some socket implementations may not expose removeAllListeners in the typing
+      (this.socket as any)?.removeAllListeners?.();
+      this.socket.disconnect('Reconnecting');
+      this.socket = null;
+    }
+
     this.token = token;
     const wsUrl = this.getWebSocketUrl();
     
-    console.log('[ChatWS] Connecting to:', wsUrl);
+    console.log('[ChatWS] Creating new socket connection to:', wsUrl);
     
     // Gateway proxy uses /api/chat/ws -> service /socket.io
     this.socket = createGameSocket(wsUrl, token, '/api/chat/ws/socket.io');
@@ -138,6 +147,59 @@ export class ChatWebSocketService {
 
     console.log('[ChatWS] Sending message:', payload);
     this.socket.emit('send_message', payload);
+  }
+
+  /**
+   * Send a game invite via WebSocket
+   * @param recipientId - User to invite
+   * @param invitePayload - Optional structured invite payload (mode, map, config)
+   */
+  sendInvite(recipientId: string, invitePayload?: Record<string, unknown>): void {
+    if (!this.socket?.connected) {
+      console.warn('[ChatWS] Cannot send invite: not connected');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      type: 'INVITE',
+      recipientId,
+      content: 'Game invite',
+    };
+
+    if (invitePayload) {
+      payload.invitePayload = invitePayload;
+    }
+
+    console.log('[ChatWS] Sending invite:', payload);
+    this.socket.emit('send_message', payload);
+  }
+
+  /**
+   * Accept a game invite
+   * @param inviteId - Message ID of the invite to accept
+   */
+  acceptInvite(inviteId: string): void {
+    if (!this.socket?.connected) {
+      console.warn('[ChatWS] Cannot accept invite: not connected');
+      return;
+    }
+
+    console.log('[ChatWS] Accepting invite:', inviteId);
+    this.socket.emit('accept_invite', { inviteId });
+  }
+
+  /**
+   * Decline a game invite
+   * @param inviteId - Message ID of the invite to decline
+   */
+  declineInvite(inviteId: string): void {
+    if (!this.socket?.connected) {
+      console.warn('[ChatWS] Cannot decline invite: not connected');
+      return;
+    }
+
+    console.log('[ChatWS] Declining invite:', inviteId);
+    this.socket.emit('decline_invite', { inviteId });
   }
 
   /**
@@ -325,6 +387,56 @@ export class ChatWebSocketService {
   }
 
   /**
+   * Listen for invite accepted events
+   * @param callback - Handler for invite accepted events
+   * @returns Unsubscribe function
+   */
+  onInviteAccepted(callback: EventHandler<{ inviteId: string; gameId: string; acceptedBy: string; acceptedByUsername: string }>): Unsubscribe {
+    if (!this.socket) {
+      console.warn('[ChatWS] onInviteAccepted called but socket is null');
+      return () => {};
+    }
+
+    const handler = (data: unknown) => {
+      console.log('[ChatWS] ========================================');
+      console.log('[ChatWS] RAW invite_accepted event received!');
+      console.log('[ChatWS] Data:', data);
+      console.log('[ChatWS] ========================================');
+      callback(data as { inviteId: string; gameId: string; acceptedBy: string; acceptedByUsername: string });
+    };
+
+    console.log('[ChatWS] Registering invite_accepted listener');
+    this.socket.on('invite_accepted', handler);
+    
+    return () => {
+      console.log('[ChatWS] Unregistering invite_accepted listener');
+      this.socket?.off('invite_accepted', handler);
+    };
+  }
+
+  /**
+   * Listen for invite declined events
+   * @param callback - Handler for invite declined events
+   * @returns Unsubscribe function
+   */
+  onInviteDeclined(callback: EventHandler<{ inviteId: string; declinedBy: string; declinedByUsername: string }>): Unsubscribe {
+    if (!this.socket) {
+      return () => {};
+    }
+
+    const handler = (data: unknown) => {
+      console.log('[ChatWS] Invite declined:', data);
+      callback(data as { inviteId: string; declinedBy: string; declinedByUsername: string });
+    };
+
+    this.socket.on('invite_declined', handler);
+    
+    return () => {
+      this.socket?.off('invite_declined', handler);
+    };
+  }
+
+  /**
    * Listen for connection events
    * @param callback - Handler for connect events
    * @returns Unsubscribe function
@@ -338,6 +450,10 @@ export class ChatWebSocketService {
       console.log('[ChatWS] Connection event handler triggered');
       callback();
     };
+
+    if (this.socket.connected) {
+      queueMicrotask(() => handler());
+    }
 
     this.socket.on('connect', handler);
     
@@ -391,14 +507,9 @@ export class ChatWebSocketService {
    */
   private getWebSocketUrl(): string {
     // Use the API base URL for WebSocket connection (gateway handles routing)
-    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
-    if (/^https?:\/\//i.test(apiBase)) {
-      return apiBase.replace(/\/api\/?$/, '') || apiBase;
-    }
-    if (typeof window !== 'undefined' && window.location?.origin) {
-      return window.location.origin;
-    }
-    return 'http://api-gateway:3000';
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+    // Remove /api suffix since we'll add it in the path
+    return apiBase.replace(/\/api\/?$/, '') || 'http://localhost:3000';
   }
 
   /**
@@ -426,6 +537,51 @@ export class ChatWebSocketService {
       }
     }, delay);
   }
+
+  /**
+   * Listen for invite accept success (when you accept an invite)
+   * @param callback - Handler for invite accept success
+   * @returns Unsubscribe function
+   */
+  onInviteAcceptedSuccess(callback: EventHandler<{ success: boolean; gameId: string; message: ChatMessage }>): Unsubscribe {
+    if (!this.socket) {
+      return () => {};
+    }
+
+    const handler = (data: unknown) => {
+      console.log('[ChatWS] Invite accepted success:', data);
+      callback(data as { success: boolean; gameId: string; message: ChatMessage });
+    };
+
+    this.socket.on('invite_accepted_success', handler);
+    
+    return () => {
+      this.socket?.off('invite_accepted_success', handler);
+    };
+  }
+
+  /**
+   * Listen for invite errors
+   * @param callback - Handler for invite errors
+   * @returns Unsubscribe function
+   */
+  onInviteError(callback: EventHandler<{ error: string }>): Unsubscribe {
+    if (!this.socket) {
+      return () => {};
+    }
+
+    const handler = (data: unknown) => {
+      console.log('[ChatWS] Invite error:', data);
+      callback(data as { error: string });
+    };
+
+    this.socket.on('invite_error', handler);
+    
+    return () => {
+      this.socket?.off('invite_error', handler);
+    };
+  }
+
 }
 
 // Export singleton instance

@@ -8,7 +8,14 @@ import type { ChatMessage as BaseChatMessage } from './Common';
 /**
  * Chat message types
  */
-export type ChatMessageType = 'DIRECT' | 'GAME';
+export type ChatMessageType = 'DIRECT' | 'GAME' | 'INVITE' | 'INVITE_ACCEPTED' | 'INVITE_DECLINED';
+
+export interface InvitePayload {
+  mode?: string;
+  map?: string;
+  notes?: string;
+  config?: Record<string, unknown>;
+}
 
 /**
  * Extended Chat message interface for chat service
@@ -68,6 +75,7 @@ export interface SendMessageParams {
   content: string;
   recipientId?: string;
   gameId?: string;
+  invitePayload?: InvitePayload;
 }
 
 /**

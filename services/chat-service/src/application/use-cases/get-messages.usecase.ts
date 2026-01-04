@@ -219,6 +219,7 @@ export class GetMessagesUseCase implements IGetMessagesUseCase {
    * Convert Message entity to DTO
    */
   private toMessageDTO(message: Message): MessageDTO {
+    const invitePayload = this.tryExtractInvitePayload(message);
     return {
       id: message.id.toString(),
       conversationId: message.conversationId,
@@ -228,7 +229,23 @@ export class GetMessagesUseCase implements IGetMessagesUseCase {
       type: message.type,
       recipientId: message.recipientId,
       gameId: message.gameId,
+      invitePayload,
       createdAt: message.createdAt.toISOString()
     };
+  }
+
+  private tryExtractInvitePayload(message: Message): any {
+    if (message.type !== MessageType.INVITE && message.type !== MessageType.INVITE_ACCEPTED && message.type !== MessageType.INVITE_DECLINED) {
+      return undefined;
+    }
+    try {
+      const parsed = JSON.parse(message.content.getValue());
+      if (parsed && typeof parsed === 'object' && 'invitePayload' in parsed) {
+        return parsed.invitePayload;
+      }
+    } catch (_err) {
+      return undefined;
+    }
+    return undefined;
   }
 }

@@ -40,7 +40,7 @@ export class SQLiteConversationRepository implements IconversationRepository {
   async findByUserId(userId: string): Promise<Conversation[]> {
     return new Promise((resolve, reject) => {
       const query = `
-        SELECT * FROM conversations
+        SELECT * FROM conversations 
         WHERE participant1_id = ? OR participant2_id = ?
         ORDER BY last_message_at DESC
       `;
@@ -66,7 +66,7 @@ export class SQLiteConversationRepository implements IconversationRepository {
     return new Promise((resolve, reject) => {
       const [sortedUser1, sortedUser2] = [userId1, userId2].sort();
       const query = `
-        SELECT * FROM conversations
+        SELECT * FROM conversations 
         WHERE participant1_id = ? AND participant2_id = ? AND type = ?
       `;
 
@@ -88,7 +88,7 @@ export class SQLiteConversationRepository implements IconversationRepository {
   async findByGameId(gameId: string): Promise<Conversation | null> {
     return new Promise((resolve, reject) => {
       const query = `
-        SELECT * FROM conversations
+        SELECT * FROM conversations 
         WHERE game_id = ? AND type = ?
       `;
 
@@ -104,11 +104,28 @@ export class SQLiteConversationRepository implements IconversationRepository {
     });
   }
 
+  async deleteByGameId(gameId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        DELETE FROM conversations
+        WHERE game_id = ? AND type = ?
+      `;
+
+      this.db.run(query, [gameId, MessageType.GAME], (err) => {
+        if (err) {
+          reject(new Error(`Failed to delete game conversation: ${err.message}`));
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
   async getUnreadCount(userId: string, recipientId: string): Promise<number> {
     return new Promise((resolve, reject) => {
       const query = `
         SELECT COUNT(*) as count
-        FROM messages
+        FROM messages 
         WHERE type = 'DIRECT'
         AND sender_id = ?
         AND recipient_id = ?
@@ -121,19 +138,6 @@ export class SQLiteConversationRepository implements IconversationRepository {
           reject(new Error(`Failed to get unread count: ${err.message}`));
         } else {
           resolve(row.count || 0);
-        }
-      });
-    });
-  }
-
-  async deleteByGameId(gameId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const query = `DELETE FROM conversations WHERE game_id = ? AND type = ?`;
-      this.db.run(query, [gameId, MessageType.GAME], (err) => {
-        if (err) {
-          reject(new Error(`Failed to delete game conversation: ${err.message}`));
-        } else {
-          resolve();
         }
       });
     });

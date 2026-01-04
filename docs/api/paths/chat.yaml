@@ -58,7 +58,7 @@
     tags: [Chat]
     operationId: Chat_sendMessage
     summary: Send a new chat message
-    description: Send a direct message or game room message. For DIRECT type, recipientId is required. For GAME type, gameId is required.
+    description: Send a direct message, game room message, or invite. For DIRECT/INVITE types, recipientId is required. For GAME type, gameId is required.
     requestBody:
       required: true
       content:

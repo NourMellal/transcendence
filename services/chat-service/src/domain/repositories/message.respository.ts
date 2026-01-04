@@ -2,6 +2,8 @@ import { Message } from "../entities/message.entity";
 
 export interface IMessageRepository {
     save(message: Message): Promise<void>;
+    findById(id: string): Promise<Message | null>;
+    deleteByConversationId(conversationId: string): Promise<void>;
     findByConversationId(
         conversationId: string,
         options: {
@@ -10,5 +12,5 @@ export interface IMessageRepository {
         }
     ): Promise<Message[]>;
     findLatestByConversationId(conversationId: string): Promise<Message | null>;
-    deleteByConversationId(conversationId: string): Promise<void>;
+    findResponseToInvite(conversationId: string, inviteId: string): Promise<Message | null>;
 }

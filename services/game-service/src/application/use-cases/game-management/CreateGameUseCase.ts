@@ -5,6 +5,7 @@ import { IGameRepository } from '../../ports/repositories/IGameRepository';
 import { IGameEventPublisher } from '../../ports/messaging/IGameEventPublisher';
 import { IUserServiceClient } from '../../ports/external/IUserServiceClient';
 import { IGameReadyTimeoutScheduler } from '../../ports/timeouts';
+import { GameStatus } from '../../../domain/value-objects';
 
 export class CreateGameUseCase {
     constructor(
@@ -21,13 +22,33 @@ export class CreateGameUseCase {
 
         const existingGame = await this.gameRepository.findActiveByPlayer(input.playerId);
         if (existingGame) {
-            throw new InvalidGameStateError('Player already has an active game');
+            // If player is in a WAITING lobby, automatically leave it to create/join new game
+            if (existingGame.status === GameStatus.WAITING) {
+                existingGame.removePlayer(input.playerId);
+                if (existingGame.players.length === 0) {
+                    existingGame.cancel();
+                }
+                await this.gameRepository.update(existingGame);
+            } else {
+                // If player is in an active game (IN_PROGRESS), they can't create a new one
+                throw new InvalidGameStateError('Player already has an active game');
+            }
         }
 
         if (input.opponentId) {
             const opponentGame = await this.gameRepository.findActiveByPlayer(input.opponentId);
             if (opponentGame) {
-                throw new InvalidGameStateError('Opponent already has an active game');
+                // If opponent is in a WAITING lobby, automatically remove them to accept this invite
+                if (opponentGame.status === GameStatus.WAITING) {
+                    opponentGame.removePlayer(input.opponentId);
+                    if (opponentGame.players.length === 0) {
+                        opponentGame.cancel();
+                    }
+                    await this.gameRepository.update(opponentGame);
+                } else {
+                    // If opponent is in an active game (IN_PROGRESS), they can't accept the invite
+                    throw new InvalidGameStateError('Opponent is currently in an active game');
+                }
             }
         }
 
@@ -47,8 +68,8 @@ export class CreateGameUseCase {
         }
 
         return {
-            id: game.id,
-            status: game.status,
+          id: game.id,
+          status: game.status,
           mode: game.mode,
           players: game.players,
           score: {player1: game.score.player1, player2: game.score.player2},

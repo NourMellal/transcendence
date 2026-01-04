@@ -1,24 +1,35 @@
 import { Database } from 'sqlite3';
 import { promisify } from 'util';
-import { ChatServiceConfig, logger } from '../infrastructure/config';
+import { ChatServiceConfig } from '../infrastructure/config';
+import { createLogger } from '@transcendence/shared-logging';
+
+const logger = createLogger('ChatServiceContainer');
 import { SQLiteMessageRepository } from '../infrastructure/database/repositories/sqlite-message.repository';
 import { SQLiteConversationRepository } from '../infrastructure/database/repositories/sqlite-conversation.repository';
 import { SendMessageUseCase } from '../application/use-cases/sendMessageUseCase';
 import { GetMessagesUseCase } from '../application/use-cases/get-messages.usecase';
 import { GetConversationsUseCase } from '../application/use-cases/get-conversation.usecase';
+import { RespondInviteUseCase } from '../application/use-cases/respond-invite.usecase';
+import { InviteErrorHandler } from '../application/services/invite-error-handler';
 import { ChatController } from '../infrastructure/http/controllers/chat.contoller';
 import { HealthController } from '../infrastructure/http/controllers/health.controller';
 import { RoomManager } from '../infrastructure/websocket/RoomManager';
 import { ConnectionHandler } from '../infrastructure/websocket/handlers/ConnectionHandler';
 import { SendMessageHandler } from '../infrastructure/websocket/handlers/SendMessageHandler';
 import { DisconnectHandler } from '../infrastructure/websocket/handlers/DisconnectHandler';
-import { TypingHandler } from '../infrastructure/websocket/handlers/TypingHandler';
+import { InviteResponseHandler } from '../infrastructure/websocket/handlers/InviteResponseHandler';
 import { WebSocketAuthService } from '../infrastructure/websocket/services/WebSocketAuthService';
 import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
 import { GameServiceClient } from '../infrastructure/external/GameServiceClient';
 import { FriendshipPolicy, GameChatPolicy } from '../application/services/chat-policies';
+import { EventBus } from '../domain/events/EventBus';
+import { createMessagingConfig } from '../infrastructure/messaging/config/messaging.config';
+import { RabbitMQConnection } from '../infrastructure/messaging/connection';
+import { EventSerializer } from '../infrastructure/messaging/serialization/EventSerializer';
+import { GameEventHandler } from '../infrastructure/messaging/subscribers/GameEventHandler';
 
 export interface ChatServiceContainer {
+    readonly eventBus: EventBus;
     readonly repositories: {
         readonly messageRepository: SQLiteMessageRepository;
         readonly conversationRepository: SQLiteConversationRepository;
@@ -27,6 +38,7 @@ export interface ChatServiceContainer {
         readonly sendMessageUseCase: SendMessageUseCase;
         readonly getMessagesUseCase: GetMessagesUseCase;
         readonly getConversationsUseCase: GetConversationsUseCase;
+        readonly respondInviteUseCase: RespondInviteUseCase;
     };
     readonly controllers: {
         readonly chatController: ChatController;
@@ -37,8 +49,12 @@ export interface ChatServiceContainer {
         readonly connectionHandler: ConnectionHandler;
         readonly sendMessageHandler: SendMessageHandler;
         readonly disconnectHandler: DisconnectHandler;
-        readonly typingHandler: TypingHandler;
+        readonly inviteResponseHandler: InviteResponseHandler;
         readonly authService: WebSocketAuthService;
+    };
+    readonly messaging: {
+        readonly connection: RabbitMQConnection;
+        readonly gameEventHandler: GameEventHandler | null;
     };
 }
 
@@ -95,6 +111,10 @@ async function initializeDatabase(dbPath: string): Promise<Database> {
 
 export async function createContainer(config: ChatServiceConfig): Promise<ChatServiceContainer> {
     const db = await initializeDatabase(config.databasePath);
+    const messagingConfig = createMessagingConfig();
+
+    // Create EventBus early - it's needed by use cases
+    const eventBus = new EventBus();
 
     const messageRepository = new SQLiteMessageRepository(db);
     const conversationRepository = new SQLiteConversationRepository(db);
@@ -102,19 +122,33 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     const gameServiceClient = new GameServiceClient(config.gameServiceBaseUrl, config.internalApiKey);
     const friendshipPolicy = new FriendshipPolicy(userServiceClient);
     const gameChatPolicy = new GameChatPolicy(gameServiceClient);
+    
+    // Create error handler for invite processing
+    const inviteErrorHandler = new InviteErrorHandler(messageRepository, conversationRepository);
+    
+    // Inject EventBus into use cases
+    const respondInviteUseCase = new RespondInviteUseCase(
+        messageRepository,
+        conversationRepository,
+        gameServiceClient,
+        eventBus,
+        inviteErrorHandler
+    );
 
     const sendMessageUseCase = new SendMessageUseCase(
         messageRepository,
         conversationRepository,
         friendshipPolicy,
-        gameChatPolicy
+        gameChatPolicy,
+        eventBus
     );
     const getMessagesUseCase = new GetMessagesUseCase(messageRepository, conversationRepository);
     const getConversationsUseCase = new GetConversationsUseCase(conversationRepository, messageRepository);
     const chatController = new ChatController(
         sendMessageUseCase,
         getMessagesUseCase,
-        getConversationsUseCase
+        getConversationsUseCase,
+        respondInviteUseCase
     );
     const healthController = new HealthController(); 
 
@@ -123,11 +157,37 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
     const connectionHandler = new ConnectionHandler(roomManager, gameChatPolicy);
     const sendMessageHandler = new SendMessageHandler(sendMessageUseCase);
     const disconnectHandler = new DisconnectHandler(roomManager);
-    const typingHandler = new TypingHandler(gameChatPolicy, roomManager);
+    const inviteResponseHandler = new InviteResponseHandler(respondInviteUseCase);
+
+    const messagingConnection = new RabbitMQConnection({
+        uri: messagingConfig.uri,
+        exchange: messagingConfig.exchange
+    });
+    const serializer = new EventSerializer();
+    const queueName = `${messagingConfig.queuePrefix}.game-events`;
+    let gameEventHandler: GameEventHandler | null = null;
+
+    try {
+        const channel = await messagingConnection.getChannel();
+        gameEventHandler = new GameEventHandler(
+            channel,
+            serializer,
+            conversationRepository,
+            messageRepository
+        );
+        await gameEventHandler.start(queueName, messagingConfig.exchange);
+        logger.info({ queue: queueName }, 'Chat service messaging consumer started');
+    } catch (error) {
+        logger.warn(
+            { error: error instanceof Error ? error.message : 'unknown' },
+            'Messaging not available, continuing without RabbitMQ'
+        );
+    }
 
     logger.info('🔧 Dependency injection container created');
 
     return {
+        eventBus,
         repositories: {
             messageRepository,
             conversationRepository
@@ -135,7 +195,8 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
         useCases: {
             sendMessageUseCase,
             getMessagesUseCase,
-            getConversationsUseCase
+            getConversationsUseCase,
+            respondInviteUseCase
         },
         controllers: {
             chatController,
@@ -146,8 +207,12 @@ export async function createContainer(config: ChatServiceConfig): Promise<ChatSe
             connectionHandler,
             sendMessageHandler,
             disconnectHandler,
-            typingHandler,
+            inviteResponseHandler,
             authService
+        },
+        messaging: {
+            connection: messagingConnection,
+            gameEventHandler
         }
     };
 }

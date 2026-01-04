@@ -17,6 +17,17 @@ function resolveDatabaseFilePath(): string {
     return process.env.CHAT_SERVICE_DB_PATH || process.env.CHAT_DB_PATH || join(process.cwd(), 'data', 'chat-service.db');
 }
 
+function buildEnvFallback(): ChatServiceConfig {
+    return {
+        port: getEnvVarAsNumber('CHAT_SERVICE_PORT', 3003),
+        databasePath: resolveDatabaseFilePath(),
+        internalApiKey: process.env.INTERNAL_API_KEY,
+        jwtSecret: process.env.JWT_SECRET || 'fallback-jwt-secret-for-development',
+        userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
+        gameServiceBaseUrl: process.env.GAME_SERVICE_URL || 'http://game-service:3002'
+    };
+}
+
 export async function loadChatServiceConfig(): Promise<ChatServiceConfig> {
     try {
         const vault = createChatServiceVault();
@@ -28,21 +39,20 @@ export async function loadChatServiceConfig(): Promise<ChatServiceConfig> {
         ]);
 
         if (!internalApiKey) {
-            throw new Error('INTERNAL_API_KEY not found in Vault. Run: pnpm vault:setup');
+            console.warn('[chat-service] INTERNAL_API_KEY not found in Vault or environment.');
         }
 
         return {
             port: getEnvVarAsNumber('CHAT_SERVICE_PORT', 3003),
             databasePath: resolveDatabaseFilePath(),
-            internalApiKey,
+            internalApiKey: internalApiKey ?? undefined,
             jwtSecret: jwtConfig.secretKey,
             userServiceBaseUrl: process.env.USER_SERVICE_URL || 'http://user-service:3001',
             gameServiceBaseUrl: process.env.GAME_SERVICE_URL || 'http://game-service:3002'
         };
     } catch (error) {
         const err = error as Error;
-        console.error('[chat-service] CRITICAL: Failed to load config from Vault:', err.message);
-        console.error('Run: pnpm vault:setup');
+        console.warn('Vault not available, falling back to environment variables:', err.message);
         throw error;
     }
 }

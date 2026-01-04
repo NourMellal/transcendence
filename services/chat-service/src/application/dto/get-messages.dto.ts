@@ -1,5 +1,6 @@
 
 import { MessageType } from "src/domain/value-objects/messageType";
+import { InvitePayload } from "./send-message.dto";
 /**
  * Input DTO - Query parameters
  */
@@ -30,6 +31,7 @@ export interface MessageDTO {
   type: MessageType;
   recipientId?: string;
   gameId?: string;
+  invitePayload?: InvitePayload;
   createdAt: string;
 }
 

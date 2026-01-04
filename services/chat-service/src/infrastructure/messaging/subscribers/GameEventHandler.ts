@@ -4,10 +4,12 @@ import {
   GameFinishedIntegrationEvent,
   IntegrationEvent
 } from '@transcendence/shared-messaging';
+import { createLogger } from '@transcendence/shared-logging';
 import { EventSerializer } from '../serialization/EventSerializer';
 import { IconversationRepository } from '../../../domain/repositories/conversation-repository';
 import { IMessageRepository } from '../../../domain/repositories/message.respository';
-import { logger } from '../../config';
+
+const logger = createLogger('GameEventHandler');
 
 export class GameEventHandler {
   constructor(

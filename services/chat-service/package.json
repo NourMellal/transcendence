@@ -4,7 +4,7 @@
     "description": "Real-time chat service",
     "main": "dist/server.js",
     "scripts": {
-        "dev": "tsx watch src/server.ts",
+        "dev": "tsx src/server.ts",
         "build": "tsc",
         "start": "node dist/server.js",
         "test": "vitest"

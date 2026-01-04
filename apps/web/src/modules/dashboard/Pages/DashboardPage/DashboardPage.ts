@@ -15,8 +15,18 @@ import { gameService } from '@/modules/game/services/GameService';
 import type { PublicGameSummary, GameLobbyUpdatedEvent, GameStateOutput } from '@/modules/game/types/game.types';
 import { createGameWebSocketClient } from '@/modules/shared/services/WebSocketClient';
 import type { SuggestedFriend } from '../../data/suggestions';
+import { chatWebSocketService } from '@/services/api/ChatWebSocketService';
+import { chatService } from '@/services/api/ChatService';
 
 type InviteStatus = 'idle' | 'loading' | 'success' | 'error';
+
+type PendingInvite = {
+  inviteId: string;
+  fromUserId: string;
+  fromUsername: string;
+  mode?: string;
+  timestamp: string;
+};
 
 type State = {
   isLoading: boolean;
@@ -43,6 +53,7 @@ type State = {
   publicGamesLoading: boolean;
   publicGamesError?: string;
   joiningGameId?: string;
+  pendingInvites: PendingInvite[];
 };
 
 export default class DashboardPage extends Component<Record<string, never>, State> {
@@ -53,6 +64,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   private friendRequestFeedbackTimeout?: number;
   private lobbySocket = createGameWebSocketClient();
   private lobbyUnsubscribes: Array<() => void> = [];
+  private chatUnsubscribes: Array<() => void> = [];
 
   constructor(props: Record<string, never> = {}) {
     super(props);
@@ -77,6 +89,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       publicGamesLoading: false,
       publicGamesError: undefined,
       joiningGameId: undefined,
+      pendingInvites: [],
     };
   }
 
@@ -98,6 +111,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     void this.loadDashboardData();
     this.startLeaderboardPolling();
     void this.initializePublicGamesFeed();
+    this.setupChatInviteListeners();
   }
 
   onUnmount(): void {
@@ -118,6 +132,8 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     this.lobbyUnsubscribes.forEach((unsub) => unsub());
     this.lobbyUnsubscribes = [];
     this.lobbySocket.disconnect();
+    this.chatUnsubscribes.forEach((unsub) => unsub());
+    this.chatUnsubscribes = [];
   }
 
   private startLeaderboardPolling(): void {
@@ -346,6 +362,160 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     }, 4000);
   }
 
+  private setupChatInviteListeners(): void {
+    const auth = appState.auth.get();
+    if (!auth.isAuthenticated || !auth.token) {
+      console.warn('[DashboardPage] Cannot setup chat listeners: not authenticated');
+      return;
+    }
+
+    // Connect to chat WebSocket service if not already connected
+    if (!chatWebSocketService.isConnected()) {
+      console.log('[DashboardPage] Connecting to chat WebSocket service');
+      chatWebSocketService.connect(auth.token);
+    }
+
+    // Listen for incoming invites via WebSocket message event
+    const unsubMessage = chatWebSocketService.onMessage((message: any) => {
+      console.log('[DashboardPage] Received message:', message);
+      
+      if (message.type === 'INVITE' && message.senderId !== auth.user?.id) {
+        console.log('[DashboardPage] Received game invite:', message);
+        
+        const invitePayload = message.invitePayload || {};
+        const newInvite: PendingInvite = {
+          inviteId: message.id,
+          fromUserId: message.senderId,
+          fromUsername: message.senderUsername || 'Friend',
+          mode: invitePayload.mode,
+          timestamp: message.createdAt || new Date().toISOString(),
+        };
+        
+        // Add to pending invites if not already there
+        const exists = this.state.pendingInvites.some(inv => inv.inviteId === message.id);
+        if (!exists) {
+          console.log('[DashboardPage] Adding invite to pending list');
+          this.setState({
+            pendingInvites: [...this.state.pendingInvites, newInvite]
+          });
+        }
+      }
+    });
+
+    // Listen for invite accepted (when other player accepts our invite)
+    const unsubAccepted = chatWebSocketService.onInviteAccepted((data: any) => {
+      console.log('[DashboardPage] Invite accepted:', data);
+      showSuccess(`${data.acceptedByUsername} accepted your invite!`);
+      
+      // Navigate to lobby
+      if (data.gameId) {
+        navigate(`/game/lobby/${data.gameId}`);
+      }
+    });
+
+    // Listen for invite declined
+    const unsubDeclined = chatWebSocketService.onInviteDeclined((data: any) => {
+      console.log('[DashboardPage] Invite declined:', data);
+      showError(`${data.declinedByUsername} declined your invite.`);
+    });
+
+    this.chatUnsubscribes.push(unsubMessage, unsubAccepted, unsubDeclined);
+  }
+
+  private async handleAcceptInvite(inviteId: string, retryCount = 0): Promise<void> {
+    const maxRetries = 2;
+    console.log('[DashboardPage] Accepting invite:', inviteId, 'retry:', retryCount);
+    
+    try {
+      const response = await chatService.acceptInvite(inviteId);
+      
+      // Check if response contains an error (backend handled gracefully)
+      if ((response as any).error) {
+        throw new Error((response as any).error);
+      }
+      
+      console.log('[DashboardPage] Invite accepted:', response);
+      
+      // Remove from pending invites immediately
+      this.setState({
+        pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+      });
+      
+      // Verify we got a valid game ID
+      if (!response.gameId) {
+        throw new Error('Game ID missing from response');
+      }
+      
+      // Navigate to lobby
+      showSuccess('Game created! Redirecting to lobby...');
+      navigate(`/game/lobby/${response.gameId}`);
+      
+    } catch (error) {
+      console.error('[DashboardPage] Failed to accept invite:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Determine if we should retry
+      const shouldRetry = retryCount < maxRetries && 
+                         (errorMessage.includes('timeout') || 
+                          errorMessage.includes('network') ||
+                          errorMessage.includes('unavailable'));
+      
+      if (shouldRetry) {
+        // Exponential backoff: 1s, 2s
+        const backoffMs = 1000 * Math.pow(2, retryCount);
+        showError(`Connection issue. Retrying in ${backoffMs / 1000}s...`);
+        
+        setTimeout(() => {
+          this.handleAcceptInvite(inviteId, retryCount + 1);
+        }, backoffMs);
+      } else {
+        // All retries exhausted or non-retryable error
+        // Clean up invite from state
+        this.setState({
+          pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+        });
+        
+        // Show user-friendly error message
+        let userMessage = 'Failed to accept invite. ';
+        if (errorMessage.includes('timeout')) {
+          userMessage += 'The server took too long to respond. Please try sending a new invite.';
+        } else if (errorMessage.includes('already been responded')) {
+          userMessage += 'This invite has already been accepted or declined.';
+        } else if (errorMessage.includes('network') || errorMessage.includes('unavailable')) {
+          userMessage += 'Please check your connection and try again.';
+        } else {
+          userMessage += errorMessage;
+        }
+        
+        showError(userMessage);
+      }
+    }
+  }
+
+  private async handleDeclineInvite(inviteId: string): Promise<void> {
+    console.log('[DashboardPage] Declining invite:', inviteId);
+    
+    try {
+      await chatService.declineInvite(inviteId);
+      console.log('[DashboardPage] Invite declined');
+      
+      // Remove from pending invites
+      this.setState({
+        pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+      });
+    } catch (error) {
+      console.error('[DashboardPage] Failed to decline invite:', error);
+      showError('Failed to decline invite.');
+    }
+  }
+
+  private dismissInvite(inviteId: string): void {
+    this.setState({
+      pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+    });
+  }
+
   private async handleFriendRequest(friendId: string): Promise<void> {
     if (this.state.friendRequestStatus[friendId] === 'loading') return;
 
@@ -501,6 +671,69 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     return `
       <div class="p-4 rounded-2xl" style="background:${colors.bg}; border:1px solid ${colors.border};">
         ${message}
+      </div>
+    `;
+  }
+
+  private renderPendingInvitesWidget(): string {
+    const { pendingInvites } = this.state;
+    
+    if (pendingInvites.length === 0) {
+      return '';
+    }
+
+    return `
+      <div class="glass-panel p-6 rounded-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2v4"></path>
+              <path d="M16 2v4"></path>
+              <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+              <path d="M3 10h18"></path>
+            </svg>
+            Game Invites
+          </h3>
+          <span class="px-2 py-1 rounded-full text-xs font-semibold" style="background: var(--color-brand-primary); color: white;">
+            ${pendingInvites.length}
+          </span>
+        </div>
+        <div class="space-y-3">
+          ${pendingInvites.map((invite) => `
+            <div class="flex items-center justify-between p-4 rounded-xl" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+              <div class="flex-1">
+                <p class="font-semibold">${invite.fromUsername}</p>
+                <p class="text-sm text-white/60">
+                  Invited you to play ${invite.mode === 'TOURNAMENT' ? 'Tournament' : '1v1'}
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  data-accept-invite="${invite.inviteId}"
+                  class="px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105"
+                  style="background: var(--color-brand-primary); color: white;"
+                >
+                  Accept
+                </button>
+                <button
+                  data-decline-invite="${invite.inviteId}"
+                  class="px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105"
+                  style="background: rgba(255, 255, 255, 0.1); color: white;"
+                >
+                  Decline
+                </button>
+                <button
+                  data-dismiss-invite="${invite.inviteId}"
+                  class="p-2 rounded-lg text-white/50 hover:text-white transition-all"
+                  style="background: rgba(255, 255, 255, 0.05);"
+                  title="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     `;
   }
@@ -1285,6 +1518,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
             ` : ''}
             ${this.renderInviteFeedback()}
             ${this.renderFriendRequestFeedback()}
+            ${this.renderPendingInvitesWidget()}
             ${this.renderHero(profile)}
             ${isLoading && !profile ? `
               <div class="glass-panel p-6 text-sm text-white/60">Loading dashboard data...</div>
@@ -1433,6 +1667,27 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       const friendshipId = el.getAttribute('data-friendship-id');
       if (friendId) {
         void this.handleBlockFriend(friendId, friendshipId);
+      }
+    });
+
+    bindClick('[data-accept-invite]', (el) => {
+      const inviteId = el.getAttribute('data-accept-invite');
+      if (inviteId) {
+        void this.handleAcceptInvite(inviteId);
+      }
+    });
+
+    bindClick('[data-decline-invite]', (el) => {
+      const inviteId = el.getAttribute('data-decline-invite');
+      if (inviteId) {
+        void this.handleDeclineInvite(inviteId);
+      }
+    });
+
+    bindClick('[data-dismiss-invite]', (el) => {
+      const inviteId = el.getAttribute('data-dismiss-invite');
+      if (inviteId) {
+        this.dismissInvite(inviteId);
       }
     });
 
