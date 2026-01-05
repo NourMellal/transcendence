@@ -90,5 +90,57 @@ export async function registerChatRoutes(
 
     // WebSocket route /api/chat/ws will be handled separately in server.ts
 
+    /**
+     * POST /api/chat/invites/:inviteId/accept
+     * Protected - Accept invite (creates game and broadcasts)
+     */
+    fastify.post('/api/chat/invites/:inviteId/accept', {
+        preHandler: [requireAuth]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { inviteId } = request.params as { inviteId: string };
+
+        const response = await fetch(`${chatServiceUrl}/chat/invites/${inviteId}/accept`, {
+            method: 'POST',
+            headers: {
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'x-user-email': user?.email || '',
+                'x-username': user?.username || '',
+                'Authorization': request.headers.authorization || '',
+            },
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
+    /**
+     * POST /api/chat/invites/:inviteId/decline
+     * Protected - Decline invite
+     */
+    fastify.post('/api/chat/invites/:inviteId/decline', {
+        preHandler: [requireAuth]
+    }, async (request, reply) => {
+        const user = getUser(request);
+        const { inviteId } = request.params as { inviteId: string };
+
+        const response = await fetch(`${chatServiceUrl}/chat/invites/${inviteId}/decline`, {
+            method: 'POST',
+            headers: {
+                'x-internal-api-key': internalApiKey,
+                'x-request-id': request.id,
+                'x-user-id': user?.userId || user?.sub || '',
+                'x-user-email': user?.email || '',
+                'x-username': user?.username || '',
+                'Authorization': request.headers.authorization || '',
+            },
+        });
+
+        const data = await response.json();
+        return reply.code(response.status).send(data);
+    });
+
     fastify.log.info('✅ Chat routes registered');
 }

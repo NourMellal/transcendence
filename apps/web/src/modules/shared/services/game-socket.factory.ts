@@ -78,10 +78,13 @@ export function createGameSocket(
   path?: string
 ): GameSocket {
   const socket = io(url, {
-    transports: ['polling', 'websocket'], // Try polling first for handshake, then upgrade to websocket
+    transports: ['websocket'], // WebSocket only - faster, no polling overhead
     autoConnect: false,
     forceNew: true,
-    reconnection: false,
+    reconnection: true,
+    reconnectionAttempts: 3,
+    reconnectionDelay: 500,
+    timeout: 5000,
     query: token ? { token } : undefined,
     ...(path ? { path } : {}),
   });

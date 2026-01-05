@@ -13,7 +13,7 @@ export default class RootComponent extends Component<Props, State> {
 
   render() {
     return [
-      '<main id="app-view"></main>',
+      '<main id="app-view" style="min-height: 100vh; width: 100%;"></main>',
     ];
   }
 

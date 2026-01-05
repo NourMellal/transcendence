@@ -70,7 +70,9 @@ export default class CreateGamePage extends Component<{}, CreateGameState> {
                   class="mode-btn ${gameMode === 'CLASSIC' ? 'active' : ''} p-4 rounded-lg transition-all duration-200 touch-feedback"
                   style="border: 2px solid ${gameMode === 'CLASSIC' ? 'var(--color-brand-primary)' : 'var(--color-panel-border)'}; background: ${gameMode === 'CLASSIC' ? 'rgba(0, 179, 217, 0.1)' : 'rgba(47, 54, 61, 0.5)'};"
                 >
-                  <div class="text-2xl mb-2">⚡</div>
+                  <div class="text-2xl mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="currentColor" style="display: inline-block;"><path d="M15.5 6H13V4a1 1 0 0 0-2 0v2H8.5a7.5 7.5 0 0 0 0 15h7a7.5 7.5 0 0 0 0-15zm0 13h-7a5.5 5.5 0 0 1 0-11h7a5.5 5.5 0 0 1 0 11zM11 13.5a1 1 0 0 1-1 1H9v1a1 1 0 0 1-2 0v-1H6a1 1 0 0 1 0-2h1v-1a1 1 0 0 1 2 0v1h1a1 1 0 0 1 1 1zm8-1.5a1 1 0 1 1-1-1 1 1 0 0 1 1 1zm-2 3a1 1 0 1 1-1-1 1 1 0 0 1 1 1z"/></svg>
+                  </div>
                   <div class="font-semibold" style="color: ${gameMode === 'CLASSIC' ? 'var(--color-brand-primary)' : 'var(--color-text-primary)'};">Classic</div>
                   <div class="text-xs mt-1" style="color: var(--color-text-muted);">Quick 1v1 match</div>
                 </button>
@@ -81,7 +83,9 @@ export default class CreateGamePage extends Component<{}, CreateGameState> {
                   class="mode-btn ${gameMode === 'TOURNAMENT' ? 'active' : ''} p-4 rounded-lg transition-all duration-200 touch-feedback"
                   style="border: 2px solid ${gameMode === 'TOURNAMENT' ? 'var(--color-brand-secondary)' : 'var(--color-panel-border)'}; background: ${gameMode === 'TOURNAMENT' ? 'rgba(255, 0, 110, 0.1)' : 'rgba(47, 54, 61, 0.5)'};"
                 >
-                  <div class="text-2xl mb-2">🏆</div>
+                  <div class="text-2xl mb-2">
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="32" height="32" fill="currentColor" style="display: inline-block;"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>
+                  </div>
                   <div class="font-semibold" style="color: ${gameMode === 'TOURNAMENT' ? 'var(--color-brand-secondary)' : 'var(--color-text-primary)'};">Tournament</div>
                   <div class="text-xs mt-1" style="color: var(--color-text-muted);">Competitive mode</div>
                 </button>

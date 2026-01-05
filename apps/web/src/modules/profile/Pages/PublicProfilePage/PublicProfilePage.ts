@@ -2,6 +2,7 @@ import Component from '../../../../core/Component';
 import { navigate } from '../../../../routes';
 import { userService } from '../../../../services/api/UserService';
 import { appState } from '../../../../state';
+import type { PresenceMap } from '../../../../state';
 import type { User, UserStats } from '../../../../models';
 
 interface Props {
@@ -36,7 +37,13 @@ export default class PublicProfilePage extends Component<Props, State> {
   }
 
   async onMount(): Promise<void> {
+    this.presenceUnsubscribe = appState.presence.subscribe((map) => this.applyPresence(map));
+    this.applyPresence(appState.presence.get());
     await this.loadProfile();
+  }
+
+  onUnmount(): void {
+    this.presenceUnsubscribe?.();
   }
 
   private async loadProfile(): Promise<void> {
@@ -74,6 +81,25 @@ export default class PublicProfilePage extends Component<Props, State> {
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to load profile',
       });
+    }
+  }
+
+  private presenceUnsubscribe?: () => void;
+
+  private applyPresence(map: PresenceMap): void {
+    const activeUserId = this.props.userId;
+    const status = map[activeUserId];
+    if (!status) {
+      return;
+    }
+
+    const current = this.state.user;
+    if (current && current.status === status) {
+      return;
+    }
+
+    if (current) {
+      this.setState({ user: { ...current, status } });
     }
   }
 
@@ -129,13 +155,6 @@ export default class PublicProfilePage extends Component<Props, State> {
       <div class="glass-panel p-8 text-center">
         <div class="text-4xl mb-4">😕</div>
         <p class="text-white/80 mb-4">${error}</p>
-        <button
-          data-action="retry"
-          class="btn-touch px-6 py-3 rounded-xl touch-feedback"
-          style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
-        >
-          Try Again
-        </button>
       </div>
     `;
   }
@@ -287,7 +306,10 @@ export default class PublicProfilePage extends Component<Props, State> {
               <p class="text-xs text-white/60">Participated</p>
             </div>
             <div class="text-center p-3 rounded-lg" style="background: rgba(0,0,0,0.3);">
-              <p class="text-xl font-bold" style="color: var(--color-brand-accent);">🏆 ${stats.tournaments.won}</p>
+              <p class="text-xl font-bold flex items-center gap-2" style="color: var(--color-brand-accent);">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="20" height="20" fill="currentColor"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>
+                ${stats.tournaments.won}
+              </p>
               <p class="text-xs text-white/60">Won</p>
             </div>
           </div>
@@ -315,7 +337,6 @@ export default class PublicProfilePage extends Component<Props, State> {
     };
 
     bind('[data-action="go-back"]', () => window.history.back());
-    bind('[data-action="retry"]', () => this.loadProfile());
     bind('[data-action="add-friend"]', () => this.handleAddFriend());
     bind('[data-action="remove-friend"]', () => this.handleRemoveFriend());
     bind('[data-action="accept-request"]', () => this.handleAcceptRequest());

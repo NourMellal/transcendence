@@ -14,6 +14,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { readFileSync } from 'fs';
 import { initializeVaultJWTService } from './utils/vault-jwt.service';
 import { loadGatewayConfig } from './config/gateway-config';
+import { createLogger } from '@transcendence/shared-logging';
 
 // Import route handlers
 import { registerAuthRoutes } from './routes/auth.routes';
@@ -36,30 +37,33 @@ async function createGateway() {
     // Initialize Vault JWT Service
     await initializeVaultJWTService();
 
-    const app = fastify({
-        logger: {
-            level: 'info',
-            serializers: {
-                req(req) {
-                    return {
-                        method: req.method,
-                        url: req.url,
-                        headers: {
-                            host: req.headers.host,
-                            'user-agent': req.headers['user-agent'],
-                            'content-type': req.headers['content-type']
-                        },
-                        remoteAddress: req.ip,
-                        remotePort: req.socket?.remotePort
-                    };
-                },
-                res(res) {
-                    return {
-                        statusCode: res.statusCode
-                    };
-                }
+    const logger = createLogger('api-gateway', {
+        pretty: process.env.LOG_PRETTY === 'true',
+        serializers: {
+            req(req) {
+                return {
+                    method: req.method,
+                    url: req.url,
+                    headers: {
+                        host: req.headers.host,
+                        'user-agent': req.headers['user-agent'],
+                        'content-type': req.headers['content-type']
+                    },
+                    remoteAddress: req.ip,
+                    remotePort: req.socket?.remotePort
+                };
+            },
+            res(res) {
+                return {
+                    statusCode: res.statusCode
+                };
             }
-        },
+        }
+    });
+
+    const app = fastify({
+        // Pino logger from shared-logging; cast to satisfy Fastify's base logger type
+        logger: logger as any,
         requestIdLogLabel: 'reqId',
         disableRequestLogging: false,
         requestIdHeader: 'x-request-id'
@@ -194,6 +198,12 @@ async function createGateway() {
             upstream: config.gameServiceUrl,
             prefix: '/api/games/ws',
             websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
             replyOptions: {
                 rewriteRequestHeaders: (originalReq, headers) => {
                     return {
@@ -211,6 +221,12 @@ async function createGateway() {
             upstream: config.chatServiceUrl,
             prefix: '/api/chat/ws',
             websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
             replyOptions: {
                 rewriteRequestHeaders: (originalReq, headers) => {
                     return {
@@ -223,7 +239,54 @@ async function createGateway() {
         });
     });
 
-    app.log.info('📡 WebSocket proxies registered: /api/games/ws, /api/chat/ws');
+    await app.register(async (fastify) => {
+        await fastify.register(proxy, {
+            upstream: config.userServiceUrl,
+            prefix: '/api/presence/ws',
+            rewritePrefix: '/api/presence/ws',
+            websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
+            replyOptions: {
+                rewriteRequestHeaders: (_originalReq, headers) => {
+                    return {
+                        ...headers,
+                        'x-internal-api-key': config.internalApiKey,
+                        'x-forwarded-by': 'transcendence-gateway',
+                    };
+                }
+            }
+        });
+    });
+
+    await app.register(async (fastify) => {
+        await fastify.register(proxy, {
+            upstream: config.tournamentServiceUrl,
+            prefix: '/api/tournaments/ws',
+            websocket: true,
+            wsClientOptions: {
+                headers: {
+                    'x-internal-api-key': config.internalApiKey,
+                    'x-forwarded-by': 'transcendence-gateway',
+                },
+            },
+            replyOptions: {
+                rewriteRequestHeaders: (originalReq, headers) => {
+                    return {
+                        ...headers,
+                        'x-internal-api-key': config.internalApiKey,
+                        'x-forwarded-by': 'transcendence-gateway',
+                    };
+                }
+            }
+        });
+    });
+
+    app.log.info('📡 WebSocket proxies registered: /api/games/ws, /api/chat/ws, /api/presence/ws, /api/tournaments/ws');
 
     // Health check endpoint
     app.get('/health', async (request, reply) => {
@@ -314,9 +377,12 @@ async function start() {
         console.log('🚀 ═══════════════════════════════════════════════════════');
         console.log('🎮 Transcendence API Gateway v2.0');
         console.log('═══════════════════════════════════════════════════════');
-        console.log(`📍 Gateway URL: http://localhost:${config.port}`);
-        console.log(`📚 API Docs:    http://localhost:${config.port}/api/docs/`);
-        console.log(`💚 Health:      http://localhost:${config.port}/health`);  
+        const publicHttpUrl = process.env.PUBLIC_HTTP_URL || `http://api-gateway:${config.port}`;
+        const docsUrl = `${publicHttpUrl.replace(/\/$/, '')}/api/docs`;
+        const healthUrl = `${publicHttpUrl.replace(/\/$/, '')}/health`;
+        console.log(`📍 Gateway URL: ${publicHttpUrl}`);
+        console.log(`📚 API Docs:    ${docsUrl}`);
+        console.log(`💚 Health:      ${healthUrl}`);  
         console.log(`🌐 CORS Origins: ${config.corsOrigins.join(', ')}`);
         console.log('═══════════════════════════════════════════════════════');
         console.log('📡 Proxied Services:');

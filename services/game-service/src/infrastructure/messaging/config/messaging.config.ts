@@ -8,8 +8,8 @@ export function createMessagingConfig(): MessagingConfig {
     const uri =
         process.env.RABBITMQ_URL ??
         process.env.RABBITMQ_URI ??
-        // Default matches docker-compose credentials and works for local host access to the container port
-        'amqp://transcendence:transcendence_dev@localhost:5672';
+        // Default matches docker-compose credentials and Docker DNS
+        'amqp://transcendence:transcendence_dev@rabbitmq:5672';
 
     return {
         uri,

@@ -67,52 +67,6 @@ export async function registerUserRoutes(
     });
 
     /**
-     * POST /api/users/presence
-     * Protected - Update current user presence
-     */
-    fastify.post<{ Body: { status: string } }>('/api/users/presence', {
-        preHandler: [requireAuth]
-    }, async (request, reply) => {
-        const user = getUser(request);
-        const response = await fetch(`${userServiceUrl}/users/presence`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-internal-api-key': internalApiKey,
-                'x-request-id': request.id,
-                'x-user-id': user?.userId || user?.sub || '',
-            },
-            body: JSON.stringify(request.body),
-        });
-
-        if (response.status === 204) {
-            return reply.code(204).send();
-        }
-
-        const data = await response.json();
-        return reply.code(response.status).send(data);
-    });
-
-    /**
-     * GET /api/users/:userId/presence
-     * Protected - Get presence for a user
-     */
-    fastify.get<{ Params: { userId: string } }>('/api/users/:userId/presence', {
-        preHandler: [requireAuth]
-    }, async (request, reply) => {
-        const response = await fetch(`${userServiceUrl}/users/${request.params.userId}/presence`, {
-            method: 'GET',
-            headers: {
-                'x-internal-api-key': internalApiKey,
-                'x-request-id': request.id,
-            },
-        });
-
-        const data = await response.json();
-        return reply.code(response.status).send(data);
-    });
-
-    /**
      * GET /api/users/:userId
      * Protected - Fetch current user's profile by ID
      */

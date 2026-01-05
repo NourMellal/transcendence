@@ -13,6 +13,23 @@ type DeferredConnect = {
   reject: (error: Error) => void;
 };
 
+const wsLogsEnabled = Boolean(import.meta.env?.DEV && import.meta.env?.VITE_DEBUG_WS === 'true');
+const wsLog = (...args: Parameters<typeof console.log>): void => {
+  if (wsLogsEnabled) {
+    console.log(...args);
+  }
+};
+const wsWarn = (...args: Parameters<typeof console.warn>): void => {
+  if (wsLogsEnabled) {
+    console.warn(...args);
+  }
+};
+const wsError = (...args: Parameters<typeof console.error>): void => {
+  if (wsLogsEnabled) {
+    console.error(...args);
+  }
+};
+
 export class WebSocketClient {
   private socket: GameSocket | null = null;
   private token: string | null = null;
@@ -30,6 +47,10 @@ export class WebSocketClient {
     private url: string,
     private readonly wsPath?: string
   ) {
+    // Initialize token from current auth state immediately
+    this.token = appState.auth.get().token ?? null;
+    
+    // Subscribe to auth changes for future updates
     appState.auth.subscribe((auth) => {
       this.token = auth.token ?? null;
       if (this.socket) {
@@ -51,7 +72,7 @@ export class WebSocketClient {
     }
 
     if (this.socket?.connected) {
-      console.warn('[WS] Already connected');
+      wsWarn('[WS] Already connected');
       return;
     }
 
@@ -93,7 +114,7 @@ export class WebSocketClient {
 
   send<T>(eventType: string, payload: T): void {
     if (!this.socket || !this.socket.connected) {
-      console.warn(`[WS] Not connected, queuing message: ${eventType}`);
+      wsWarn(`[WS] Not connected, queuing message: ${eventType}`);
       this.messageQueue.push({ event: eventType, payload });
       return;
     }
@@ -101,12 +122,12 @@ export class WebSocketClient {
     try {
       this.socket.emit(eventType, payload);
     } catch (error) {
-      console.error(`[WS] Failed to send message '${eventType}':`, error);
+      wsError(`[WS] Failed to send message '${eventType}':`, error);
     }
   }
 
   disconnect(): void {
-    console.log('[WS] Disconnecting...');
+    wsLog('[WS] Disconnecting...');
     this.manualDisconnect = true;
     this.handlers.forEach((_value, key) => this.detachSocketHandler(key));
     this.handlers.clear();
@@ -131,7 +152,7 @@ export class WebSocketClient {
     }
 
     this.socket.on('connect', () => {
-      console.log('[WS] ✅ Connected');
+      wsLog('[WS] ✅ Connected');
       this.connectionState = 'connected';
       this.reconnectAttempts = 0;
       this.clearReconnectTimer();
@@ -143,7 +164,7 @@ export class WebSocketClient {
     this.socket.on('disconnect', (...args: unknown[]) => {
       const [reasonArg] = args;
       const reason = typeof reasonArg === 'string' ? reasonArg : undefined;
-      console.warn('[WS] 🔌 Disconnected', reason);
+      wsWarn('[WS] 🔌 Disconnected', reason);
       this.connectionState = 'disconnected';
       if (this.connectDeferred) {
         this.connectDeferred.reject(new Error(reason || 'socket disconnected'));
@@ -156,7 +177,7 @@ export class WebSocketClient {
     this.socket.on('connect_error', (...args: unknown[]) => {
       const [errorArg] = args;
       const error = errorArg instanceof Error ? errorArg : new Error(String(errorArg ?? 'UNKNOWN_ERROR'));
-      console.error('[WS] ❌ Connection error:', error);
+      wsError('[WS] ❌ Connection error:', error);
       this.connectionState = 'error';
       if (this.connectDeferred) {
         this.connectDeferred.reject(error);
@@ -180,7 +201,7 @@ export class WebSocketClient {
         try {
           listener(payload);
         } catch (error) {
-          console.error(`[WS] Handler error for event '${eventType}':`, error);
+          wsError(`[WS] Handler error for event '${eventType}':`, error);
         }
       });
     };
@@ -209,7 +230,7 @@ export class WebSocketClient {
     }
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[WS] ❌ Max reconnect attempts reached');
+      wsError('[WS] ❌ Max reconnect attempts reached');
       this.connectionState = 'failed';
       return;
     }
@@ -217,14 +238,14 @@ export class WebSocketClient {
     this.reconnectAttempts += 1;
     const delay = Math.min(1000 * 2 ** (this.reconnectAttempts - 1), 30000);
 
-    console.log(
+    wsLog(
       `[WS] 🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`
     );
 
     this.reconnectTimeout = window.setTimeout(() => {
       this.reconnectTimeout = null;
       this.connect(this.url).catch((error) => {
-        console.error('[WS] Reconnect failed:', error);
+        wsError('[WS] Reconnect failed:', error);
       });
     }, delay);
   }
@@ -234,7 +255,7 @@ export class WebSocketClient {
       return;
     }
 
-    console.log(`[WS] Flushing ${this.messageQueue.length} queued messages`);
+    wsLog(`[WS] Flushing ${this.messageQueue.length} queued messages`);
 
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
@@ -265,15 +286,43 @@ export class WebSocketClient {
 
 const wsUrlFromEnv =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_GAME_URL?.trim()) || '';
+const tournamentWsUrlFromEnv =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_TOURNAMENT_URL?.trim()) || '';
 const apiBaseFromEnv =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL?.trim()) || '';
+const browserOrigin =
+  typeof window !== 'undefined' && typeof window.location?.origin === 'string'
+    ? window.location.origin
+    : '';
 
 const defaultWsHost =
   wsUrlFromEnv ||
+  browserOrigin ||
   (/^https?:\/\//i.test(apiBaseFromEnv)
     ? apiBaseFromEnv.replace(/\/?api$/, '')
-    : 'http://localhost:3000');
+    : 'http://api-gateway:3000');
 const defaultWsPath =
   import.meta.env.VITE_WS_GAME_PATH || '/api/games/ws/socket.io';
+const defaultTournamentWsPath =
+  import.meta.env.VITE_WS_TOURNAMENT_PATH || '/api/tournaments/ws/socket.io';
+
+export function createGameWebSocketClient(
+  url: string = defaultWsHost,
+  path: string = defaultWsPath
+): WebSocketClient {
+  return new WebSocketClient(url, path);
+}
 
 export const gameWS = new WebSocketClient(defaultWsHost, defaultWsPath);
+
+export function createTournamentWebSocketClient(
+  url: string = tournamentWsUrlFromEnv || defaultWsHost,
+  path: string = defaultTournamentWsPath
+): WebSocketClient {
+  return new WebSocketClient(url, path);
+}
+
+export const tournamentWS = new WebSocketClient(
+  tournamentWsUrlFromEnv || defaultWsHost,
+  defaultTournamentWsPath
+);

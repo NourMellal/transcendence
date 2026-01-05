@@ -1,10 +1,10 @@
 import { getEnvVar, getEnvVarAsNumber, createAPIGatewayVault } from '@transcendence/shared-utils';
 
 const DEFAULT_SERVICE_URLS = {
-    user: 'http://localhost:3001',
-    game: 'http://localhost:3002',
-    chat: 'http://localhost:3003',
-    tournament: 'http://localhost:3004'
+    user: 'http://user-service:3001',
+    game: 'http://game-service:3002',
+    chat: 'http://chat-service:3003',
+    tournament: 'http://tournament-service:3004'
 } as const;
 
 const DEFAULT_CORS = ['http://localhost:5173'];
@@ -32,16 +32,19 @@ export async function loadGatewayConfig(): Promise<GatewayConfig> {
     try {
         await vault.initialize();
         internalApiKeyFromVault = await vault.getInternalApiKey();
+        
+        if (!internalApiKeyFromVault) {
+            throw new Error('INTERNAL_API_KEY not found in Vault');
+        }
+        
         usingVault = true;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(`⚠️  API Gateway falling back to environment variables (Vault unavailable): ${message}`);
+        console.error(`❌ CRITICAL: API Gateway cannot start without Vault: ${message}`);
+        console.error('Run: pnpm vault:setup');
+        throw error;
     }
 
-    const internalApiKey = ensureInternalApiKey(
-        internalApiKeyFromVault ?? undefined,
-        process.env.INTERNAL_API_KEY
-    );
     const corsOrigins =
         parseOriginsInput(process.env.CORS_ORIGINS) ??
         DEFAULT_CORS;
@@ -55,19 +58,9 @@ export async function loadGatewayConfig(): Promise<GatewayConfig> {
         rateLimitMax: getEnvVarAsNumber('RATE_LIMIT_MAX', DEFAULT_RATE_LIMIT_MAX),
         rateLimitWindow: getEnvVar('RATE_LIMIT_WINDOW', DEFAULT_RATE_LIMIT_WINDOW),
         corsOrigins,
-        internalApiKey,
+        internalApiKey: internalApiKeyFromVault,
         usingVault
     };
-}
-
-function ensureInternalApiKey(fromVault?: string, fromEnv?: string): string {
-    const key = (fromVault || fromEnv || '').trim();
-    if (!key) {
-        throw new Error(
-            'INTERNAL_API_KEY is missing. Run `bash infrastructure/vault/simple-setup.sh` or export INTERNAL_API_KEY before starting the gateway.'
-        );
-    }
-    return key;
 }
 
 function parseOriginsInput(value: unknown): string[] | undefined {

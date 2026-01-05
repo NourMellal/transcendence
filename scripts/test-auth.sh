@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Comprehensive User Service smoke test via API Gateway
-# Usage: BASE_URL=http://localhost:3000/api ./scripts/test-auth.sh
+# Usage: BASE_URL=http://api-gateway:3000/api ./scripts/test-auth.sh
 
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:3000/api}"
+BASE_URL="${BASE_URL:-http://api-gateway:3000/api}"
 TIMESTAMP=$(date +%s)
 PRIMARY_EMAIL="user-${TIMESTAMP}@example.com"
 PRIMARY_USERNAME="user${TIMESTAMP}"
@@ -175,40 +175,6 @@ BAD_UPDATE=$(curl -s -w "\n%{http_code}" -X PATCH "$BASE_URL/users/me" \
   -d '{"avatar":"not-a-url"}')
 HTTP_CODE=$(echo "$BAD_UPDATE" | tail -n1)
 check_status $HTTP_CODE 400
-
-next_step "Presence online"
-RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/users/presence" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"status":"online"}')
-check_status $RESP 204
-
-next_step "Presence invalid status rejected"
-BAD_PRES=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/users/presence" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"status":"busy"}')
-HTTP_CODE=$(echo "$BAD_PRES" | tail -n1)
-check_status $HTTP_CODE 400
-
-next_step "Presence offline"
-RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/users/presence" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"status":"offline"}')
-check_status $RESP 204
-
-next_step "Presence lookup"
-PRESENCE=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/users/$PRIMARY_USER_ID/presence" \
-  -H "Authorization: Bearer $ACCESS_TOKEN")
-HTTP_CODE=$(echo "$PRESENCE" | tail -n1)
-check_status $HTTP_CODE 200
-
-next_step "Presence unknown user"
-UNKNOWN=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/users/$UNKNOWN_USER_ID/presence" \
-  -H "Authorization: Bearer $ACCESS_TOKEN")
-HTTP_CODE=$(echo "$UNKNOWN" | tail -n1)
-check_status $HTTP_CODE 404
 
 next_step "Send friend request"
 FRIEND_REQ=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/friends/requests" \

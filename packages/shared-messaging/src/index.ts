@@ -8,7 +8,6 @@ export * from './enums/EventType';
 // User events
 export * from './events/user/UserRegisteredIntegrationEvent';
 export * from './events/user/UserProfileUpdatedIntegrationEvent';
-export * from './events/user/UserDeletedIntegrationEvent';
 export * from './events/user/UserAuthenticatedIntegrationEvent';
 
 // Game events

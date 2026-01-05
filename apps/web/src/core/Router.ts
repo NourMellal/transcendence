@@ -7,7 +7,17 @@ import { appState } from "../state";
 const GUEST_ONLY_ROUTES = ['/auth/login', '/auth/signup'];
 
 // Routes that require authentication (redirect to login if not authenticated)
-const PROTECTED_ROUTES = ['/dashboard', '/profile', '/game', '/chat', '/friends'];
+const PROTECTED_ROUTES = ['/dashboard', '/profile', '/chat', '/friends', '/game/lobby', '/game/play', '/tournament'];
+const GUEST_ALLOWED_ROUTES = [
+  '/',
+  '/game/local',
+  '/auth/login',
+  '/auth/signup',
+  '/oauth/callback',
+  '/auth/callback',
+  '/oauth/error',
+  '/auth/42/callback',
+];
 
 export default class Router {
    private _routes: Route[];
@@ -51,6 +61,16 @@ export default class Router {
       }
     }
     
+    if (!isAuthenticated) {
+      const isGuestAllowed = GUEST_ALLOWED_ROUTES.some(route => {
+        return path === route || (route !== '/' && path.startsWith(route));
+      });
+      if (!isGuestAllowed) {
+        setTimeout(() => this.navigate('/auth/login'), 0);
+        return false;
+      }
+    }
+
     // Redirect unauthenticated users away from protected pages
     if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
       if (!isAuthenticated) {
@@ -66,7 +86,9 @@ navigate(path: string): void  {
      if (!path) return;
      const url = new URL(path, window.location.origin);
      const targetPath = url.pathname;
-     if (targetPath === this._location) return;
+     if (targetPath === this._location) {
+       return;
+     }
      
      // Check auth guards before proceeding
      if (!this.checkAuthGuards(path)) {

@@ -1,5 +1,8 @@
-import { loadChatServiceConfig, logger } from './infrastructure/config';
+import { loadChatServiceConfig } from './infrastructure/config';
+import { createLogger } from '@transcendence/shared-logging';
 import { createContainer } from './dependency-injection/container';
+
+const logger = createLogger('ChatServer');
 import { ChatWebSocketServer } from './infrastructure/websocket/ChatWebSocketServer';
 import { createServer } from 'http';
 import fastify, { FastifyInstance } from 'fastify';
@@ -48,23 +51,25 @@ export async function startChatService(): Promise<void> {
             app.routing(req, res);
         });
 
-        // Initialize WebSocket server with the container dependencies
+        // Initialize WebSocket server with EventBus - it will subscribe to domain events
         const wsServer = new ChatWebSocketServer(httpServer, {
             roomManager: container.websocket.roomManager,
             connectionHandler: container.websocket.connectionHandler,
             sendMessageHandler: container.websocket.sendMessageHandler,
             disconnectHandler: container.websocket.disconnectHandler,
-            typingHandler: container.websocket.typingHandler,
+            inviteResponseHandler: container.websocket.inviteResponseHandler,
             authService: container.websocket.authService,
+            eventBus: container.eventBus,
             internalApiKey: config.internalApiKey
         });
 
-        logger.info('✅ WebSocket server initialized');
+        logger.info('✅ WebSocket server initialized with EventBus subscriptions');
 
         const shutdown = async () => {
             logger.info('🛑 Shutting down Chat Service...');
             await app.close();
             httpServer.close();
+            await container.messaging.connection.close();
             process.exit(0);
         };
 

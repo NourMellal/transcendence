@@ -220,6 +220,25 @@ export default class LoginPage extends Component<Props, State> {
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       document.body.classList.add('touch-device');
     }
+
+    // Restore values after rerenders (setState replaces the DOM subtree).
+    const emailInput = this.element?.querySelector('#email') as HTMLInputElement | null;
+    if (emailInput && this.state.email && emailInput.value !== this.state.email) {
+      emailInput.value = this.state.email;
+    }
+    const passwordInput = this.element?.querySelector('#password') as HTMLInputElement | null;
+    if (passwordInput && this.state.password && passwordInput.value !== this.state.password) {
+      passwordInput.value = this.state.password;
+    }
+    const twoFAInput = this.element?.querySelector('#twofa') as HTMLInputElement | null;
+    if (twoFAInput && this.state.twoFACode && twoFAInput.value !== this.state.twoFACode) {
+      twoFAInput.value = this.state.twoFACode;
+    }
+
+    if (this.state.show2FA && twoFAInput) {
+      // Defer to ensure element is in DOM and focus sticks.
+      setTimeout(() => twoFAInput.focus(), 0);
+    }
   }
 
   private async handleLogin(): Promise<void> {
@@ -231,7 +250,7 @@ export default class LoginPage extends Component<Props, State> {
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const twoFA = twoFAInput?.value || '';
+    const twoFA = twoFAInput?.value?.trim() || '';
 
     // Basic validation
     if (!email || !password) {
@@ -241,22 +260,50 @@ export default class LoginPage extends Component<Props, State> {
 
     console.log('Login attempt:', { email, password: '***', twoFA });
 
+    // Persist values across rerenders.
     this.setState({
+      email,
+      password,
+      twoFACode: twoFA,
       isLoading: true,
-      error: null
+      error: null,
     });
 
     try {
       const response = await authService.login({ email, password, twoFACode: twoFA || undefined });
+      const currentAuth = appState.auth.get();
       appState.auth.set({
-        ...appState.auth.get(),
-        user: response.user ?? null,
-        isAuthenticated: Boolean(response.user),
+        ...currentAuth,
+        user: response.user ?? currentAuth.user ?? null,
+        isAuthenticated: true,
         isLoading: false,
       });
       navigate('/dashboard');
     } catch (error) {
       let message = 'Unable to sign in. Please try again.';
+
+      // If backend requires 2FA, reveal the code field and stop loading.
+      if (error instanceof ApiError) {
+        const msg = (error.message || '').toLowerCase();
+        if (error.status === 401 && (msg.includes('two-factor') || msg.includes('2fa'))) {
+          this.setState({
+            isLoading: false,
+            show2FA: true,
+            error: null,
+          });
+          return;
+        }
+
+        // If 2FA is shown and we got a 401 for login, treat it as an invalid code.
+        if (error.status === 401 && this.state.show2FA) {
+          this.setState({
+            isLoading: false,
+            show2FA: true,
+            error: 'Invalid two-factor code. Please try again.',
+          });
+          return;
+        }
+      }
 
       if (error instanceof ApiError) {
         if (error.status === 401) {
@@ -264,10 +311,6 @@ export default class LoginPage extends Component<Props, State> {
         } else if (error.status >= 500) {
           message = 'Service is temporarily unavailable. Please try later.';
         }
-      } else if (error instanceof Error) {
-        message = /refresh token/i.test(error.message)
-          ? 'Invalid email or password.'
-          : error.message;
       }
 
       this.setState({

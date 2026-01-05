@@ -1,10 +1,11 @@
 import { GameServiceConfig } from '../infrastructure/config';
 import { createDatabaseConnection, runMigrations, SQLiteGameRepository } from '../infrastructure/database';
-import { RabbitMQConnection, EventSerializer, RabbitMQGameEventPublisher, UserEventHandler } from '../infrastructure/messaging';
+import { RabbitMQConnection, EventSerializer, RabbitMQGameEventPublisher } from '../infrastructure/messaging';
 import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
 import {
     CreateGameUseCase,
     FinishGameUseCase,
+    ForfeitGameUseCase,
     GetGameUseCase,
     JoinGameUseCase,
     HandlePaddleMoveUseCase,
@@ -17,9 +18,10 @@ import {
 } from '../application/use-cases';
 import { GameController, HealthController } from '../infrastructure/http/controllers';
 import { GamePhysics, CollisionDetector } from '../domain/services';
-import { GameLoop, GameRoomManager, ConnectionHandler, PaddleMoveHandler, DisconnectHandler } from '../infrastructure/websocket';
+import { GameLoop, GameRoomManager, ConnectionHandler, PaddleMoveHandler, DisconnectHandler, PublicGameLobbyNotifier } from '../infrastructure/websocket';
 import { PaddleSetHandler } from '../infrastructure/websocket/handlers/PaddleSetHandler';
 import { GameAuthService } from '../infrastructure/auth';
+import { GameReadyTimeoutScheduler } from '../infrastructure/timeouts/GameReadyTimeoutScheduler';
 
 export interface GameServiceContainer {
     readonly controllers: {
@@ -39,6 +41,7 @@ export interface GameServiceContainer {
         readonly createGame: CreateGameUseCase;
         readonly startGame: StartGameUseCase;
         readonly finishGame: FinishGameUseCase;
+        readonly forfeitGame: ForfeitGameUseCase;
         readonly getGame: GetGameUseCase;
         readonly listGames: ListGamesUseCase;
         readonly joinGame: JoinGameUseCase;
@@ -50,7 +53,6 @@ export interface GameServiceContainer {
     };
     readonly messaging: {
         readonly connection: RabbitMQConnection;
-        readonly userEventsHandler: UserEventHandler;
     };
 }
 
@@ -60,7 +62,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
 
     const repository = new SQLiteGameRepository(db);
     const messagingConnection = new RabbitMQConnection({
-        uri: config.messaging.uri,
+        uri: config.messaging.uri, 
         exchange: config.messaging.exchange,
     });
     const serializer = new EventSerializer();
@@ -69,7 +71,9 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
 
     const gamePhysics = new GamePhysics(new CollisionDetector());
 
-    const createGame = new CreateGameUseCase(repository, eventPublisher, userServiceClient);
+    const forfeitGame = new ForfeitGameUseCase(repository, eventPublisher);
+    const readyTimeoutScheduler = new GameReadyTimeoutScheduler(forfeitGame);
+    const createGame = new CreateGameUseCase(repository, eventPublisher, userServiceClient, readyTimeoutScheduler);
     const startGame = new StartGameUseCase(repository, eventPublisher);
     const finishGame = new FinishGameUseCase(repository, eventPublisher);
     const getGame = new GetGameUseCase(repository);
@@ -78,19 +82,17 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
     const leaveGame = new LeaveGameUseCase(repository);
     const readyUp = new ReadyUpUseCase(repository, eventPublisher);
     const handlePaddleMove = new HandlePaddleMoveUseCase(repository, gamePhysics, eventPublisher);
-    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics, eventPublisher);
+    const updateGameState = new UpdateGameStateUseCase(repository, gamePhysics, eventPublisher, undefined, userServiceClient);
     const disconnectPlayer = new DisconnectPlayerUseCase(repository);
 
     const gameLoop = new GameLoop(updateGameState);
     const roomManager = new GameRoomManager();
+    const lobbyNotifier = new PublicGameLobbyNotifier(roomManager, repository, userServiceClient);
     const authService = new GameAuthService();
     const connectionHandler = new ConnectionHandler(roomManager, gameLoop, joinGame, readyUp, repository, disconnectPlayer);
     const paddleMoveHandler = new PaddleMoveHandler(handlePaddleMove, repository, roomManager);
     const paddleSetHandler = new PaddleSetHandler(updateGameState, roomManager);
     const disconnectHandler = new DisconnectHandler(disconnectPlayer, roomManager, gameLoop);
-
-    const userEventsChannel = await messagingConnection.getChannel();
-    const userEventsHandler = new UserEventHandler(userEventsChannel, serializer, repository, roomManager);
 
     const gameController = new GameController({
         createGameUseCase: createGame,
@@ -101,6 +103,7 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         readyUpUseCase: readyUp,
         gameLoop,
         roomManager,
+        lobbyNotifier,
     });
     const healthController = new HealthController();
 
@@ -119,13 +122,14 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
             authService,
         },
         useCases: {
-            createGame,
-            startGame,
-            finishGame,
-            getGame,
-            listGames,
-            joinGame,
-            leaveGame,
+        createGame,
+        startGame,
+        finishGame,
+        forfeitGame,
+        getGame,
+        listGames,
+        joinGame,
+        leaveGame,
         handlePaddleMove,
         updateGameState,
         disconnectPlayer,
@@ -133,7 +137,6 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
         },
         messaging: {
             connection: messagingConnection,
-            userEventsHandler,
         },
     };
 }

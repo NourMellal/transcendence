@@ -5,6 +5,7 @@
 
 import httpClient, { HttpClient } from '../../modules/shared/services/HttpClient';
 import type { User } from '../../models/User';
+import type { UserDTOs } from '../../models/User';
 import type { SignUpRequest, LoginRequest, LoginResponse } from '../../models/Auth';
 import { appState } from '../../state';
 
@@ -12,6 +13,24 @@ export class AuthService {
   // use the existing instance by default
   constructor(private readonly http: HttpClient = httpClient) {
     // No-op; callers should invoke hydrateFromStorage() during app bootstrap
+  }
+
+  private normalizeUser(user: any): User {
+    if (!user || typeof user !== 'object') {
+      throw new Error('Invalid user payload');
+    }
+
+    const isTwoFAEnabled =
+      typeof (user as any).isTwoFAEnabled === 'boolean'
+        ? (user as any).isTwoFAEnabled
+        : typeof (user as any).is2FAEnabled === 'boolean'
+          ? (user as any).is2FAEnabled
+          : false;
+
+    return {
+      ...(user as User),
+      isTwoFAEnabled,
+    };
   }
 
   /**
@@ -38,14 +57,40 @@ export class AuthService {
   async login(
     credentials: LoginRequest & { twoFACode?: string }
   ): Promise<LoginResponse> {
+    // Backend expects `totpCode`; keep `twoFACode` as a UI-friendly alias.
+    const payload: Record<string, unknown> = {
+      ...credentials,
+      totpCode: (credentials as any).totpCode ?? credentials.twoFACode,
+    };
+    delete (payload as any).twoFACode;
+
     const response = await this.http.post<LoginResponse>(
       '/auth/login',
-      credentials
+      payload
     );
 
     const data = response.data!;
+
+    // Normalize user payload field naming (some APIs use `is2FAEnabled`).
+    if (data.user && typeof (data.user as any).isTwoFAEnabled !== 'boolean' && typeof (data.user as any).is2FAEnabled === 'boolean') {
+      (data.user as any).isTwoFAEnabled = (data.user as any).is2FAEnabled;
+    }
+
     if (data.accessToken && data.refreshToken) {
       this.persistTokens(data.accessToken, data.refreshToken, data.user);
+
+      // Prefer the authoritative backend profile (includes presence status).
+      try {
+        const profile = await this.http.get<User>('/users/me');
+        if (profile.data) {
+          const normalized = this.normalizeUser(profile.data);
+          const current = appState.auth.get();
+          appState.auth.set({ ...current, user: normalized });
+          data.user = normalized;
+        }
+      } catch (err) {
+        console.warn('Failed to hydrate user after login', err);
+      }
     }
     return data;
   }
@@ -103,7 +148,7 @@ export class AuthService {
       if (!user) {
         try {
           const profile = await this.http.get<User>('/users/me');
-          user = profile.data ?? undefined;
+          user = profile.data ? this.normalizeUser(profile.data) : undefined;
           if (user) {
             const current = appState.auth.get();
             appState.auth.set({ ...current, user });
@@ -127,6 +172,33 @@ export class AuthService {
   }
 
   /**
+   * Generate a new 2FA secret + QR code
+   * POST /auth/2fa/generate
+   */
+  async generate2FA(): Promise<UserDTOs.Generate2FAResponse> {
+    const response = await this.http.post<UserDTOs.Generate2FAResponse>('/auth/2fa/generate', {});
+    return response.data!;
+  }
+
+  /**
+   * Enable 2FA using a TOTP code
+   * POST /auth/2fa/enable
+   */
+  async enable2FA(payload: UserDTOs.Enable2FARequest): Promise<{ message?: string }> {
+    const response = await this.http.post<{ message?: string }>('/auth/2fa/enable', payload);
+    return response.data ?? {};
+  }
+
+  /**
+   * Disable 2FA using a TOTP code
+   * POST /auth/2fa/disable
+   */
+  async disable2FA(payload: UserDTOs.Disable2FARequest): Promise<{ message?: string }> {
+    const response = await this.http.post<{ message?: string }>('/auth/2fa/disable', payload);
+    return response.data ?? {};
+  }
+
+  /**
    * Restore session from localStorage and hydrate user profile.
    * Should be called once during app bootstrap.
    */
@@ -147,11 +219,23 @@ export class AuthService {
 
     try {
       const user = await this.getStatus();
+
+      // Prefer the authoritative backend profile (includes presence status).
+      let profileUser = user;
+      if (user) {
+        try {
+          const profile = await this.http.get<User>('/users/me');
+          profileUser = profile.data ? this.normalizeUser(profile.data) : user;
+        } catch (err) {
+          console.warn('Failed to hydrate user profile after restore', err);
+        }
+      }
+
       const latest = appState.auth.get();
       appState.auth.set({
         ...latest,
-        user,
-        isAuthenticated: Boolean(user),
+        user: profileUser,
+        isAuthenticated: Boolean(profileUser),
         isLoading: false,
       });
     } catch (error) {

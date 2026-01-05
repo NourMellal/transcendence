@@ -42,20 +42,11 @@ export class GameRenderer {
     const dpr = window.devicePixelRatio || 1;
     const logicalHeight = this.canvas.height / dpr;
     const logicalWidth = this.canvas.width / dpr;
-    const root = getComputedStyle(document.documentElement);
-    const warnColor = root.getPropertyValue('--color-warning').trim() || '#ffaa00';
-    const accentColor = root.getPropertyValue('--color-brand-accent').trim() || '#ff6600';
 
-    const topGradient = this.ctx.createLinearGradient(0, 0, 0, 25);
-    topGradient.addColorStop(0, warnColor);
-    topGradient.addColorStop(1, accentColor);
-    this.ctx.fillStyle = topGradient;
-    this.ctx.fillRect(0, 0, logicalWidth, 25);
-    const bottomGradient = this.ctx.createLinearGradient(0, logicalHeight - 25, 0, logicalHeight);
-    bottomGradient.addColorStop(0, accentColor);
-    bottomGradient.addColorStop(1, warnColor);
-    this.ctx.fillStyle = bottomGradient;
-    this.ctx.fillRect(0, logicalHeight - 25, logicalWidth, 25);
+    // Clean subtle borders instead of harsh gradients
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    this.ctx.fillRect(0, 0, logicalWidth, 2);
+    this.ctx.fillRect(0, logicalHeight - 2, logicalWidth, 2);
   }
 
   drawNet(): void {
@@ -73,13 +64,23 @@ export class GameRenderer {
     this.ctx.setLineDash([]);
   }
 
-  drawPaddle(paddle: Paddle, isLeftPaddle: boolean = true): void {
-    const color = isLeftPaddle 
-      ? getComputedStyle(document.documentElement).getPropertyValue('--color-brand-secondary').trim() || '#ffcc66'
-      : getComputedStyle(document.documentElement).getPropertyValue('--color-brand-accent').trim() || '#ff8800';
+  drawPaddle(paddle: Paddle): void {
+    const color = '#ffffff';
+    const radius = 6; // Rounded corner radius
+
+    // Add glow effect
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = 'rgba(255, 255, 255, 0.3)';
 
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+    
+    // Draw rounded rectangle
+    this.ctx.beginPath();
+    this.ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, radius);
+    this.ctx.fill();
+
+    // Reset shadow
+    this.ctx.shadowBlur = 0;
   }
 
   drawBall(ball: Ball): void {
@@ -101,22 +102,26 @@ export class GameRenderer {
   drawScore(player1Score: number, player2Score: number): void {
     const dpr = window.devicePixelRatio || 1;
     const logicalWidth = this.canvas.width / dpr;
-    const scoreColor = getComputedStyle(document.documentElement).getPropertyValue('--color-brand-secondary').trim() || '#ffcc66';
 
-    this.drawText('SCORE', logicalWidth / 2, 50, scoreColor, '20px "Press Start 2P"');
+    // Clean white scores with subtle styling
+    const scoreColor = '#ffffff';
+    const labelColor = 'rgba(255, 255, 255, 0.4)';
 
-    this.drawText(player1Score.toString(), logicalWidth / 4, 95, scoreColor, '36px "Press Start 2P"');
-    this.drawText('-', logicalWidth / 2, 95, scoreColor, '36px "Press Start 2P"');
-    this.drawText(player2Score.toString(), (logicalWidth * 3) / 4, 95, scoreColor, '36px "Press Start 2P"');
+    // Small label at top
+    this.drawText('SCORE', logicalWidth / 2, 35, labelColor, '14px "Press Start 2P"');
+
+    // Large clean scores
+    this.drawText(player1Score.toString(), logicalWidth / 4, 85, scoreColor, '42px "Press Start 2P"');
+    this.drawText('-', logicalWidth / 2, 85, labelColor, '28px "Press Start 2P"');
+    this.drawText(player2Score.toString(), (logicalWidth * 3) / 4, 85, scoreColor, '42px "Press Start 2P"');
   }
 
   render(ball: Ball, player1: Paddle, player2: Paddle): void {
     this.clear();
     this.drawBorders();
     this.drawNet();
-    this.drawPaddle(player1, true);
-    this.drawPaddle(player2, false);
+    this.drawPaddle(player1);
+    this.drawPaddle(player2);
     this.drawBall(ball);
-    this.drawScore(player1.score, player2.score);
   }
 }

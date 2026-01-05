@@ -1,6 +1,7 @@
 export * from './CreateGameUseCase';
 export * from './StartGameUseCase';
 export * from './FinishGameUseCase';
+export * from './ForfeitGameUseCase';
 export * from './GetGameUseCase';
 export * from './ListGamesUseCase';
 export * from './JoinGameUseCase';

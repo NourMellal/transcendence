@@ -1,7 +1,3 @@
-/**
- * WebSocket connection state types
- * Used by WebSocketClient and GameCanvas
- */
 export type WSConnectionState =
   | 'disconnected'
   | 'connecting'
@@ -9,7 +5,9 @@ export type WSConnectionState =
   | 'error'
   | 'failed';
 
-/**
- * Generic event handler type for WebSocket events
- */
+export interface WSMessage<T = unknown> {
+  type: string;
+  payload: T;
+}
+
 export type WSEventHandler<T = unknown> = (payload: T) => void;

@@ -1,3 +1,13 @@
+# JetBrains merge tool temp files
+.merge_file_*
+**/.merge_file_*
+# --- Local pnpm state ---
+.pnpm-installed
+.pnpm-store-user/
+
+# --- Local Vault / secrets ---
+infrastructure/vault/.seed.env
+
 # Node.js dependencies
 node_modules/
 .pnpm-store/
