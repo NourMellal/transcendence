@@ -78,7 +78,8 @@ export class AuthController {
             } else if (
                 error.message.includes('required') ||
                 error.message.includes('Invalid') ||
-                error.message.includes('must be')
+                error.message.includes('must be') ||
+                error.message.includes('must include')
             ) {
                 reply.code(400).send({
                     error: 'Bad Request',
@@ -240,9 +241,11 @@ export class AuthController {
             const { authorizationUrl } = await this.oauth42LoginUseCase.execute();
             reply.redirect(authorizationUrl);
         } catch (error: any) {
-            reply.code(500).send({
-                error: 'Internal Server Error',
-                message: error.message || 'Failed to start OAuth flow'
+            const message = error?.message || 'Failed to start OAuth flow';
+            const isNotConfigured = message.includes('not configured');
+            reply.code(isNotConfigured ? 503 : 500).send({
+                error: isNotConfigured ? 'Service Unavailable' : 'Internal Server Error',
+                message
             });
         }
     }
@@ -263,7 +266,9 @@ export class AuthController {
             reply.redirect(this.buildSuccessRedirect(sessionToken, userId, refreshToken));
         } catch (error: any) {
             request.log.error({ err: error }, 'OAuth 42 callback failed');
-            reply.redirect(this.buildFailureRedirect('oauth_error'));
+            const message = (error as Error)?.message ?? '';
+            const reason = 'oauth_error';
+            reply.redirect(this.buildFailureRedirect(reason));
         }
     }
 

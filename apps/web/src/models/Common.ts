@@ -8,13 +8,15 @@ export type GameType = 'pong' | 'tournament' | 'custom';
 
 export type GameStatus = 'waiting' | 'playing' | 'finished' | 'cancelled';
 
-export type TournamentType = 'single_elimination' | 'double_elimination' | 'round_robin';
+export type TournamentType = 'single_elimination';
 
-export type TournamentStatus = 'registration' | 'in_progress' | 'finished' | 'cancelled';
+export type TournamentStatus = 'recruiting' | 'in_progress' | 'finished';
+
+export type TournamentRole = 'none' | 'creator' | 'participant';
 
 export type ParticipantStatus = 'registered' | 'active' | 'eliminated' | 'winner';
 
-export type MatchStatus = 'pending' | 'ready' | 'in_progress' | 'completed';
+export type MatchStatus = 'pending' | 'in_progress' | 'finished';
 
 export type PowerUpType = 'speed_boost' | 'big_paddle' | 'multi_ball' | 'freeze';
 

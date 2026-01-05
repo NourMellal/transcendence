@@ -32,7 +32,6 @@ Repository -> SQLite / External Service
   - `RABBITMQ_URL` (or `RABBITMQ_URI`): AMQP connection string, defaults to `amqp://guest:guest@rabbitmq:5672`.
   - `RABBITMQ_EXCHANGE`: topic exchange name, defaults to `transcendence.events`.
   - `RABBITMQ_QUEUE_PREFIX`: optional prefix for service-specific queues (defaults to `user-service`).
-- `DeleteUserUseCase` now emits the `user.deleted` event after a successful transaction so downstream services (e.g., Game Service) can react by cleaning up active matches or cached state.
 
 ## Adding a New Use Case
 1. **Define DTOs** in `src/application/dto` (input and output) with readonly fields.

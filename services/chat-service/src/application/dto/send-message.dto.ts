@@ -1,5 +1,12 @@
 import { MessageType } from "src/domain/value-objects/messageType";   
 
+export interface InvitePayload {
+  mode?: string;
+  map?: string;
+  notes?: string;
+  config?: Record<string, unknown>;
+}
+
 export interface SendMessageRequestDTO {
   senderId: string;           
   senderUsername: string;     
@@ -7,6 +14,7 @@ export interface SendMessageRequestDTO {
   type: MessageType;         
   recipientId?: string;     
   gameId?: string;            
+  invitePayload?: InvitePayload;
 }
 
 
@@ -19,5 +27,6 @@ export interface SendMessageResponseDTO {
   type: MessageType;
   recipientId?: string;
   gameId?: string;
+  invitePayload?: InvitePayload;
   createdAt: string;        
 }

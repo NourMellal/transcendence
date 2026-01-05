@@ -4,7 +4,7 @@
     "description": "User management microservice",
     "main": "dist/server.js",
     "scripts": {
-        "dev": "tsx src/server.ts",
+        "dev": "tsx watch src/server.ts",
         "build": "tsc",
         "start": "node dist/server.js",
         "test": "vitest",
@@ -15,6 +15,7 @@
         "@fastify/cookie": "^9.3.1",
         "@fastify/cors": "^8.5.0",
         "@fastify/multipart": "^8.0.0",
+        "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-messaging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
@@ -26,6 +27,7 @@
         "otplib": "^12.0.1",
         "pino-pretty": "^10.3.0",
         "qrcode": "^1.5.3",
+        "socket.io": "^4.8.1",
         "sqlite": "^5.1.1",
         "sqlite3": "^5.1.6",
         "zod": "^3.23.8"

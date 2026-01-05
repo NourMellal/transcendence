@@ -8,6 +8,7 @@ import {
 import { createMockPasswordHasher, createMockJWTService } from '../../../../helpers/mock-services';
 import { createTestUser } from '../../../../helpers/entity-factories';
 import { UserId } from '../../../../../src/domain/value-objects';
+import { PresenceStatus } from '../../../../../src/domain/entities/presence.entity';
 
 describe('LoginUseCase', () => {
     let userRepository: ReturnType<typeof createMockUserRepository>;
@@ -55,7 +56,11 @@ describe('LoginUseCase', () => {
         expect(result.accessToken).toBeTypeOf('string');
         expect(passwordHasher.verify).toHaveBeenCalledWith('Abcdef1!', 'stored-hash');
         expect(sessionRepository.save).toHaveBeenCalledOnce();
-        expect(presenceRepository.upsert).toHaveBeenCalledWith(user.id.toString(), 'online', expect.any(Date));
+        expect(presenceRepository.upsert).toHaveBeenCalledWith(
+            user.id.toString(),
+            PresenceStatus.ONLINE,
+            expect.any(Date)
+        );
     });
 
     it('throws when credentials are invalid', async () => {
@@ -71,4 +76,6 @@ describe('LoginUseCase', () => {
             })
         ).rejects.toThrow('Invalid credentials');
     });
+
+    // Multiple active sessions are allowed (no single-session restriction).
 });

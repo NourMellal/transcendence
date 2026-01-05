@@ -4,7 +4,6 @@ import { updateUserSchema, userIdParamSchema, idParamSchema } from '@transcenden
 import { UpdateProfileRequestDTO } from '../../../application/dto/user.dto';
 import { ErrorHandler } from '../utils/error-handler';
 import type {
-    IDeleteUserUseCase,
     IGetUserUseCase,
     IUpdateProfileUseCase
 } from '../../../domain/ports';
@@ -18,15 +17,10 @@ interface GetUserByUsernameParams {
     username: string;
 }
 
-interface DeleteUserRequestBody {
-    reason?: string;
-}
-
 export class UserController {
     constructor(
         private updateProfileUseCase: IUpdateProfileUseCase,
         private getUserUseCase: IGetUserUseCase,
-        private deleteUserUseCase: IDeleteUserUseCase,
         private getUserByUsernameUseCase?: IGetUserByUsernameUseCase
     ) { }
 
@@ -52,68 +46,6 @@ export class UserController {
             reply.code(500).send({
                 error: 'Internal Server Error',
                 message: 'An error occurred while fetching user'
-            });
-        }
-    }
-
-    async deleteUser(
-        request: FastifyRequest<{ Params: GetUserParams; Body?: DeleteUserRequestBody }>,
-        reply: FastifyReply
-    ): Promise<void> {
-        try {
-            const params = userIdParamSchema.parse(request.params);
-            const body = (request.body ?? {}) as DeleteUserRequestBody;
-            const userIdHeader = request.headers['x-user-id'] as string;
-
-            if (!userIdHeader) {
-                reply.code(401).send({
-                    error: 'Unauthorized',
-                    message: 'User ID not found in request headers'
-                });
-                return;
-            }
-
-            const authenticatedUserId = idParamSchema.parse({ id: userIdHeader }).id;
-
-            if (params.userId !== authenticatedUserId) {
-                reply.code(403).send({
-                    error: 'Forbidden',
-                    message: 'You can only delete your own profile'
-                });
-                return;
-            }
-
-            request.log.info({ targetUserId: params.userId, initiatedBy: authenticatedUserId, reason: body?.reason }, 'Deleting user');
-
-            await this.deleteUserUseCase.execute({
-                userId: params.userId,
-                reason: body?.reason,
-                initiatedBy: authenticatedUserId,
-            });
-
-            reply.code(204).send();
-        } catch (error: any) {
-            request.log.error({ err: error }, 'Delete user failed');
-
-            if (error.message === 'User not found') {
-                reply.code(404).send({
-                    error: 'Not Found',
-                    message: error.message,
-                });
-                return;
-            }
-
-            if (error.message === 'User ID is required') {
-                reply.code(400).send({
-                    error: 'Bad Request',
-                    message: error.message,
-                });
-                return;
-            }
-
-            reply.code(500).send({
-                error: 'Internal Server Error',
-                message: 'Failed to delete user',
             });
         }
     }

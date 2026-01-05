@@ -1,14 +1,12 @@
 import type { User } from '../../../domain/entities/user.entity';
 import { FriendshipStatus } from '../../../domain/entities/friendship.entity';
-import { PresenceStatus, type UserPresence } from '../../../domain/entities/presence.entity';
+import type { UserPresence } from '../../../domain/entities/presence.entity';
 import type { UserPresenceRepository, FriendshipRepository, UserRepository } from '../../../domain/ports';
 import type { IListFriendsUseCase } from '../../../domain/ports';
 import type { FriendListResponseDTO, ListFriendsInputDTO } from '../../dto/friend.dto';
 import { FriendMapper } from '../../mappers/friend.mapper';
 
 export class ListFriendsUseCase implements IListFriendsUseCase {
-    private static readonly PRESENCE_STALE_MS = 2 * 60 * 1000; // 2 minutes
-
     constructor(
         private readonly friendshipRepository: FriendshipRepository,
         private readonly userRepository: UserRepository,
@@ -35,18 +33,7 @@ export class ListFriendsUseCase implements IListFriendsUseCase {
                     friendsMap.set(id, user);
                 }
                 const presence = await this.presenceRepository.findByUserId(id);
-                if (presence) {
-                    const isStale = this.isPresenceStale(presence.lastSeenAt);
-                    if (isStale && presence.status === PresenceStatus.ONLINE) {
-                        const now = new Date();
-                        await this.presenceRepository.markOffline(id, now);
-                        presenceMap.set(id, { userId: id, status: PresenceStatus.OFFLINE, lastSeenAt: now });
-                    } else {
-                        presenceMap.set(id, presence);
-                    }
-                } else {
-                    presenceMap.set(id, null);
-                }
+                presenceMap.set(id, presence ?? null);
             })
         );
 
@@ -66,7 +53,4 @@ export class ListFriendsUseCase implements IListFriendsUseCase {
         }
     }
 
-    private isPresenceStale(lastSeenAt: Date): boolean {
-        return Date.now() - lastSeenAt.getTime() > ListFriendsUseCase.PRESENCE_STALE_MS;
-    }
 }

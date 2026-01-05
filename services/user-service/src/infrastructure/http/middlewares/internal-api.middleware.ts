@@ -35,15 +35,13 @@ async function loadInternalApiKey(): Promise<string | null> {
                 key = await vaultHelper.getInternalApiKey();
 
                 if (!key) {
-                    console.warn('[Security] INTERNAL_API_KEY missing in Vault configuration and environment.');
+                    throw new Error('INTERNAL_API_KEY not found in Vault. Run: pnpm vault:setup');
                 }
             } catch (error) {
-                console.warn('[Security] Failed to load INTERNAL_API_KEY from Vault:', error);
-                key = process.env.INTERNAL_API_KEY || null;
-            }
-
-            if (!key && process.env.NODE_ENV === 'development') {
-                console.warn('[Security] Allowing requests without INTERNAL_API_KEY in development mode.');
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                console.error('[Security] CRITICAL: Failed to load INTERNAL_API_KEY from Vault:', message);
+                console.error('[Security] Service cannot start without INTERNAL_API_KEY. Run: pnpm vault:setup');
+                throw error;
             }
 
             cachedInternalApiKey = key;

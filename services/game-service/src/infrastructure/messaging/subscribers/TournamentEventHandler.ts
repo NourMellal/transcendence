@@ -119,6 +119,7 @@ export class TournamentEventHandler {
                 opponentId: match.player2Id,
                 mode: 'TOURNAMENT',
                 tournamentId,
+                matchId: match.matchId,
                 config: {},
             });
 

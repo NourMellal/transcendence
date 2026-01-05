@@ -1,4 +1,14 @@
-Tournament:
+TournamentStatus:
+  type: string
+  enum: [recruiting, in_progress, finished]
+  example: recruiting
+
+TournamentRole:
+  type: string
+  enum: [none, creator, participant]
+  example: none
+
+TournamentSummary:
   type: object
   properties:
     id:
@@ -7,61 +17,101 @@ Tournament:
       example: "tournament-123e4567"
     name:
       type: string
-      example: "Weekly Pong Championship"
-    description:
-      type: string
-      example: "The ultimate pong tournament!"
-    maxParticipants:
-      type: integer
-      example: 16
-      minimum: 4
-      maximum: 32
-    currentParticipants:
-      type: integer
-      example: 8
-    status:
-      type: string
-      enum: [REGISTRATION, ONGOING, FINISHED, CANCELLED]
-      example: REGISTRATION
-    createdBy:
+      example: "Neon Legends Cup"
+    creatorId:
       type: string
       format: uuid
       example: "123e4567-e89b-12d3-a456-426614174000"
-    participants:
-      type: array
-      items:
-        $ref: './user.yaml#/User'
-    bracket:
-      type: array
-      items:
-        $ref: '#/TournamentMatch'
-    winner:
+    creatorName:
       type: string
-      format: uuid
+      example: "alice"
+    status:
+      $ref: "#/TournamentStatus"
+    currentParticipants:
+      type: integer
+      example: 4
+    maxParticipants:
+      type: integer
+      enum: [8]
+      default: 8
+      example: 8
+    minParticipants:
+      type: integer
+      enum: [4]
+      default: 4
+      example: 4
+    isPublic:
+      type: boolean
+      description: Public tournaments show a shareable accessCode; private ones require passcode on join.
+    accessCode:
+      type: string
       nullable: true
-    registrationDeadline:
+      description: 6-character code for public tournaments.
+      example: "A7K2F9"
+    requiresPasscode:
+      type: boolean
+      description: True when tournament is private.
+    readyToStart:
+      type: boolean
+      description: True when participant count >= minParticipants.
+    startTimeoutAt:
       type: string
       format: date-time
-      example: "2025-10-25T18:00:00Z"
-    startDate:
-      type: string
-      format: date-time
-      example: "2025-10-26T10:00:00Z"
+      nullable: true
+      description: When auto-start will trigger after reaching ready state; resets on new join.
+    myRole:
+      $ref: "#/TournamentRole"
     createdAt:
       type: string
       format: date-time
-      example: "2025-10-22T10:00:00Z"
+      example: "2025-12-19T12:00:00Z"
+    startedAt:
+      type: string
+      format: date-time
+      nullable: true
+    finishedAt:
+      type: string
+      format: date-time
+      nullable: true
   required:
     - id
     - name
-    - maxParticipants
-    - currentParticipants
+    - creatorId
     - status
-    - createdBy
-    - participants
-    - registrationDeadline
-    - startDate
+    - currentParticipants
+    - maxParticipants
+    - minParticipants
+    - isPublic
+    - requiresPasscode
+    - myRole
     - createdAt
+
+TournamentParticipant:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+      example: "user-123e4567"
+    username:
+      type: string
+      example: "alice"
+    joinedAt:
+      type: string
+      format: date-time
+      example: "2025-12-19T12:02:00Z"
+  required: [userId, joinedAt]
+
+TournamentMatchPlayer:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+    username:
+      type: string
+      example: "alice"
+  required: [userId]
 
 TournamentMatch:
   type: object
@@ -74,60 +124,127 @@ TournamentMatch:
       type: string
       format: uuid
       example: "tournament-123e4567"
-    player1:
-      type: string
-      format: uuid
-      nullable: true
-    player2:
-      type: string
-      format: uuid
-      nullable: true
-    winner:
-      type: string
-      format: uuid
-      nullable: true
     round:
       type: integer
+      minimum: 1
       example: 1
-    matchNumber:
+    matchPosition:
       type: integer
+      minimum: 1
       example: 1
+    player1:
+      $ref: "#/TournamentMatchPlayer"
+      nullable: true
+    player2:
+      $ref: "#/TournamentMatchPlayer"
+      nullable: true
+    winnerId:
+      type: string
+      format: uuid
+      nullable: true
     status:
       type: string
-      enum: [PENDING, PLAYING, FINISHED]
-      example: PENDING
+      enum: [pending, in_progress, finished]
+      example: pending
     gameId:
       type: string
       format: uuid
       nullable: true
-    scheduledAt:
+    startedAt:
       type: string
       format: date-time
       nullable: true
-  required: [id, tournamentId, round, matchNumber, status]
+    finishedAt:
+      type: string
+      format: date-time
+      nullable: true
+  required: [id, tournamentId, round, matchPosition, status]
+
+TournamentDetail:
+  allOf:
+    - $ref: "#/TournamentSummary"
+    - type: object
+      properties:
+        participants:
+          type: array
+          items:
+            $ref: "#/TournamentParticipant"
+        matches:
+          type: array
+          items:
+            $ref: "#/TournamentMatch"
+        bracketType:
+          type: string
+          enum: [single_elimination]
+          default: single_elimination
+        readyToStart:
+          type: boolean
+        startTimeoutAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [participants, matches, bracketType]
 
 CreateTournamentRequest:
   type: object
   properties:
     name:
       type: string
-      example: "Weekly Pong Championship"
+      example: "Squad Championship"
       maxLength: 100
-    description:
+    bracketType:
       type: string
-      example: "The ultimate pong tournament!"
-      maxLength: 500
-    maxParticipants:
+      enum: [single_elimination]
+      default: single_elimination
+      description: Only single-elimination is supported in the MVP.
+    isPublic:
+      type: boolean
+      description: If false, a passcode must be provided to join.
+      default: true
+    privatePasscode:
+      type: string
+      description: Required when isPublic is false; stored as bcrypt hash.
+      nullable: true
+  required: [name]
+
+CreateTournamentResponse:
+  $ref: "#/TournamentDetail"
+
+JoinTournamentResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      example: true
+    message:
+      type: string
+      example: "Joined tournament"
+    status:
+      $ref: "#/TournamentStatus"
+    participantCount:
       type: integer
-      example: 16
-      minimum: 4
-      maximum: 32
-    registrationDeadline:
+      example: 4
+    readyToStart:
+      type: boolean
+      example: true
+    startTimeoutSeconds:
+      type: integer
+      example: 300
+    autoStart:
+      type: boolean
+      example: false
+    tournament:
+      $ref: "#/TournamentDetail"
+  required: [success, message, status, participantCount]
+
+PlayMatchResponse:
+  type: object
+  properties:
+    gameId:
       type: string
-      format: date-time
-      example: "2025-10-25T18:00:00Z"
-    startDate:
+      format: uuid
+      example: "game-123e4567"
+    redirectUrl:
       type: string
-      format: date-time
-      example: "2025-10-26T10:00:00Z"
-  required: [name, maxParticipants, registrationDeadline, startDate]
+      example: "/game/play/game-123e4567"
+  required: [gameId, redirectUrl]

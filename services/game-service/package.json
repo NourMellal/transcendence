@@ -4,12 +4,13 @@
     "description": "Game management and real-time gameplay service",
     "main": "dist/index.js",
     "scripts": {
-        "dev": "tsc && node dist/index.js",
+        "dev": "tsx watch src/index.ts",
         "build": "tsc",
         "start": "node dist/index.js",
         "test": "vitest"
     },
     "dependencies": {
+        "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-messaging": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",

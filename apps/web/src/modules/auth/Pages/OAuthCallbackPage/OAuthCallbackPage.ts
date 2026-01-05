@@ -22,6 +22,7 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
     const refreshToken = params.get('refreshToken');
     const code = params.get('code');
     const stateParam = params.get('state') ?? '';
+    const errorCode = params.get('error');
 
     if (token) {
       await this.handleTokenLogin(token, refreshToken ?? undefined);
@@ -29,24 +30,24 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
     }
 
     if (!code) {
-      const errorMessage = params.get('error') || 'Missing OAuth parameters.';
-      this.setState({ status: 'error', message: errorMessage });
+      this.setState({ status: 'error', message: this.getErrorMessage(errorCode) });
       return;
     }
 
     try {
       const response = await authService.handle42Callback(code, stateParam);
+      const currentAuth = appState.auth.get();
       appState.auth.set({
-        ...appState.auth.get(),
-        user: response.user ?? null,
-        isAuthenticated: Boolean(response.user),
+        ...currentAuth,
+        user: response.user ?? currentAuth.user ?? null,
+        isAuthenticated: true,
         isLoading: false,
       });
       this.setState({ status: 'success' });
       navigate('/dashboard');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'OAuth callback failed.';
-      this.setState({ status: 'error', message });
+      const message = error instanceof Error ? error.message : undefined;
+      this.setState({ status: 'error', message: this.getErrorMessage(message) });
     }
   }
 
@@ -90,19 +91,36 @@ export default class OAuthCallbackPage extends Component<Record<string, never>, 
         localStorage.setItem('refreshToken', refreshToken);
       }
       const user = await userService.getMe();
+      const currentAuth = appState.auth.get();
       appState.auth.set({
-        ...appState.auth.get(),
-        user,
+        ...currentAuth,
+        user: user ?? currentAuth.user ?? null,
         token,
-        isAuthenticated: Boolean(user),
+        isAuthenticated: true,
         isLoading: false,
       });
       this.setState({ status: 'success' });
       navigate('/dashboard');
     } catch (error) {
       httpClient.clearAuthToken();
-      const message = error instanceof Error ? error.message : 'Failed to finalize OAuth login.';
+      const message = this.getErrorMessage(error instanceof Error ? error.message : undefined);
       this.setState({ status: 'error', message });
     }
+  }
+
+  private getErrorMessage(code?: string | null): string {
+    if (!code) {
+      return 'OAuth callback failed.';
+    }
+
+    const normalized = code.toLowerCase();
+    if (normalized === 'missing_code') {
+      return 'Missing OAuth parameters.';
+    }
+    if (normalized === 'oauth_error') {
+      return 'OAuth login failed. Please try again.';
+    }
+
+    return code;
   }
 }

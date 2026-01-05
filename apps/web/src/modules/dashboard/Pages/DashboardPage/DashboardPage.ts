@@ -1,6 +1,7 @@
 import Component from '@/core/Component';
 import { navigate } from '@/routes';
 import { appState } from '@/state';
+import type { PresenceMap } from '@/state';
 import {
   DashboardLeaderboardEntry,
   DashboardMatchSummary,
@@ -10,13 +11,25 @@ import {
 import { userService } from '@/services/api/UserService';
 import { authManager } from '@/utils/auth';
 import { showSuccess, showError } from '@/utils/errors';
+import { gameService } from '@/modules/game/services/GameService';
+import type { PublicGameSummary, GameLobbyUpdatedEvent, GameStateOutput } from '@/modules/game/types/game.types';
+import { createGameWebSocketClient } from '@/modules/shared/services/WebSocketClient';
 import type { SuggestedFriend } from '../../data/suggestions';
+import { chatWebSocketService } from '@/services/api/ChatWebSocketService';
+import { chatService } from '@/services/api/ChatService';
 
 type InviteStatus = 'idle' | 'loading' | 'success' | 'error';
 
+type PendingInvite = {
+  inviteId: string;
+  fromUserId: string;
+  fromUsername: string;
+  mode?: string;
+  timestamp: string;
+};
+
 type State = {
   isLoading: boolean;
-  isRefreshing: boolean;
   profile: DashboardProfile | null;
   friends: Friend[];
   matches: DashboardMatchSummary[];
@@ -36,13 +49,22 @@ type State = {
   userSearchQuery: string;
   userSearchResult: SuggestedFriend | null;
   userSearchStatus: 'idle' | 'loading' | 'error' | 'not-found';
+  publicGames: PublicGameSummary[];
+  publicGamesLoading: boolean;
+  publicGamesError?: string;
+  joiningGameId?: string;
+  pendingInvites: PendingInvite[];
 };
 
 export default class DashboardPage extends Component<Record<string, never>, State> {
   private leaderboardInterval?: number;
   private authUnsubscribe?: () => void;
+  private presenceUnsubscribe?: () => void;
   private feedbackTimeout?: number;
   private friendRequestFeedbackTimeout?: number;
+  private lobbySocket = createGameWebSocketClient();
+  private lobbyUnsubscribes: Array<() => void> = [];
+  private chatUnsubscribes: Array<() => void> = [];
 
   constructor(props: Record<string, never> = {}) {
     super(props);
@@ -51,7 +73,6 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   getInitialState(): State {
     return {
       isLoading: true,
-      isRefreshing: false,
       profile: null,
       friends: [],
       matches: [],
@@ -64,6 +85,11 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       userSearchQuery: '',
       userSearchResult: null,
       userSearchStatus: 'idle',
+      publicGames: [],
+      publicGamesLoading: false,
+      publicGamesError: undefined,
+      joiningGameId: undefined,
+      pendingInvites: [],
     };
   }
 
@@ -79,13 +105,18 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
         navigate('/auth/login');
       }
     });
+    this.presenceUnsubscribe = appState.presence.subscribe((map) => this.applyPresenceMap(map));
+    this.applyPresenceMap(appState.presence.get());
 
     void this.loadDashboardData();
     this.startLeaderboardPolling();
+    void this.initializePublicGamesFeed();
+    this.setupChatInviteListeners();
   }
 
   onUnmount(): void {
     this.authUnsubscribe?.();
+    this.presenceUnsubscribe?.();
     if (this.leaderboardInterval) {
       clearInterval(this.leaderboardInterval);
       this.leaderboardInterval = undefined;
@@ -98,6 +129,11 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       clearTimeout(this.friendRequestFeedbackTimeout);
       this.friendRequestFeedbackTimeout = undefined;
     }
+    this.lobbyUnsubscribes.forEach((unsub) => unsub());
+    this.lobbyUnsubscribes = [];
+    this.lobbySocket.disconnect();
+    this.chatUnsubscribes.forEach((unsub) => unsub());
+    this.chatUnsubscribes = [];
   }
 
   private startLeaderboardPolling(): void {
@@ -109,9 +145,105 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     }, 30_000);
   }
 
+  private async initializePublicGamesFeed(): Promise<void> {
+    this.setState({ publicGamesLoading: true, publicGamesError: undefined });
+
+    try {
+      const games = await gameService.listGames({ status: 'WAITING', limit: 10 });
+      const summaries = await this.mapGamesToSummaries(games);
+      this.setState({ publicGames: summaries, publicGamesLoading: false });
+    } catch (error) {
+      console.warn('[DashboardPage] Failed to load public games snapshot', error);
+      this.setState({ publicGamesLoading: false, publicGamesError: 'Unable to load public games.' });
+    }
+
+    this.subscribeToLobbyUpdates();
+  }
+
+  private async mapGamesToSummaries(games: GameStateOutput[]): Promise<PublicGameSummary[]> {
+    const waitingGames = games.filter((game) => (game.players?.length ?? 0) < 2);
+    return Promise.all(waitingGames.map(async (game) => {
+      const creatorId = game.players?.[0]?.id;
+      const creatorProfile = creatorId ? await userService.getUserInfo(creatorId).catch(() => null) : null;
+
+      return {
+        gameId: game.id,
+        creatorId,
+        creatorUsername: creatorProfile?.username ?? 'Unknown',
+        gameType: game.mode ?? 'CLASSIC',
+        createdAt: typeof game.createdAt === 'string' ? game.createdAt : game.createdAt.toString(),
+        playersWaiting: game.players?.length ?? 0,
+      } satisfies PublicGameSummary;
+    }));
+  }
+
+  private subscribeToLobbyUpdates(): void {
+    this.lobbyUnsubscribes.forEach((unsub) => unsub());
+    this.lobbyUnsubscribes = [];
+
+    const unsubscribe = this.lobbySocket.on<GameLobbyUpdatedEvent>('game:lobby:updated', (payload) => {
+      this.handleLobbyUpdate(payload);
+    });
+
+    this.lobbyUnsubscribes.push(unsubscribe);
+
+    this.lobbySocket.connect().catch((error) => {
+      console.warn('[DashboardPage] Failed to connect lobby socket', error);
+    });
+  }
+
+  private handleLobbyUpdate(event: GameLobbyUpdatedEvent | unknown): void {
+    if (!event || typeof event !== 'object' || !Array.isArray((event as GameLobbyUpdatedEvent).games)) {
+      return;
+    }
+
+    const games = [...(event as GameLobbyUpdatedEvent).games];
+    games.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    this.state.publicGames = games;
+    this.state.publicGamesLoading = false;
+    this.state.publicGamesError = undefined;
+    this.update({});
+  }
+
+  private applyPresenceMap(map: PresenceMap): void {
+    const friends = this.state.friends;
+    let friendsChanged = false;
+    const updatedFriends = friends.map((friend) => {
+      const status = map[friend.id];
+      if (!status || status === friend.status) {
+        return friend;
+      }
+      friendsChanged = true;
+      return {
+        ...friend,
+        status,
+        isOnline: status === 'ONLINE' || status === 'INGAME',
+      };
+    });
+
+    const profile = this.state.profile;
+    const profileStatus = profile?.id ? map[profile.id] : undefined;
+    const profileChanged = Boolean(
+      profile && profileStatus && profile.status !== profileStatus
+    );
+
+    if (!friendsChanged && !profileChanged) {
+      return;
+    }
+
+    this.setState({
+      friends: friendsChanged ? updatedFriends : friends,
+      profile:
+        profileChanged && profile
+          ? { ...profile, status: profileStatus }
+          : profile,
+    });
+  }
+
   private async refreshLeaderboard(): Promise<void> {
     try {
-      const leaderboard = await userService.getLeaderboard(3);
+      const leaderboard = await userService.getLeaderboard(20);
       this.setState({ leaderboard });
     } catch (error) {
       console.warn('[DashboardPage] Failed to refresh leaderboard', error);
@@ -122,14 +254,14 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     const { silent = false } = options;
     this.setState({
       error: undefined,
-      ...(silent ? { isRefreshing: true } : { isLoading: true }),
+      ...(silent ? {} : { isLoading: true })
     });
 
     const results = await Promise.allSettled([
       userService.getProfile(),
       userService.getFriends(),
       userService.getRecentMatches(3),
-      userService.getLeaderboard(3),
+      userService.getLeaderboard(20),
     ]);
 
     const errors: string[] = [];
@@ -161,9 +293,8 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       matches,
       leaderboard,
       isLoading: false,
-      isRefreshing: false,
       error: errors.length && errors.length === results.length
-        ? 'Failed to load dashboard data. Please try again.'
+        ? 'Failed to load dashboard data.'
         : errors.length
           ? `Some widgets failed to load (${errors.join(', ')}).`
           : undefined,
@@ -229,6 +360,160 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       this.setState({ friendRequestFeedback: undefined });
       this.friendRequestFeedbackTimeout = undefined;
     }, 4000);
+  }
+
+  private setupChatInviteListeners(): void {
+    const auth = appState.auth.get();
+    if (!auth.isAuthenticated || !auth.token) {
+      console.warn('[DashboardPage] Cannot setup chat listeners: not authenticated');
+      return;
+    }
+
+    // Connect to chat WebSocket service if not already connected
+    if (!chatWebSocketService.isConnected()) {
+      console.log('[DashboardPage] Connecting to chat WebSocket service');
+      chatWebSocketService.connect(auth.token);
+    }
+
+    // Listen for incoming invites via WebSocket message event
+    const unsubMessage = chatWebSocketService.onMessage((message: any) => {
+      console.log('[DashboardPage] Received message:', message);
+      
+      if (message.type === 'INVITE' && message.senderId !== auth.user?.id) {
+        console.log('[DashboardPage] Received game invite:', message);
+        
+        const invitePayload = message.invitePayload || {};
+        const newInvite: PendingInvite = {
+          inviteId: message.id,
+          fromUserId: message.senderId,
+          fromUsername: message.senderUsername || 'Friend',
+          mode: invitePayload.mode,
+          timestamp: message.createdAt || new Date().toISOString(),
+        };
+        
+        // Add to pending invites if not already there
+        const exists = this.state.pendingInvites.some(inv => inv.inviteId === message.id);
+        if (!exists) {
+          console.log('[DashboardPage] Adding invite to pending list');
+          this.setState({
+            pendingInvites: [...this.state.pendingInvites, newInvite]
+          });
+        }
+      }
+    });
+
+    // Listen for invite accepted (when other player accepts our invite)
+    const unsubAccepted = chatWebSocketService.onInviteAccepted((data: any) => {
+      console.log('[DashboardPage] Invite accepted:', data);
+      showSuccess(`${data.acceptedByUsername} accepted your invite!`);
+      
+      // Navigate to lobby
+      if (data.gameId) {
+        navigate(`/game/lobby/${data.gameId}`);
+      }
+    });
+
+    // Listen for invite declined
+    const unsubDeclined = chatWebSocketService.onInviteDeclined((data: any) => {
+      console.log('[DashboardPage] Invite declined:', data);
+      showError(`${data.declinedByUsername} declined your invite.`);
+    });
+
+    this.chatUnsubscribes.push(unsubMessage, unsubAccepted, unsubDeclined);
+  }
+
+  private async handleAcceptInvite(inviteId: string, retryCount = 0): Promise<void> {
+    const maxRetries = 2;
+    console.log('[DashboardPage] Accepting invite:', inviteId, 'retry:', retryCount);
+    
+    try {
+      const response = await chatService.acceptInvite(inviteId);
+      
+      // Check if response contains an error (backend handled gracefully)
+      if ((response as any).error) {
+        throw new Error((response as any).error);
+      }
+      
+      console.log('[DashboardPage] Invite accepted:', response);
+      
+      // Remove from pending invites immediately
+      this.setState({
+        pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+      });
+      
+      // Verify we got a valid game ID
+      if (!response.gameId) {
+        throw new Error('Game ID missing from response');
+      }
+      
+      // Navigate to lobby
+      showSuccess('Game created! Redirecting to lobby...');
+      navigate(`/game/lobby/${response.gameId}`);
+      
+    } catch (error) {
+      console.error('[DashboardPage] Failed to accept invite:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Determine if we should retry
+      const shouldRetry = retryCount < maxRetries && 
+                         (errorMessage.includes('timeout') || 
+                          errorMessage.includes('network') ||
+                          errorMessage.includes('unavailable'));
+      
+      if (shouldRetry) {
+        // Exponential backoff: 1s, 2s
+        const backoffMs = 1000 * Math.pow(2, retryCount);
+        showError(`Connection issue. Retrying in ${backoffMs / 1000}s...`);
+        
+        setTimeout(() => {
+          this.handleAcceptInvite(inviteId, retryCount + 1);
+        }, backoffMs);
+      } else {
+        // All retries exhausted or non-retryable error
+        // Clean up invite from state
+        this.setState({
+          pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+        });
+        
+        // Show user-friendly error message
+        let userMessage = 'Failed to accept invite. ';
+        if (errorMessage.includes('timeout')) {
+          userMessage += 'The server took too long to respond. Please try sending a new invite.';
+        } else if (errorMessage.includes('already been responded')) {
+          userMessage += 'This invite has already been accepted or declined.';
+        } else if (errorMessage.includes('network') || errorMessage.includes('unavailable')) {
+          userMessage += 'Please check your connection and try again.';
+        } else {
+          userMessage += errorMessage;
+        }
+        
+        showError(userMessage);
+      }
+    }
+  }
+
+  private async handleDeclineInvite(inviteId: string): Promise<void> {
+    console.log('[DashboardPage] Declining invite:', inviteId);
+    
+    try {
+      await chatService.declineInvite(inviteId);
+      console.log('[DashboardPage] Invite declined');
+      
+      // Remove from pending invites
+      this.setState({
+        pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+      });
+    } catch (error) {
+      console.error('[DashboardPage] Failed to decline invite:', error);
+      showError('Failed to decline invite.');
+    }
+  }
+
+  private dismissInvite(inviteId: string): void {
+    this.setState({
+      pendingInvites: this.state.pendingInvites.filter(inv => inv.inviteId !== inviteId)
+    });
   }
 
   private async handleFriendRequest(friendId: string): Promise<void> {
@@ -390,6 +675,69 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     `;
   }
 
+  private renderPendingInvitesWidget(): string {
+    const { pendingInvites } = this.state;
+    
+    if (pendingInvites.length === 0) {
+      return '';
+    }
+
+    return `
+      <div class="glass-panel p-6 rounded-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2v4"></path>
+              <path d="M16 2v4"></path>
+              <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+              <path d="M3 10h18"></path>
+            </svg>
+            Game Invites
+          </h3>
+          <span class="px-2 py-1 rounded-full text-xs font-semibold" style="background: var(--color-brand-primary); color: white;">
+            ${pendingInvites.length}
+          </span>
+        </div>
+        <div class="space-y-3">
+          ${pendingInvites.map((invite) => `
+            <div class="flex items-center justify-between p-4 rounded-xl" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+              <div class="flex-1">
+                <p class="font-semibold">${invite.fromUsername}</p>
+                <p class="text-sm text-white/60">
+                  Invited you to play ${invite.mode === 'TOURNAMENT' ? 'Tournament' : '1v1'}
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  data-accept-invite="${invite.inviteId}"
+                  class="px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105"
+                  style="background: var(--color-brand-primary); color: white;"
+                >
+                  Accept
+                </button>
+                <button
+                  data-decline-invite="${invite.inviteId}"
+                  class="px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105"
+                  style="background: rgba(255, 255, 255, 0.1); color: white;"
+                >
+                  Decline
+                </button>
+                <button
+                  data-dismiss-invite="${invite.inviteId}"
+                  class="p-2 rounded-lg text-white/50 hover:text-white transition-all"
+                  style="background: rgba(255, 255, 255, 0.05);"
+                  title="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
 
   private getFriendshipKey(friendshipId: string): string {
     return `friendship-${friendshipId}`;
@@ -471,10 +819,10 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
     const onlineFriends = acceptedFriends.filter((friend) => friend.status === 'ONLINE' || friend.status === 'INGAME').length;
     const pendingCount = this.getIncomingRequests().length;
     const navItems = [
-      { label: 'Dashboard', icon: '🏠', path: '/dashboard' },
-      { label: 'Games', icon: '🎮', path: '/game' },
-      { label: 'Friends', icon: '🧑‍🤝‍🧑', path: '/friends/manage' },
-      { label: 'Settings', icon: '⚙️', path: '/profile' },
+      { label: 'Dashboard', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><g data-name="31.Home"><path d="M12 24a12 12 0 1 1 12-12 12.013 12.013 0 0 1-12 12zm0-22a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2z"/><path d="M18.293 13.707 12 7.414l-6.293 6.293-1.414-1.414L12 4.586l7.707 7.707-1.414 1.414z"/><path d="M17 18H7v-8h2v6h6v-6h2v8z"/></g></svg>', path: '/dashboard' },
+      { label: 'Tournaments', icon: '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="20" height="20" fill="currentColor"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>', path: '/tournament/list' },
+      { label: 'Friends', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90" width="20" height="20" fill="currentColor"><path d="M 45 49.519 L 45 49.519 c -7.68 0 -13.964 -6.284 -13.964 -13.964 v -5.008 c 0 -7.68 6.284 -13.964 13.964 -13.964 h 0 c 7.68 0 13.964 6.284 13.964 13.964 v 5.008 C 58.964 43.236 52.68 49.519 45 49.519 z"/><path d="M 52.863 51.438 c -2.362 1.223 -5.032 1.927 -7.863 1.927 s -5.501 -0.704 -7.863 -1.927 C 26.58 53.014 18.414 62.175 18.414 73.152 v 14.444 c 0 1.322 1.082 2.403 2.403 2.403 h 48.364 c 1.322 0 2.403 -1.082 2.403 -2.403 V 73.152 C 71.586 62.175 63.42 53.014 52.863 51.438 z"/><path d="M 71.277 34.854 c -2.362 1.223 -5.032 1.927 -7.863 1.927 c -0.004 0 -0.007 0 -0.011 0 c -0.294 4.412 -2.134 8.401 -4.995 11.43 c 10.355 3.681 17.678 13.649 17.678 24.941 v 0.263 h 11.511 c 1.322 0 2.404 -1.082 2.404 -2.404 V 56.568 C 90 45.59 81.834 36.429 71.277 34.854 z"/><path d="M 63.414 0 c -7.242 0 -13.237 5.589 -13.898 12.667 c 8 2.023 13.947 9.261 13.947 17.881 v 2.385 c 7.657 -0.027 13.914 -6.298 13.914 -13.961 v -5.008 C 77.378 6.284 71.094 0 63.414 0 z"/><path d="M 13.915 73.152 c 0 -11.292 7.322 -21.261 17.677 -24.941 c -2.861 -3.029 -4.702 -7.019 -4.995 -11.43 c -0.004 0 -0.007 0 -0.011 0 c -2.831 0 -5.5 -0.704 -7.863 -1.927 C 8.166 36.429 0 45.59 0 56.568 v 14.444 c 0 1.322 1.082 2.404 2.404 2.404 h 11.511 V 73.152 z"/><path d="M 26.536 32.932 v -2.385 c 0 -8.62 5.946 -15.858 13.947 -17.881 C 39.823 5.589 33.828 0 26.586 0 c -7.68 0 -13.964 6.284 -13.964 13.964 v 5.008 C 12.622 26.635 18.879 32.905 26.536 32.932 z"/></svg>', path: '/friends/manage' },
+      { label: 'Settings', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 19.904 19.905" fill="currentColor"><circle cx="9.952" cy="9.953" r="3"/><path d="M9.952 0A9.953 9.953 0 1 0 19.9 9.953 9.953 9.953 0 0 0 9.952 0zm7 10.953h-2.1a4.98 4.98 0 0 1-.731 1.755l1.487 1.492-1.414 1.41-1.488-1.488a4.955 4.955 0 0 1-1.754.73v2.1h-2v-2.1a5 5 0 0 1-1.752-.731L5.709 15.61 4.3 14.2l1.488-1.489a4.94 4.94 0 0 1-.73-1.754h-2.1v-2h2.1A5 5 0 0 1 5.783 7.2L4.3 5.711 5.71 4.3 7.2 5.785a4.919 4.919 0 0 1 1.754-.73v-2.1h2v2.1a4.963 4.963 0 0 1 1.754.73L14.194 4.3l1.414 1.414L14.12 7.2a4.936 4.936 0 0 1 .731 1.755h2.1z"/></svg>', path: '/profile' },
     ];
 
     return `
@@ -519,17 +867,19 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
         </div>
         <button
           data-nav="/profile"
-          class="btn-touch w-full py-3 rounded-xl touch-feedback"
+          class="btn-touch w-full py-3 rounded-xl touch-feedback flex items-center justify-center gap-2"
           style="border: 1px solid rgba(255, 255, 255, 0.2); color: white;"
         >
-          ⚙️ Settings
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 19.904 19.905" fill="currentColor"><circle cx="9.952" cy="9.953" r="3"/><path d="M9.952 0A9.953 9.953 0 1 0 19.9 9.953 9.953 9.953 0 0 0 9.952 0zm7 10.953h-2.1a4.98 4.98 0 0 1-.731 1.755l1.487 1.492-1.414 1.41-1.488-1.488a4.955 4.955 0 0 1-1.754.73v2.1h-2v-2.1a5 5 0 0 1-1.752-.731L5.709 15.61 4.3 14.2l1.488-1.489a4.94 4.94 0 0 1-.73-1.754h-2.1v-2h2.1A5 5 0 0 1 5.783 7.2L4.3 5.711 5.71 4.3 7.2 5.785a4.919 4.919 0 0 1 1.754-.73v-2.1h2v2.1a4.963 4.963 0 0 1 1.754.73L14.194 4.3l1.414 1.414L14.12 7.2a4.936 4.936 0 0 1 .731 1.755h2.1z"/></svg>
+          Settings
         </button>
         <button
           data-action="logout"
-          class="btn-touch w-full py-3 rounded-xl touch-feedback"
+          class="btn-touch w-full py-3 rounded-xl touch-feedback flex items-center justify-center gap-2"
           style="background: rgba(255,0,110,0.1); border: 1px solid rgba(255,0,110,0.3); color: white;"
         >
-          🚪 Logout
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="18" height="18" fill="currentColor"><path d="M256 73.825a182.18 182.18 0 0 0-182.18 182.18c0 100.617 81.567 182.17 182.18 182.17a182.175 182.175 0 1 0 0-364.35zm-18.096 86.22a18.099 18.099 0 0 1 36.197 0v53.975a18.099 18.099 0 0 1-36.197 0zM256 348.589a92.413 92.413 0 0 1-32.963-178.751v33.38a62.453 62.453 0 1 0 65.93 0v-33.38A92.415 92.415 0 0 1 256 348.588z" data-name="Logout"/></svg>
+          Logout
         </button>
       </aside>
     `;
@@ -588,13 +938,13 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       {
         title: 'Create 1v1 Game',
         description: 'Jump into a quick duel.',
-        icon: '🎮',
+        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M9 21a1 1 0 0 0 1-1v-1a2 2 0 0 1 4 0v.78A1.223 1.223 0 0 0 15.228 21 7.7 7.7 0 0 0 23 13.73 7.5 7.5 0 0 0 15.5 6H13V4a1 1 0 0 0-2 0v2H8.772A7.7 7.7 0 0 0 1 13.27a7.447 7.447 0 0 0 2.114 5.453A7.81 7.81 0 0 0 9 21zM8.772 8H15.5a5.5 5.5 0 0 1 5.5 5.67 5.643 5.643 0 0 1-5 5.279 4 4 0 0 0-8 .029 5.5 5.5 0 0 1-5-5.648A5.684 5.684 0 0 1 8.772 8zM5 12.5a1 1 0 0 1 1-1h1v-1a1 1 0 0 1 2 0v1h1a1 1 0 0 1 0 2H9v1a1 1 0 0 1-2 0v-1H6a1 1 0 0 1-1-1zM17 11a1 1 0 1 1 1 1 1 1 0 0 1-1-1zm-2 3a1 1 0 1 1 1 1 1 1 0 0 1-1-1z"/></svg>',
         path: '/game/create',
       },
       {
         title: 'Create Tournament',
         description: 'Host a bracket for friends.',
-        icon: '🏆',
+        icon: '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="32" height="32" fill="currentColor"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>',
         path: '/tournament/create',
       },
       {
@@ -630,6 +980,90 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
           .join('')}
       </section>
     `;
+  }
+
+  private async handleJoinPublicGame(gameId: string): Promise<void> {
+    if (!gameId || this.state.joiningGameId === gameId) {
+      return;
+    }
+
+    this.setState({ joiningGameId: gameId });
+
+    try {
+      const game = await gameService.joinGame(gameId);
+      showSuccess('Joined lobby!');
+      navigate(`/game/lobby/${game.id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to join game.';
+      showError(message);
+      this.setState({ joiningGameId: undefined });
+    }
+  }
+
+  private renderPublicGamesWidget(): string {
+    const { publicGames, publicGamesLoading, publicGamesError, joiningGameId } = this.state;
+
+    let body = '';
+
+    if (publicGamesError) {
+      body = `<p class="text-sm" style="color: var(--color-error);">${publicGamesError}</p>`;
+    } else if (publicGamesLoading && publicGames.length === 0) {
+      body = '<p class="text-sm text-white/60">Loading public games...</p>';
+    } else if (!publicGamesLoading && publicGames.length === 0) {
+      body = '<p class="text-sm text-white/60">No public games are waiting right now.</p>';
+    } else {
+      body = `
+        <div class="space-y-3">
+          ${publicGames
+            .slice(0, 5)
+            .map((game) => `
+              <div class="rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);">
+                <div class="flex-1">
+                  <p class="text-xs font-mono text-white/40">
+                    ${game.gameId}
+                  </p>
+                  <p class="text-lg font-semibold">${game.creatorUsername ?? 'Unknown player'}</p>
+                  <p class="text-xs text-white/50 mt-1">
+                    ${game.gameType} • Created ${this.formatGameTime(game.createdAt)}
+                  </p>
+                </div>
+                <button
+                  data-action="join-public-game"
+                  data-game-id="${game.gameId}"
+                  class="btn-touch px-4 py-2 rounded-xl text-sm touch-feedback"
+                  style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white; ${joiningGameId === game.gameId ? 'opacity: 0.7;' : ''}"
+                  ${joiningGameId === game.gameId ? 'disabled' : ''}
+                >
+                  ${joiningGameId === game.gameId ? 'Joining…' : 'Join'}
+                </button>
+              </div>
+            `)
+            .join('')}
+        </div>
+      `;
+    }
+
+    return `
+      <section class="glass-panel rounded-2xl p-5 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs uppercase tracking-widest text-white/50">Public Games</p>
+            <h3 class="text-xl font-semibold">Waiting Lobby</h3>
+          </div>
+          <span class="text-xs text-white/60">${publicGamesLoading ? 'Syncing…' : 'Live'}</span>
+        </div>
+        ${body}
+      </section>
+    `;
+  }
+
+  private formatGameTime(timestamp: string): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return 'just now';
+    }
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   private renderPendingRequestsWidget(): string {
@@ -901,13 +1335,14 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
                 💬 Chat
               </button>
               <button
-                class="btn-touch px-3 py-2 rounded-xl text-xs touch-feedback"
+                class="btn-touch px-3 py-2 rounded-xl text-xs touch-feedback flex items-center gap-1.5"
                 data-action="invite-friend"
                 data-friend-id="${friend.id}"
                 ${inviteState === 'loading' ? 'disabled' : ''}
                 style="background: rgba(0,217,255,0.15); color: white; border: 1px solid rgba(0,217,255,0.3);"
               >
-                🎮 ${inviteLabel}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M9 21a1 1 0 0 0 1-1v-1a2 2 0 0 1 4 0v.78A1.223 1.223 0 0 0 15.228 21 7.7 7.7 0 0 0 23 13.73 7.5 7.5 0 0 0 15.5 6H13V4a1 1 0 0 0-2 0v2H8.772A7.7 7.7 0 0 0 1 13.27a7.447 7.447 0 0 0 2.114 5.453A7.81 7.81 0 0 0 9 21zM8.772 8H15.5a5.5 5.5 0 0 1 5.5 5.67 5.643 5.643 0 0 1-5 5.279 4 4 0 0 0-8 .029 5.5 5.5 0 0 1-5-5.648A5.684 5.684 0 0 1 8.772 8zM5 12.5a1 1 0 0 1 1-1h1v-1a1 1 0 0 1 2 0v1h1a1 1 0 0 1 0 2H9v1a1 1 0 0 1-2 0v-1H6a1 1 0 0 1-1-1zM17 11a1 1 0 1 1 1 1 1 1 0 0 1-1-1zm-2 3a1 1 0 1 1 1 1 1 1 0 0 1-1-1z"/></svg>
+                ${inviteLabel}
               </button>
             </div>
           `
@@ -1016,14 +1451,14 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
           )
           .join('')
       : `<div class="text-sm text-white/50 rounded-xl p-4" style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.2);">
-          ${this.state.isLoading ? 'Loading leaderboard...' : 'Leaderboard unavailable.'}
+          ${this.state.isLoading ? 'Loading leaderboard...' : 'No leaderboard data yet.'}
         </div>`;
 
     return `
       <section class="glass-panel p-6">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <p class="text-sm text-white/60">Top Players</p>
+            <p class="text-sm text-white/60">Top 20 Players</p>
             <h3 class="text-xl font-semibold">Leaderboard</h3>
           </div>
           <div class="flex items-center gap-3 text-xs text-white/60">
@@ -1045,7 +1480,7 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
   }
 
   render(): string {
-    const { profile, isLoading, isRefreshing, error } = this.state;
+    const { profile, isLoading, error } = this.state;
 
     return `
       <div class="relative min-h-screen" style="background: var(--color-bg-dark);">
@@ -1062,18 +1497,12 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
               </div>
               <div class="flex items-center gap-3">
                 <button
-                  data-action="refresh-dashboard"
-                  class="btn-touch px-5 py-2 rounded-xl touch-feedback text-sm"
-                  style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white;"
-                >
-                  ${isRefreshing ? 'Refreshing...' : 'Refresh'}
-                </button>
-                <button
                   data-nav="/profile"
-                  class="btn-touch px-5 py-2 rounded-xl touch-feedback text-sm"
+                  class="btn-touch px-5 py-2 rounded-xl touch-feedback text-sm flex items-center gap-2"
                   style="background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary)); color: white;"
                 >
-                  ⚙️ Settings
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 19.904 19.905" fill="currentColor"><circle cx="9.952" cy="9.953" r="3"/><path d="M9.952 0A9.953 9.953 0 1 0 19.9 9.953 9.953 9.953 0 0 0 9.952 0zm7 10.953h-2.1a4.98 4.98 0 0 1-.731 1.755l1.487 1.492-1.414 1.41-1.488-1.488a4.955 4.955 0 0 1-1.754.73v2.1h-2v-2.1a5 5 0 0 1-1.752-.731L5.709 15.61 4.3 14.2l1.488-1.489a4.94 4.94 0 0 1-.73-1.754h-2.1v-2h2.1A5 5 0 0 1 5.783 7.2L4.3 5.711 5.71 4.3 7.2 5.785a4.919 4.919 0 0 1 1.754-.73v-2.1h2v2.1a4.963 4.963 0 0 1 1.754.73L14.194 4.3l1.414 1.414L14.12 7.2a4.936 4.936 0 0 1 .731 1.755h2.1z"/></svg>
+                  Settings
                 </button>
               </div>
             </header>
@@ -1084,23 +1513,18 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
                     <p class="font-semibold" style="color: var(--color-error);">Something went wrong</p>
                     <p class="text-sm text-white/70 mt-1">${error}</p>
                   </div>
-                  <button
-                    data-action="refresh-dashboard"
-                    class="btn-touch px-4 py-2 rounded-xl touch-feedback text-sm"
-                    style="background: rgba(255,255,255,0.08); color: white;"
-                  >
-                    Try Again
-                  </button>
                 </div>
               </div>
             ` : ''}
             ${this.renderInviteFeedback()}
             ${this.renderFriendRequestFeedback()}
+            ${this.renderPendingInvitesWidget()}
             ${this.renderHero(profile)}
             ${isLoading && !profile ? `
               <div class="glass-panel p-6 text-sm text-white/60">Loading dashboard data...</div>
             ` : ''}
             ${this.renderQuickActions()}
+            ${this.renderPublicGamesWidget()}
             ${this.renderPendingRequestsWidget()}
             ${this.renderSuggestedFriend()}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1137,13 +1561,16 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       if (path) navigate(path);
     });
 
-    bindClick('[data-action="refresh-dashboard"]', () => {
-      void this.loadDashboardData({ silent: true });
-    });
-
     bindClick('[data-action="quick-action"]', (el) => {
       const path = el.getAttribute('data-target');
       if (path) navigate(path);
+    });
+
+    bindClick('[data-action="join-public-game"]', (el) => {
+      const gameId = el.getAttribute('data-game-id');
+      if (gameId) {
+        void this.handleJoinPublicGame(gameId);
+      }
     });
 
     bindClick('[data-action="view-matches"]', () => {
@@ -1240,6 +1667,27 @@ export default class DashboardPage extends Component<Record<string, never>, Stat
       const friendshipId = el.getAttribute('data-friendship-id');
       if (friendId) {
         void this.handleBlockFriend(friendId, friendshipId);
+      }
+    });
+
+    bindClick('[data-accept-invite]', (el) => {
+      const inviteId = el.getAttribute('data-accept-invite');
+      if (inviteId) {
+        void this.handleAcceptInvite(inviteId);
+      }
+    });
+
+    bindClick('[data-decline-invite]', (el) => {
+      const inviteId = el.getAttribute('data-decline-invite');
+      if (inviteId) {
+        void this.handleDeclineInvite(inviteId);
+      }
+    });
+
+    bindClick('[data-dismiss-invite]', (el) => {
+      const inviteId = el.getAttribute('data-dismiss-invite');
+      if (inviteId) {
+        this.dismissInvite(inviteId);
       }
     });
 

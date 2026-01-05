@@ -76,6 +76,24 @@ export class ChatService {
   }
 
   /**
+   * Accept a game invite
+   * POST /api/chat/invites/:id/accept
+   */
+  async acceptInvite(inviteId: string): Promise<{ gameId: string; message: ChatMessage }> {
+    const response = await httpClient.post<{ gameId: string; message: ChatMessage }>(`${API_PREFIX}/invites/${inviteId}/accept`, {});
+    return response.data!;
+  }
+
+  /**
+   * Decline a game invite
+   * POST /api/chat/invites/:id/decline
+   */
+  async declineInvite(inviteId: string): Promise<{ message: ChatMessage }> {
+    const response = await httpClient.post<{ message: ChatMessage }>(`${API_PREFIX}/invites/${inviteId}/decline`, {});
+    return response.data!;
+  }
+
+  /**
    * Get notifications
    */
   async getNotifications(page = 1, limit = 20): Promise<PaginatedResponse<Notification>> {

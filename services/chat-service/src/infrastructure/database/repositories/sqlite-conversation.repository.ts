@@ -104,6 +104,23 @@ export class SQLiteConversationRepository implements IconversationRepository {
     });
   }
 
+  async deleteByGameId(gameId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        DELETE FROM conversations
+        WHERE game_id = ? AND type = ?
+      `;
+
+      this.db.run(query, [gameId, MessageType.GAME], (err) => {
+        if (err) {
+          reject(new Error(`Failed to delete game conversation: ${err.message}`));
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
   async getUnreadCount(userId: string, recipientId: string): Promise<number> {
     return new Promise((resolve, reject) => {
       const query = `

@@ -1,27 +1,19 @@
 /tournaments:
   get:
     tags: [Tournaments]
-    operationId: Tournaments_listTournaments
-    summary: List all tournaments
+    operationId: Tournaments_list
+    summary: List tournaments
     parameters:
       - name: status
         in: query
         schema:
+          $ref: '../components/schemas/tournament.yaml#/TournamentStatus'
+        description: Filter by status; when omitted, all statuses are returned.
+      - name: search
+        in: query
+        schema:
           type: string
-          enum: [REGISTRATION, ONGOING, FINISHED, CANCELLED]
-      - name: limit
-        in: query
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 100
-          default: 20
-      - name: offset
-        in: query
-        schema:
-          type: integer
-          minimum: 0
-          default: 0
+        description: Search by tournament name or access code (public only).
     responses:
       '200':
         description: List of tournaments
@@ -33,13 +25,12 @@
                 tournaments:
                   type: array
                   items:
-                    $ref: '../components/schemas/tournament.yaml#/Tournament'
-                total:
-                  type: integer
+                    $ref: '../components/schemas/tournament.yaml#/TournamentSummary'
+              required: [tournaments]
 
   post:
     tags: [Tournaments]
-    operationId: Tournaments_createTournament
+    operationId: Tournaments_create
     summary: Create a new tournament
     requestBody:
       required: true
@@ -53,16 +44,20 @@
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/tournament.yaml#/Tournament'
+              $ref: '../components/schemas/tournament.yaml#/CreateTournamentResponse'
       '400':
         description: Invalid input
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
       '401':
         description: Not authenticated
 
 /tournaments/{tournamentId}:
   get:
     tags: [Tournaments]
-    operationId: Tournaments_getTournament
+    operationId: Tournaments_get
     summary: Get tournament by ID
     parameters:
       - name: tournamentId
@@ -77,15 +72,69 @@
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/tournament.yaml#/Tournament'
+              $ref: '../components/schemas/tournament.yaml#/TournamentDetail'
       '404':
         description: Tournament not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
 
 /tournaments/{tournamentId}/join:
   post:
     tags: [Tournaments]
-    operationId: Tournaments_joinTournament
+    operationId: Tournaments_join
     summary: Join a tournament
+    parameters:
+      - name: tournamentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: passcode
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Required when tournament is private.
+    responses:
+      '200':
+        description: Successfully joined tournament
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/tournament.yaml#/JoinTournamentResponse'
+      '400':
+        description: Cannot join tournament (already started or already joined)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '403':
+        description: Incorrect passcode or not authorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '409':
+        description: Tournament is full
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '404':
+        description: Tournament not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+
+/tournaments/{tournamentId}/start:
+  post:
+    tags: [Tournaments]
+    operationId: Tournaments_start
+    summary: Manually start a tournament (creator only)
     parameters:
       - name: tournamentId
         in: path
@@ -95,48 +144,34 @@
           format: uuid
     responses:
       '200':
-        description: Successfully joined tournament
+        description: Tournament start initiated
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/tournament.yaml#/Tournament'
+              $ref: '../components/schemas/tournament.yaml#/TournamentDetail'
       '400':
-        description: Cannot join tournament (full, started, etc.)
+        description: Not enough participants or already started
         content:
           application/json:
             schema:
               $ref: '../components/schemas/common.yaml#/Error'
-      '401':
-        description: Not authenticated
+      '403':
+        description: Only the creator can start the tournament
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
       '404':
         description: Tournament not found
-
-/tournaments/{tournamentId}/leave:
-  post:
-    tags: [Tournaments]
-    operationId: Tournaments_leaveTournament
-    summary: Leave a tournament
-    parameters:
-      - name: tournamentId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    responses:
-      '204':
-        description: Successfully left tournament
-      '400':
-        description: Cannot leave tournament
-      '401':
-        description: Not authenticated
-      '404':
-        description: Tournament not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
 
 /tournaments/{tournamentId}/bracket:
   get:
     tags: [Tournaments]
-    operationId: Tournaments_getTournamentBracket
+    operationId: Tournaments_getBracket
     summary: Get tournament bracket
     parameters:
       - name: tournamentId
@@ -151,31 +186,123 @@
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: '../components/schemas/tournament.yaml#/TournamentMatch'
+              type: object
+              properties:
+                matches:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/tournament.yaml#/TournamentMatch'
+              required: [matches]
       '404':
         description: Tournament not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+
+/tournaments/{tournamentId}/matches/{matchId}/play:
+  post:
+    tags: [Tournaments]
+    operationId: Tournaments_playMatch
+    summary: Start a tournament match (create game)
+    parameters:
+      - name: tournamentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: matchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Game created for the match
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/tournament.yaml#/PlayMatchResponse'
+      '400':
+        description: Match is not pending or not ready
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '403':
+        description: You are not a participant in this match
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '409':
+        description: Player already has an active game
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '503':
+        description: Game service unavailable
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+
+/tournaments/{tournamentId}/leave:
+  post:
+    tags: [Tournaments]
+    operationId: Tournaments_leave
+    summary: Leave a tournament
+    parameters:
+      - name: tournamentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Successfully left tournament
+      '400':
+        description: Cannot leave tournament
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
+      '401':
+        description: Not authenticated
+      '404':
+        description: Tournament not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/Error'
 
 /tournaments/my-tournaments:
   get:
     tags: [Tournaments]
-    operationId: Tournaments_getMyTournaments
+    operationId: Tournaments_getMine
     summary: Get current user's tournaments
     parameters:
       - name: status
         in: query
         schema:
-          type: string
-          enum: [REGISTRATION, ONGOING, FINISHED, CANCELLED]
+          $ref: '../components/schemas/tournament.yaml#/TournamentStatus'
+        description: Filter by status; when omitted, all statuses are returned.
     responses:
       '200':
         description: User's tournaments
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: '../components/schemas/tournament.yaml#/Tournament'
+              type: object
+              properties:
+                tournaments:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/tournament.yaml#/TournamentSummary'
+              required: [tournaments]
       '401':
         description: Not authenticated

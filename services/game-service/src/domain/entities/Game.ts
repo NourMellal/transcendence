@@ -25,6 +25,7 @@ export interface GameSnapshot {
     readonly status: GameStatus;
     readonly mode: GameMode;
     readonly tournamentId?: string;
+    readonly matchId?: string;
     readonly ball: {
         position: { x: number; y: number };
         velocity: { dx: number; dy: number };
@@ -52,6 +53,7 @@ interface GameProps {
     status: GameStatus;
     mode: GameMode;
     tournamentId?: string;
+    matchId?: string;
     ball: Ball;
     players: GamePlayerState[];
     score: Score;
@@ -67,6 +69,7 @@ interface CreateGameProps {
     opponentId?: string;
     mode: GameMode;
     tournamentId?: string;
+    matchId?: string;
     config: Partial<GameConfig>;
 }
 
@@ -74,8 +77,8 @@ const DEFAULT_CONFIG: GameConfig = {
     arenaWidth: 800,
     arenaHeight: 600,
     scoreLimit: 11,
-    paddleSpeed: 720, // units per second; ~12px per frame at 60fps
-    ballSpeed: 900 // units per second; ~15px per frame at 60fps
+    paddleSpeed: 8, // values <= 30 are treated as "per frame" inputs (see resolveSpeed)
+    ballSpeed: 5
 };
 
 export class Game {
@@ -131,6 +134,7 @@ export class Game {
             status: props.opponentId ? GameStatus.WAITING : GameStatus.WAITING,
             mode: props.mode,
             tournamentId: props.tournamentId,
+            matchId: props.matchId,
             ball: initialBall,
             players,
             score: Score.create(),
@@ -162,6 +166,7 @@ export class Game {
             status: snapshot.status,
             mode: snapshot.mode,
             tournamentId: snapshot.tournamentId,
+            matchId: snapshot.matchId,
             ball,
             players,
             score: Score.create(snapshot.score.player1, snapshot.score.player2),
@@ -203,6 +208,10 @@ export class Game {
 
     get tournamentId(): string | undefined {
         return this.props.tournamentId;
+    }
+
+    get matchId(): string | undefined {
+        return this.props.matchId;
     }
 
     get createdAt(): Date {
@@ -351,6 +360,7 @@ export class Game {
             status: this.props.status,
             mode: this.props.mode,
             tournamentId: this.props.tournamentId,
+            matchId: this.props.matchId,
             ball: {
                 position: { x: this.props.ball.position.x, y: this.props.ball.position.y },
                 velocity: { dx: this.props.ball.velocity.dx, dy: this.props.ball.velocity.dy }

@@ -12,6 +12,7 @@ import {
   DashboardLeaderboardEntry,
 } from '../../models';
 import { appState } from '@/state';
+import type { PresenceStatus } from '@/models/presence';
 import { ApiError } from '@/modules/shared/services/HttpClient';
 
 // API prefix for user endpoints - empty for now but can be configured
@@ -25,6 +26,24 @@ const userCache = new Map<string, { username: string; displayName?: string; avat
  * Handles user profile management, friends, and user-related operations
  */
 export class UserService {
+  private normalizeUser(user: any): User {
+    if (!user || typeof user !== 'object') {
+      throw new Error('Invalid user payload');
+    }
+
+    const isTwoFAEnabled =
+      typeof (user as any).isTwoFAEnabled === 'boolean'
+        ? (user as any).isTwoFAEnabled
+        : typeof (user as any).is2FAEnabled === 'boolean'
+          ? (user as any).is2FAEnabled
+          : false;
+
+    return {
+      ...(user as User),
+      isTwoFAEnabled,
+    };
+  }
+
   /**
    * Get current user profile
    */
@@ -33,7 +52,9 @@ export class UserService {
     if (!response.data) {
       throw new Error('Failed to fetch user profile');
     }
-    return response.data;
+    const normalized = this.normalizeUser(response.data);
+    this.syncPresenceSnapshot([{ id: normalized.id, status: normalized.status ?? 'OFFLINE' }]);
+    return normalized;
   }
 
   /**
@@ -45,13 +66,16 @@ export class UserService {
       if (!response.data) {
         throw new Error('Failed to fetch user profile');
       }
+      const normalized = this.normalizeUser(response.data);
       const stats = await this.getUserStats(userId).catch(() => this.buildEmptyStats());
-      return {
-        ...response.data,
+      const profile: UserProfile = {
+        ...normalized,
         stats,
         friends: [],
         matchHistory: [],
       };
+      this.syncPresenceSnapshot([{ id: profile.id, status: profile.status ?? 'OFFLINE' }]);
+      return profile;
     }
 
     const [user, stats, friends] = await Promise.all([
@@ -60,12 +84,14 @@ export class UserService {
       this.getFriends(),
     ]);
 
-    return {
+    const profile: UserProfile = {
       ...user,
       stats,
       friends,
       matchHistory: [],
     };
+    this.syncPresenceSnapshot([{ id: profile.id, status: profile.status ?? 'OFFLINE' }]);
+    return profile;
   }
 
   /**
@@ -97,7 +123,7 @@ export class UserService {
           'Accept': 'application/json'
         }
       });
-      return response.data ?? null;
+      return response.data ? this.normalizeUser(response.data) : null;
     } catch (error) {
       // Return null if user not found (404) or other errors
       console.warn('[UserService] User search failed', error);
@@ -112,7 +138,9 @@ export class UserService {
     try {
       const response = await httpClient.get<{ friends: ApiFriend[]; totalCount: number }>(`${API_PREFIX}/friends`);
       const list = response.data?.friends ?? [];
-      return list.map((friend) => this.mapFriend(friend));
+      const friends = list.map((friend) => this.mapFriend(friend));
+      this.syncPresenceSnapshot(friends.map((friend) => ({ id: friend.id, status: friend.status })));
+      return friends;
     } catch (error) {
       console.warn('[UserService] Falling back to empty friends list', error);
       return [];
@@ -124,11 +152,16 @@ export class UserService {
    */
   async getRecentMatches(limit = 3): Promise<DashboardMatchSummary[]> {
     try {
-      const games = await this.getMyGames('FINISHED');
-      const summaries = games
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        return [];
+      }
+      const games = await this.getGamesForPlayer(userId);
+      const recentGames = games
         .sort((a, b) => new Date(b.finishedAt ?? b.createdAt).getTime() - new Date(a.finishedAt ?? a.createdAt).getTime())
-        .slice(0, limit)
-        .map((game) => this.mapGameToDashboardMatch(game));
+        .slice(0, limit);
+      await this.hydratePlayers(recentGames);
+      const summaries = recentGames.map((game) => this.mapGameToDashboardMatch(game));
       return summaries;
     } catch (error) {
       console.warn('[UserService] Falling back to empty recent matches', error);
@@ -189,10 +222,12 @@ export class UserService {
     try {
       const response = await httpClient.get<User>(`${API_PREFIX}/users/${userId}`);
       if (response.data) {
+        const normalized = this.normalizeUser(response.data);
+        this.syncPresenceSnapshot([{ id: normalized.id, status: normalized.status ?? 'OFFLINE' }]);
         const info = {
-          username: response.data.username,
-          displayName: response.data.displayName,
-          avatar: response.data.avatar,
+          username: normalized.username,
+          displayName: normalized.displayName,
+          avatar: normalized.avatar,
         };
         userCache.set(userId, info);
         return info;
@@ -209,22 +244,27 @@ export class UserService {
    * Get user's match history
    */
   async getMatchHistory(_userId?: string, page = 1, limit = 20): Promise<PaginatedResponse<Match>> {
-    const games = await this.getMyGames('FINISHED');
+    const currentUserId = this.getCurrentUserId();
+    if (!currentUserId) {
+      return {
+        data: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNext: false,
+          hasPrevious: false,
+        },
+      };
+    }
+
+    const games = await this.getGamesForPlayer(currentUserId);
     const startIndex = (page - 1) * limit;
     const pagedGames = games.slice(startIndex, startIndex + limit);
-    
-    // Collect all unique player IDs and fetch their info
-    const playerIds = new Set<string>();
-    for (const game of pagedGames) {
-      if (game.player1) playerIds.add(game.player1);
-      if (game.player2) playerIds.add(game.player2);
-    }
-    
-    // Fetch user info for all players in parallel
-    await Promise.all(
-      Array.from(playerIds).map(id => this.getUserInfo(id))
-    );
-    
+
+    await this.hydratePlayers(pagedGames);
+
     // Now map games to matches (userCache is populated)
     const paged = pagedGames.map((game) => this.mapGameToMatch(game));
 
@@ -271,10 +311,16 @@ export class UserService {
    * Send a game invite to a friend
    */
   async sendGameInvite(friendId: string, gameType: '1v1' | 'tournament'): Promise<void> {
+    const invitePayload = {
+      mode: gameType === 'tournament' ? 'TOURNAMENT' : 'CLASSIC',
+      config: {}
+    };
+    
     await httpClient.post(`${API_PREFIX}/chat/messages`, {
       recipientId: friendId,
-      content: gameType === 'tournament' ? 'Join my tournament?' : 'Want to play 1v1?',
-      type: 'GAME',
+      content: 'Game invite',
+      type: 'INVITE',
+      invitePayload,
     });
   }
 
@@ -282,15 +328,17 @@ export class UserService {
    * Fetch current user's stats
    */
   async getMyStats(): Promise<UserStats> {
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      return this.buildEmptyStats();
+    }
+
     try {
-      const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/me`);
-      return this.mapStats(response.data);
+      const games = await this.getGamesForPlayer(userId);
+      return this.computeStatsFromGames(games, userId);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
-        console.warn('[UserService] /stats/me not available, returning empty stats');
-        return this.buildEmptyStats();
-      }
-      throw error;
+      console.warn('[UserService] Failed to compute current user stats', error);
+      return this.buildEmptyStats();
     }
   }
 
@@ -299,14 +347,11 @@ export class UserService {
    */
   async getUserStats(userId: string): Promise<UserStats> {
     try {
-      const response = await httpClient.get<ApiUserStats>(`${API_PREFIX}/stats/users/${userId}`);
-      return this.mapStats(response.data);
+      const games = await this.getGamesForPlayer(userId);
+      return this.computeStatsFromGames(games, userId);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
-        console.warn('[UserService] Stats unavailable for user, returning empty stats');
-        return this.buildEmptyStats();
-      }
-      throw error;
+      console.warn('[UserService] Stats unavailable for user, returning empty stats', error);
+      return this.buildEmptyStats();
     }
   }
 
@@ -406,14 +451,28 @@ export class UserService {
 
   private buildDisplayName(userId?: string | null): string {
     if (!userId) return 'Unknown Player';
-    
+
     // Check cache for user info
     const cached = userCache.get(userId);
     if (cached) {
       return cached.displayName || cached.username;
     }
-    
+
     return `Player ${userId.slice(0, 6)}`;
+  }
+
+  private async hydratePlayers(games: ApiGameSummary[]): Promise<void> {
+    const playerIds = new Set<string>();
+    for (const game of games) {
+      if (game.player1) playerIds.add(game.player1);
+      if (game.player2) playerIds.add(game.player2);
+    }
+
+    if (!playerIds.size) {
+      return;
+    }
+
+    await Promise.all(Array.from(playerIds).map((id) => this.getUserInfo(id)));
   }
 
   private buildEmptyStats(): UserStats {
@@ -434,16 +493,99 @@ export class UserService {
     return appState.auth.get().user?.id;
   }
 
-  /**
-   * Update user status (online, offline, in-game)
-   */
-  async updateStatus(
-    status: 'ONLINE' | 'OFFLINE' | 'INGAME',
-    config: Partial<RequestConfig> = {}
-  ): Promise<void> {
-    await httpClient.post(`${API_PREFIX}/users/presence`, { status }, config);
+  private async getGamesForPlayer(userId: string): Promise<ApiGameSummary[]> {
+    const params = new URLSearchParams({
+      status: 'FINISHED',
+      playerId: userId,
+      limit: '200'
+    });
+
+    const response = await httpClient.get<{ games: ApiGameSummary[] }>(`${API_PREFIX}/games?${params.toString()}`);
+    return response.data?.games ?? [];
   }
 
+  private computeStatsFromGames(games: ApiGameSummary[], playerId: string): UserStats {
+    if (!games.length) {
+      return this.buildEmptyStats();
+    }
+
+    let wins = 0;
+    let losses = 0;
+    let totalScore = 0;
+    let tournamentsPlayed = 0;
+    let tournamentsWon = 0;
+
+    for (const game of games) {
+      const isPlayer1 = game.player1 === playerId;
+      const isPlayer2 = game.player2 === playerId;
+      if (!isPlayer1 && !isPlayer2) {
+        continue;
+      }
+
+      const myScore = isPlayer1 ? game.score.player1 : game.score.player2 ?? 0;
+      const didWin = game.winner === playerId;
+
+      if (didWin) {
+        wins += 1;
+      } else {
+        losses += 1;
+      }
+
+      totalScore += myScore;
+
+      if (game.mode === 'TOURNAMENT') {
+        tournamentsPlayed += 1;
+        if (didWin) {
+          tournamentsWon += 1;
+        }
+      }
+    }
+
+    const totalGames = wins + losses;
+    if (!totalGames) {
+      return this.buildEmptyStats();
+    }
+
+    return {
+      totalGames,
+      wins,
+      losses,
+      winRate: Number(((wins / totalGames) * 100).toFixed(2)),
+      averageScore: Number((totalScore / totalGames).toFixed(2)),
+      tournaments: {
+        participated: tournamentsPlayed,
+        won: tournamentsWon,
+      },
+    };
+  }
+
+  private syncPresenceSnapshot(entries: Array<{ id: string; status?: PresenceStatus }>): void {
+    if (!entries.length) {
+      return;
+    }
+
+    const current = appState.presence.get();
+    let changed = false;
+    const next: Record<string, PresenceStatus> = { ...current };
+
+    for (const entry of entries) {
+      if (!entry.id) {
+        continue;
+      }
+
+      const status = entry.status ?? 'OFFLINE';
+      if (next[entry.id] === status) {
+        continue;
+      }
+
+      next[entry.id] = status;
+      changed = true;
+    }
+
+    if (changed) {
+      appState.presence.set(next);
+    }
+  }
 
   /**
    * Delete user account

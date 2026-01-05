@@ -4,7 +4,6 @@ dist/
 
 # Generated files
 openapi.bundled.json
-src/types/openapi.d.ts
 
 # Dependencies
 node_modules/

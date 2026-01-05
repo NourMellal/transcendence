@@ -100,6 +100,9 @@ export const createGameSchema = z.object({
     errorMap: () => ({message: 'Game mode must be CLASSIC or TOURNAMENT'})
     }),
   isPrivate: z.boolean().optional(),
+  opponentId: z.string().uuid().optional().nullable(),
+  tournamentId: z.string().uuid().optional(),
+  matchId: z.string().uuid().optional(),
   config: z.object({
     arenaWidth: z.number().int().positive().max(4000).optional(),
     arenaHeight: z.number().int().positive().max(4000).optional(),
@@ -107,6 +110,22 @@ export const createGameSchema = z.object({
     paddleSpeed: z.number().int().min(1).max(50).optional(),
     ballSpeed: z.number().int().min(1).max(50).optional(),
   }).optional()
+}).superRefine((val, ctx) => {
+  if (val.matchId && !val.tournamentId) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'tournamentId is required when matchId is provided',
+      path: ['tournamentId']
+    });
+  }
+
+  if ((val.tournamentId || val.matchId) && val.gameMode !== 'TOURNAMENT') {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'tournamentId/matchId can only be set for TOURNAMENT games',
+      path: ['gameMode']
+    });
+  }
 });
 
 // Chat validation schemas
@@ -114,12 +133,18 @@ export const sendMessageSchema = z.object({
     content: z.string()
         .min(1, 'Message content is required')
         .max(500, 'Message must not exceed 500 characters'),
-    type: z.enum(['DIRECT', 'GAME']),
+    type: z.enum(['DIRECT', 'GAME', 'INVITE']),
     recipientId: z.string().uuid().optional(),
-    gameId: z.string().optional()
+    gameId: z.string().optional(),
+    invitePayload: z.object({
+        mode: z.string().optional(),
+        map: z.string().optional(),
+        notes: z.string().optional(),
+        config: z.record(z.unknown()).optional(),
+    }).optional()
 }).superRefine((val, ctx) => {
-    if (val.type === 'DIRECT' && !val.recipientId) {
-        ctx.addIssue({ code: 'custom', message: 'recipientId is required for DIRECT messages' });
+    if ((val.type === 'DIRECT' || val.type === 'INVITE') && !val.recipientId) {
+        ctx.addIssue({ code: 'custom', message: 'recipientId is required for DIRECT and INVITE messages' });
     }
     if (val.type === 'GAME' && !val.gameId) {
         ctx.addIssue({ code: 'custom', message: 'gameId is required for GAME messages' });
@@ -142,9 +167,20 @@ export const createTournamentSchema = z.object({
     name: z.string()
         .min(3, 'Tournament name must be at least 3 characters')
         .max(100, 'Tournament name must not exceed 100 characters'),
+    bracketType: z.enum(['single_elimination']).optional(),
+    isPublic: z.boolean().optional(),
+    privatePasscode: z.string().min(1).nullable().optional(),
     maxParticipants: z.number()
         .min(4, 'Tournament must have at least 4 participants')
         .max(64, 'Tournament cannot exceed 64 participants')
+        .optional(),
+    minParticipants: z.number()
+        .min(4, 'Tournament must have at least 4 participants')
+        .max(64, 'Tournament cannot exceed 64 participants')
+        .optional()
+}).refine((data) => data.isPublic !== false || Boolean(data.privatePasscode), {
+    message: 'Private tournaments require a passcode',
+    path: ['privatePasscode'],
 });
 
 // Param validation schemas
@@ -158,6 +194,11 @@ export const gameIdParamSchema = z.object({
 
 export const tournamentIdParamSchema = z.object({
     tournamentId: z.string().min(1, 'Tournament ID is required'),
+});
+
+export const tournamentMatchParamSchema = z.object({
+    tournamentId: z.string().min(1, 'Tournament ID is required'),
+    matchId: z.string().min(1, 'Match ID is required'),
 });
 
 export const userIdParamSchema = z.object({

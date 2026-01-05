@@ -49,40 +49,54 @@ This project implements **Hexagonal Architecture (Ports & Adapters)** with **Eve
 - **Docker Desktop** ([Download](https://www.docker.com/))
 - **pnpm** (installed automatically if missing)
 
-### One-Command Setup
+### Docker Canonical Setup (recommended)
 
-**Linux/Mac/WSL:**
+1) Prepare env files and SSL certs:
 ```bash
-bash setup.sh
+make setup
 ```
-
-**Windows:**
-```powershell
-powershell -ExecutionPolicy Bypass -File setup.ps1
+2) Seed Vault (required for internal API key/JWT; OAuth values are optional):
+```bash
+make seed
 ```
+If you keep secrets in a private repo, you can copy them in one shot:
+```bash
+SEED_SOURCE=/path/to/private/secrets.env make seed
+```
+The private file only needs `OAUTH_42_CLIENT_ID` and `OAUTH_42_CLIENT_SECRET` (optional `OAUTH_42_REDIRECT_URI` if you are not using the default).
+You only need to rerun `make seed` if you removed the Vault volume or changed the OAuth values.
+3) Start everything in Docker:
+```bash
+make dev-up
+```
+Note: `make dev-up` runs `make setup` automatically but does not run `make seed`.
 
-This will:
-- ✅ Install all dependencies
-- ✅ Set up HashiCorp Vault with secrets
-- ✅ Start RabbitMQ, Redis, and Vault
-- ✅ Configure environment variables
-- ✅ Validate everything works
-
-### Start All Services
+### Start All Services (host dev)
 
 ```bash
 # Start all services in development mode
 pnpm dev:all
 ```
 
-**Services will be available at:**
+### Run Everything in Docker
+
+```bash
+docker compose up --build
+```
+
+This command builds every workspace image, installs dependencies inside the `pnpm-install` helper container, and starts the API Gateway, frontend, shared packages, and infrastructure services on the `transcendence` Docker network. Source code is hot-reloaded through bind mounts, so editing files locally immediately refreshes the running containers.
+
+If `infrastructure/vault/.seed.env` is missing, copy `infrastructure/vault/.seed.env.example` and fill in `OAUTH_42_CLIENT_ID` and `OAUTH_42_CLIENT_SECRET` (optional `OAUTH_42_REDIRECT_URI` if you are not using the default). This file is gitignored by default.
+
+**Key endpoints when running inside Docker:**
 - 🌐 API Gateway: `http://localhost:3000`
-- 👤 User Service: `http://localhost:3001`
-- 🎮 Game Service: `http://localhost:3002`
-- 💬 Chat Service: `http://localhost:3003`
-- 🏆 Tournament Service: `http://localhost:3004`
+- 🖥️ Frontend SPA: `http://localhost:5173`
 - 🐰 RabbitMQ UI: `http://localhost:15672` (transcendence/transcendence_dev)
 - 🔐 Vault: `http://localhost:8200`
+- 📈 Grafana: `http://localhost:3300`
+- 📊 Kibana: `http://localhost:5601`
+
+All backend services (user, game, chat, tournament) listen on their usual ports inside the `transcendence` Docker network (`http://user-service:3001`, etc.) and are routed publicly through the API Gateway.
 
 ### Start Individual Services
 
@@ -177,8 +191,6 @@ User Registration Flow:
 **User Events:**
 - `UserRegisteredIntegrationEvent`
 - `UserProfileUpdatedIntegrationEvent`
-- `UserDeletedIntegrationEvent`
-- 📄 See `docs/events/user-deleted.md` for the full contract (schema, guarantees, retries).
 
 **Game Events:**
 - `GameStartedIntegrationEvent`
@@ -249,9 +261,9 @@ pnpm test              # Run all tests
 pnpm lint              # Lint code
 
 # Infrastructure
-docker-compose up -d rabbitmq vault redis   # Start infrastructure
-docker-compose logs -f [service]            # View logs
-docker-compose down                         # Stop all services
+docker compose up -d rabbitmq vault redis   # Start infrastructure
+docker compose logs -f [service]            # View logs
+docker compose down                         # Stop all services
 ```
 
 ### Vault Commands
@@ -279,6 +291,14 @@ Monitor:
 - Queue lengths
 - Consumer status
 - Exchange bindings
+
+### Logs & ELK (optional)
+
+- Copy `.env.example` to `.env` and adjust `LOG_DIR/HOST_LOG_DIR`, `RABBITMQ_*`, and ELK image/ports to match your setup.
+- Services emit JSON logs to `${HOST_LOG_DIR}` (default `data/logs`); `LOG_PRETTY=true` keeps console human-friendly while files stay JSON for shipping.
+- Start ELK when needed: `docker compose up -d elasticsearch logstash kibana filebeat` (reads the same `.env` source of truth).
+- Kibana: http://localhost:5601 (create index pattern `transcendence-*`).
+- Filebeat tails `${HOST_LOG_DIR}/*.log` and ships to Logstash → Elasticsearch.
 
 ---
 
@@ -364,7 +384,9 @@ Developer 5: Infrastructure & DevOps
 
 2. **Run setup**
    ```bash
-   bash setup.sh  # Linux/Mac
+   make setup
+   make seed
+   make dev-up
    ```
 
 3. **Create feature branch**
@@ -409,10 +431,10 @@ lsof -ti:3000,3001,3002,3003,3004 | xargs kill -9
 docker ps | grep rabbitmq
 
 # Restart RabbitMQ
-docker-compose restart rabbitmq
+docker compose restart rabbitmq
 
 # Check logs
-docker-compose logs rabbitmq
+docker compose logs rabbitmq
 ```
 
 ### Vault issues
@@ -422,7 +444,7 @@ docker-compose logs rabbitmq
 curl http://localhost:8200/v1/sys/health
 
 # Restart Vault
-docker-compose restart vault
+docker compose restart vault
 
 # Re-initialize secrets
 bash infrastructure/vault/scripts/setup-secrets-dev.sh
@@ -435,7 +457,7 @@ bash infrastructure/vault/scripts/setup-secrets-dev.sh
 docker info
 
 # Start infrastructure
-docker-compose up -d rabbitmq vault redis
+docker compose up -d rabbitmq vault redis
 
 # View all containers
 docker ps -a

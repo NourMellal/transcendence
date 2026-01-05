@@ -1,5 +1,7 @@
 import { Socket } from 'socket.io';
-import { logger } from '../../config';
+import { createLogger } from '@transcendence/shared-logging';
+
+const logger = createLogger('DisconnectHandler');
 import { RoomManager } from '../RoomManager';
 
 export class DisconnectHandler {

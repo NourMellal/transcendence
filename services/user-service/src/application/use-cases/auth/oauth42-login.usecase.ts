@@ -11,8 +11,15 @@ export class OAuth42LoginUseCaseImpl implements IOAuth42LoginUseCase {
 
     async execute(): Promise<OAuthLoginResponseDTO> {
         const state = this.stateManager.createState();
-        return {
-            authorizationUrl: this.oauthService.getAuthorizationUrl(state),
-        };
+        try {
+            const authorizationUrl = this.oauthService.getAuthorizationUrl(state);
+            return {
+                authorizationUrl,
+            };
+        } catch (error) {
+            // Clean up state if OAuth config is missing or invalid.
+            this.stateManager.consumeState(state);
+            throw error;
+        }
     }
 }

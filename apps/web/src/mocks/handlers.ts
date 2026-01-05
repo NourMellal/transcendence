@@ -197,7 +197,7 @@ export const handlers = [
 
   // GET /auth/42/login - return authorization URL
   http.get(`${API_BASE}/auth/42/login`, () => {
-    const origin = globalThis.location?.origin ?? 'http://localhost:3002';
+    const origin = globalThis.location?.origin ?? 'http://game-service:3002';
     const authorizationUrl = new URL('https://profile.intra.42.fr/oauth/authorize');
     authorizationUrl.searchParams.set('client_id', 'mock-client-id');
     authorizationUrl.searchParams.set('redirect_uri', `${origin}/auth/42/callback`);

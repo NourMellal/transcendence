@@ -111,7 +111,7 @@ export class SQLiteUserRepository implements UserRepository {
         if (!this.db) throw new Error('Database not initialized');
 
         const fields: string[] = [];
-        const values: any[] = [];
+        const values: Array<string | number | null> = [];
 
         if (updates.email !== undefined) {
             fields.push('email = ?');
@@ -173,20 +173,38 @@ export class SQLiteUserRepository implements UserRepository {
         return rows.map(row => this.mapRowToUser(row));
     }
 
-    private mapRowToUser(row: any): User {
+    async listAll(limit: number = 100, offset: number = 0): Promise<User[]> {
+        if (!this.db) throw new Error('Database not initialized');
+
+        const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(1000, Math.floor(limit))) : 100;
+        const safeOffset = Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0;
+
+        const rows = await this.db.all(
+            `SELECT * FROM users ORDER BY created_at ASC LIMIT ? OFFSET ?`,
+            [safeLimit, safeOffset]
+        );
+
+        return rows.map((row) => this.mapRowToUser(row));
+    }
+
+    private mapRowToUser(row: Record<string, unknown>): User {
+        const oauthProviderRaw = typeof row.oauth_provider === 'string' ? row.oauth_provider : undefined;
+        const oauthProvider: 'local' | '42' | undefined =
+            oauthProviderRaw === 'local' || oauthProviderRaw === '42' ? oauthProviderRaw : undefined;
+
         return createUser({
-            id: new UserId(row.id),
-            email: new Email(row.email),
-            username: new Username(row.username),
-            passwordHash: row.password_hash ?? undefined,
-            displayName: row.display_name ? new DisplayName(row.display_name) : undefined,
-            avatar: row.avatar ?? undefined,
-            twoFASecret: row.two_fa_secret ?? undefined,
+            id: new UserId(String(row.id)),
+            email: new Email(String(row.email)),
+            username: new Username(String(row.username)),
+            passwordHash: typeof row.password_hash === 'string' ? row.password_hash : undefined,
+            displayName: row.display_name ? new DisplayName(String(row.display_name)) : undefined,
+            avatar: typeof row.avatar === 'string' ? row.avatar : undefined,
+            twoFASecret: typeof row.two_fa_secret === 'string' ? row.two_fa_secret : undefined,
             is2FAEnabled: row.is_2fa_enabled === 1,
-            oauthProvider: row.oauth_provider ?? undefined,
-            oauthId: row.oauth_id ?? undefined,
-            createdAt: new Date(row.created_at),
-            updatedAt: new Date(row.updated_at),
+            oauthProvider,
+            oauthId: typeof row.oauth_id === 'string' ? row.oauth_id : undefined,
+            createdAt: new Date(String(row.created_at)),
+            updatedAt: new Date(String(row.updated_at)),
         });
     }
 }

@@ -14,6 +14,8 @@ import type { WSConnectionState } from '@/modules/shared/types/websocket.types';
 import { isOnlineMode } from '../utils/featureFlags';
 import { gameService } from '../services/GameService';
 import { appState } from '@/state';
+import { navigate } from '@/routes';
+import { parseQueryParams } from '@/utils/helpers';
 
 interface GameCanvasProps {
   gameId?: string; // Optional: for online mode
@@ -26,6 +28,9 @@ interface GameCanvasState {
   isGameRunning: boolean;
   connectionStatus?: ConnectionStatus;
   mySide?: 'left' | 'right';
+  showEndModal: boolean;
+  winnerName?: string;
+  winnerId?: string;
 }
 
 export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
@@ -36,6 +41,11 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private animationId: number | null = null;
   private isOnline: boolean = false;
   private wsUnsubscribes: Array<() => void> = [];
+  private autoReady: boolean = false;
+  private autoReadyKnown: boolean = false;
+  private autoReadySent: boolean = false;
+  private isTournamentGame: boolean = false;
+  private tournamentReturnPath?: string;
 
   private readonly BASE_WIDTH = 800;
   private readonly BASE_HEIGHT = 600;
@@ -64,6 +74,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private pointerMoveHandler?: (e: PointerEvent) => void;
   private startStopBtn?: HTMLButtonElement | null;
   private restartBtn?: HTMLButtonElement | null;
+  private returnHomeBtn?: HTMLButtonElement | null;
+  private returnHomeHandler?: (event: Event) => void;
   private readonly player2Controls = { up: 'ArrowUp', down: 'ArrowDown' };
   private readonly player1Controls = { up: 'w', down: 's' };
   private handleButtonClick = (e: Event): void => {
@@ -86,6 +98,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     return {
       isGameRunning: false,
       connectionStatus: 'disconnected',
+      showEndModal: false,
     };
   }
 
@@ -121,60 +134,150 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
   render(): string {
     return `
-      <div class="game-canvas-wrapper space-y-4 sm:space-y-6">
-        <!-- Canvas Container -->
-        <div class="glass-panel-mobile sm:glass-panel relative rounded-xl sm:rounded-2xl overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1);">
-          <div class="game-area rounded-lg sm:rounded-xl overflow-hidden" style="background: var(--color-bg-dark); aspect-ratio: 4 / 3;">
-            <canvas
-              id="game-canvas"
-              class="w-full h-full"
-              style="display: block; image-rendering: crisp-edges;"
-            ></canvas>
+      <div class="game-canvas-wrapper flex flex-col gap-6 sm:gap-8 relative w-full max-w-[800px] mx-auto">
+        ${this.renderEndModal()}
+        
+        <!-- Game Canvas -->
+        <div class="relative w-full group">
+          <!-- Glass card container -->
+          <div class="relative rounded-[2rem] p-1 overflow-hidden" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08);">
+            
+            <!-- Inner game area -->
+            <div class="relative rounded-[1.8rem] w-full overflow-hidden flex flex-col" style="background: #050505; border: 1px solid rgba(255, 255, 255, 0.05); aspect-ratio: 4 / 3; box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);">
+              
+              <!-- Score Overlay on Canvas -->
+              <div class="absolute top-6 sm:top-8 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none select-none">
+                <div class="relative">
+                  <!-- Score glow -->
+                  <div class="absolute -inset-1 rounded-full opacity-30" style="background: rgba(255, 0, 110, 0.5); filter: blur(8px);"></div>
+                  <!-- Score card -->
+                  <div class="relative rounded-full px-4 sm:px-6 py-1.5 sm:py-2 flex items-center justify-center gap-4 sm:gap-6" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+                    <span id="player1-score" class="text-lg sm:text-xl font-bold text-white tabular-nums drop-shadow-md">0</span>
+                    <div class="h-1.5 w-1.5 rounded-full" style="background: rgba(255, 0, 110, 0.8); box-shadow: 0 0 8px rgba(255, 0, 110, 0.6);"></div>
+                    <span id="player2-score" class="text-lg sm:text-xl font-bold text-white tabular-nums drop-shadow-md">0</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Canvas -->
+              <canvas
+                id="game-canvas"
+                class="w-full h-full"
+                style="display: block; image-rendering: crisp-edges;"
+              ></canvas>
+            </div>
           </div>
         </div>
 
-        <!-- Control Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center px-4 sm:px-0">
-          <button
-            id="start-stop-btn"
-            data-action="start-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
-            style="background: white; color: var(--color-bg-dark);"
-            onmouseover="this.style.background='var(--color-brand-secondary)'; this.style.color='white';"
-            onmouseout="this.style.background='white'; this.style.color='var(--color-bg-dark)';"
-          >
-            ▶️ Start Game
-          </button>
-
-          <button
-            id="restart-btn"
-            data-action="restart-game"
-            class="btn-touch w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-base sm:text-lg touch-feedback"
-            style="border: 2px solid rgba(255, 255, 255, 0.2); color: white; background: rgba(255, 255, 255, 0.05);"
-          >
-            🔄 Restart
-          </button>
-        </div>
-
-        <!-- Score Display -->
-        <div class="glass-panel-mobile sm:glass-panel px-4 sm:px-8 py-4 sm:py-6 rounded-xl sm:rounded-2xl" style="border: 1px solid rgba(255, 255, 255, 0.1);">
-          <div class="grid grid-cols-2 gap-4 sm:gap-8 text-center">
-            <div class="space-y-2">
-              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 1</div>
-              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-primary);">
-                <span id="player1-score">0</span>
+        <!-- Bottom Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+          
+          <!-- Score Panel -->
+          <div class="relative group">
+            <!-- Glow -->
+            <div class="absolute -inset-0.5 rounded-2xl opacity-20 transition duration-500" style="background: rgba(255, 0, 110, 0.5); filter: blur(12px);"></div>
+            <!-- Glass card -->
+            <div class="relative rounded-2xl p-6 flex justify-between items-center h-full" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08);">
+              <div class="flex flex-col items-center flex-1 border-r border-white/10">
+                <span class="text-[10px] font-bold tracking-[0.2em] text-gray-500 uppercase mb-1">Player 1</span>
+                <span id="player1-score-panel" class="text-3xl font-light text-white">0</span>
+              </div>
+              <div class="flex flex-col items-center flex-1">
+                <span class="text-[10px] font-bold tracking-[0.2em] text-gray-500 uppercase mb-1">Player 2</span>
+                <span id="player2-score-panel" class="text-3xl font-light text-white">0</span>
               </div>
             </div>
-            <div class="space-y-2">
-              <div class="text-xs sm:text-sm font-medium" style="color: rgba(255, 255, 255, 0.6);">Player 2</div>
-              <div class="text-3xl sm:text-4xl lg:text-5xl font-mono font-bold" style="color: var(--color-brand-secondary);">
-                <span id="player2-score">0</span>
-              </div>
+          </div>
+
+          <!-- Control Buttons Panel -->
+          <div class="relative group">
+            <!-- Glow -->
+            <div class="absolute -inset-0.5 rounded-2xl opacity-20 transition duration-500" style="background: rgba(255, 0, 110, 0.5); filter: blur(12px);"></div>
+            <!-- Glass card -->
+            <div class="relative rounded-2xl p-6 flex gap-4 items-center justify-center h-full" style="background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08);">
+              <button
+                id="start-stop-btn"
+                data-action="start-game"
+                class="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-medium transition-all duration-200 transform active:scale-95 hover:bg-gray-100"
+                style="background: white; color: black; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon></svg>
+                <span>Start Game</span>
+              </button>
+
+              <button
+                id="restart-btn"
+                data-action="restart-game"
+                class="flex-none flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all duration-200 transform active:scale-95 hover:bg-white/10"
+                style="background: rgba(255, 255, 255, 0.05); color: white; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px);"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              </button>
             </div>
           </div>
         </div>
       </div>
     `;
+  }
+
+  private renderEndModal(): string {
+    if (!this.state.showEndModal) {
+      return '';
+    }
+
+    const winnerLabel = this.state.winnerName ?? 'Winner';
+    const returnLabel = this.getReturnLabel();
+
+    return `
+      <div class="absolute inset-0 z-20 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-md rounded-2xl"></div>
+        <div class="relative w-full max-w-md mx-4 rounded-2xl p-8 text-center overflow-hidden" style="border: 1px solid rgba(255, 255, 255, 0.1); background: linear-gradient(135deg, rgba(13, 17, 23, 0.98) 0%, rgba(27, 31, 35, 0.98) 100%); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);">
+          <!-- Subtle glow effect -->
+          <div class="absolute inset-0 opacity-10" style="background: radial-gradient(circle at 50% 0%, var(--color-brand-primary), transparent 60%);"></div>
+
+          <div class="relative">
+            <p class="text-xs sm:text-sm uppercase tracking-widest font-semibold" style="color: rgba(255, 255, 255, 0.5); letter-spacing: 0.15em;">Match Finished</p>
+            <h3 class="text-3xl sm:text-5xl font-bold mt-4 mb-8 flex items-center justify-center gap-3" style="color: #ffffff; text-shadow: 0 2px 20px rgba(0, 179, 217, 0.4);">
+              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="48" height="48" fill="currentColor"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>
+              ${winnerLabel}
+            </h3>
+            <button
+              data-action="return-home"
+              class="btn-touch px-8 py-4 rounded-xl font-semibold touch-feedback transition-all duration-300 hover:scale-105"
+              style="background: linear-gradient(135deg, #00b3d9 0%, #0095b8 100%); color: white; box-shadow: 0 4px 20px rgba(0, 179, 217, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);"
+            >
+              ${returnLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private showGameEndModal(winnerId?: string, winnerName?: string): void {
+    if (this.state.showEndModal) {
+      return;
+    }
+
+    const label = winnerName ?? this.deriveWinnerLabel(winnerId);
+    this.setState({ showEndModal: true, winnerName: label, winnerId });
+  }
+
+  private deriveWinnerLabel(winnerId?: string): string {
+    if (!winnerId) {
+      return 'Winner';
+    }
+
+    const currentUserId = (appState.auth.get().user as { id?: string } | undefined)?.id;
+    if (currentUserId && currentUserId === winnerId) {
+      return 'You Win';
+    }
+
+    return 'Opponent Wins';
+  }
+
+  private handleReturnHome(): void {
+    navigate(this.getReturnPath());
   }
 
   onMount(): void {
@@ -188,11 +291,14 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.observeCanvasResize();
     this.renderer.render(this.ball, this.player1, this.player2);
 
+    this.resolveTournamentReturnPath();
     this.attachEventListeners();
 
     if (this.isOnline) {
       this.disableLocalButtons();
-      void this.syncSideAndState();
+      void this.syncSideAndState().finally(() => {
+        void this.maybeAutoReady(true);
+      });
       void this.setupWebSocket();
     }
   }
@@ -221,6 +327,18 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     this.registerPointerHandlers();
     this.registerKeyboardHandlers();
+
+    if (this.returnHomeBtn && this.returnHomeHandler) {
+      this.returnHomeBtn.removeEventListener('click', this.returnHomeHandler);
+    }
+    this.returnHomeBtn = this.element.querySelector('[data-action="return-home"]') as HTMLButtonElement | null;
+    if (this.returnHomeBtn) {
+      this.returnHomeHandler = (event: Event) => {
+        event.preventDefault();
+        this.handleReturnHome();
+      };
+      this.returnHomeBtn.addEventListener('click', this.returnHomeHandler);
+    }
   }
 
   private observeCanvasResize(): void {
@@ -362,6 +480,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       gameWS.on('connect', () => {
         updateStatus('connected');
         gameWS.send('join_game', { gameId: this.props.gameId });
+        void this.maybeAutoReady();
       }),
       gameWS.on('disconnect', () => updateStatus('disconnected')),
       gameWS.on('connect_error', () => updateStatus('error')),
@@ -369,7 +488,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       gameWS.on('game_state', (event: GameStateUpdateEvent) => this.applyGameStateUpdate(event)),
       gameWS.on('ball_state', (event: BallStateEvent) => this.applyBallStateUpdate(event)),
       gameWS.on('paddle_update', (event: PaddleUpdateEvent) => this.applyPaddleUpdate(event)),
-      gameWS.on('game_end', (event: GameEndEvent) => this.handleGameEnd(event)),
+      gameWS.on('game:finished', (event: GameEndEvent) => this.handleGameEnd(event)),
       gameWS.on('error', (data: unknown) => {
         console.error('[GameCanvas] Game error:', data);
       })
@@ -394,9 +513,60 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       } else if (players[1]?.id === currentUserId) {
         this.mySide = 'right';
       }
+      this.isTournamentGame = game.mode === 'TOURNAMENT';
+      this.autoReady = this.isTournamentGame;
+      this.autoReadyKnown = true;
     } catch (error) {
       console.warn('[GameCanvas] syncSideAndState failed', error);
     }
+  }
+
+  private async maybeAutoReady(force = false): Promise<void> {
+    if (!this.props.gameId || this.autoReadySent) return;
+    if (!this.autoReadyKnown) {
+      try {
+        const game = await gameService.getGame(this.props.gameId);
+        this.isTournamentGame = game.mode === 'TOURNAMENT';
+        this.autoReady = this.isTournamentGame;
+        this.autoReadyKnown = true;
+      } catch (error) {
+        console.warn('[GameCanvas] Auto-ready check failed', error);
+        return;
+      }
+    }
+
+    if (!this.autoReady) return;
+    if (!force && gameWS.getState() !== 'connected') return;
+
+    this.autoReadySent = true;
+    gameWS.send('ready', { gameId: this.props.gameId });
+  }
+
+  private resolveTournamentReturnPath(): void {
+    const params = parseQueryParams();
+    if (params.tournamentId) {
+      this.tournamentReturnPath = `/tournament/${params.tournamentId}`;
+    }
+  }
+
+  private getReturnLabel(): string {
+    if (this.tournamentReturnPath) {
+      return 'Return to Bracket';
+    }
+    if (this.isTournamentGame) {
+      return 'Return to Tournaments';
+    }
+    return 'Return to Dashboard';
+  }
+
+  private getReturnPath(): string {
+    if (this.tournamentReturnPath) {
+      return this.tournamentReturnPath;
+    }
+    if (this.isTournamentGame) {
+      return '/tournament/list';
+    }
+    return '/dashboard';
   }
 
   private emitPaddleSet(y: number): void {
@@ -435,6 +605,7 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     this.stopLoop();
     this.renderer.render(this.ball, this.player1, this.player2);
+    this.showGameEndModal(event.winnerId, event.winnerUsername);
   }
 
   private applyGameStateUpdate(payload: GameStateUpdateEvent): void {
@@ -493,9 +664,13 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private updateScoreDisplay(): void {
     const player1ScoreEl = this.element?.querySelector('#player1-score');
     const player2ScoreEl = this.element?.querySelector('#player2-score');
+    const player1ScorePanelEl = this.element?.querySelector('#player1-score-panel');
+    const player2ScorePanelEl = this.element?.querySelector('#player2-score-panel');
 
     if (player1ScoreEl) player1ScoreEl.textContent = String(this.player1.score);
     if (player2ScoreEl) player2ScoreEl.textContent = String(this.player2.score);
+    if (player1ScorePanelEl) player1ScorePanelEl.textContent = String(this.player1.score);
+    if (player2ScorePanelEl) player2ScorePanelEl.textContent = String(this.player2.score);
   }
 
   private resizeCanvas(): void {
@@ -544,10 +719,10 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
 
     if (this.isRunning) {
       this.stopLoop();
-      this.startStopBtn.textContent = '▶️ Start Game';
+      this.startStopBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><g data-name="24.play circle"><path d="M12 0a12 12 0 1 0 12 12A12.013 12.013 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10.011 10.011 0 0 1-10 10z"/><path d="m10.8 15.8 5-4a1 1 0 0 0 0-1.6l-5-4a1 1 0 0 0-1.6.8v8a1 1 0 0 0 1.6.8z"/></g></svg>Start Game';
     } else {
       this.startLoop();
-      this.startStopBtn.textContent = '⏹ Stop Game';
+      this.startStopBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><g data-name="pause circle"><path d="M12 0a12 12 0 1 0 12 12A12 12 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10 10 0 0 1-10 10z"/><path d="M14 8v8a1 1 0 0 0 2 0V8a1 1 0 0 0-2 0zM8 8v8a1 1 0 0 0 2 0V8a1 1 0 0 0-2 0z"/></g></svg>Stop Game';
     }
   }
 
@@ -558,6 +733,8 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
     this.lastInputSentAt = 0;
     this.isRunning = true;
     this.setState({ isGameRunning: true });
+    // Update score display after setState re-rendered the HTML
+    this.updateScoreDisplay();
     this.runFrame();
   }
 
@@ -571,6 +748,11 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+
+    // Re-render to keep game objects visible when stopped
+    this.renderer.render(this.ball, this.player1, this.player2);
+    // Update score display after setState re-rendered the HTML
+    this.updateScoreDisplay();
   }
 
   private runFrame(): void {
@@ -637,13 +819,15 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private resetGame(): void {
     this.player1.score = 0;
     this.player2.score = 0;
+    this.player1.y = this.BASE_HEIGHT / 2 - this.player1.height / 2;
+    this.player2.y = this.BASE_HEIGHT / 2 - this.player2.height / 2;
     this.resetBall();
     this.updateScoreDisplay();
     this.renderer.render(this.ball, this.player1, this.player2);
 
     // Re-enable start button after reset
     if (this.startStopBtn) {
-      this.startStopBtn.textContent = '▶️ Start Game';
+      this.startStopBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><g data-name="24.play circle"><path d="M12 0a12 12 0 1 0 12 12A12.013 12.013 0 0 0 12 0zm0 22a10 10 0 1 1 10-10 10.011 10.011 0 0 1-10 10z"/><path d="m10.8 15.8 5-4a1 1 0 0 0 0-1.6l-5-4a1 1 0 0 0-1.6.8v8a1 1 0 0 0 1.6.8z"/></g></svg>Start Game';
       this.startStopBtn.disabled = false;
       this.startStopBtn.style.opacity = '1';
     }
@@ -717,9 +901,10 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
   private endGame(winner: string): void {
     this.stopLoop();
     if (this.startStopBtn) {
-      this.startStopBtn.textContent = `🏆 ${winner} Wins!`;
+      this.startStopBtn.innerHTML = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="18" height="18" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><path d="M96 1.2H32v9.9h64V1.2zm31.7 12.3h-34l-93.4.2S-1.4 31.4 3 43.5c3.7 10.1 15 16.3 15 16.3l-4.1 5.4 5.4 2.7 5.4-9.5S10.4 49.8 7 42.1C3.7 34.5 4.3 19 4.3 19h30.4c.2 5.2 0 13.5-1.7 21.7-1.9 9.1-6.6 19.6-10.1 21.1 7.7 10.7 22.3 19.9 29 19.7 0 6.2.3 18-6.7 23.6-7 5.6-10.8 13.6-10.8 13.6h-6.7v8.1h72.9v-8.1h-6.7s-3.8-8-10.8-13.6c-7-5.6-6.7-17.4-6.7-23.6 6.8.2 21.4-8.8 29.1-19.5-3.6-1.4-8.3-12.2-10.2-21.2-1.7-8.2-1.8-16.5-1.7-21.7h29.1s1.4 15.4-1.9 23-17.4 16.3-17.4 16.3l5.5 9.5L114 65l-4.1-5.4s11.3-6.2 15-16.3c4.5-12.1 2.8-29.8 2.8-29.8z"/></svg>${winner} Wins!`;
       this.startStopBtn.disabled = true;
     }
+    this.showGameEndModal(undefined, winner);
   }
 
   onUnmount(): void {
@@ -748,6 +933,12 @@ export class GameCanvas extends Component<GameCanvasProps, GameCanvasState> {
       document.removeEventListener('keyup', this.keyUpHandler);
       this.keyUpHandler = undefined;
     }
+
+    if (this.returnHomeBtn && this.returnHomeHandler) {
+      this.returnHomeBtn.removeEventListener('click', this.returnHomeHandler);
+    }
+    this.returnHomeBtn = null;
+    this.returnHomeHandler = undefined;
 
     this.startStopBtn = null;
     this.restartBtn = null;

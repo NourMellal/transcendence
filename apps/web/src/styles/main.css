@@ -116,6 +116,15 @@
     box-shadow: var(--shadow-glass);
   }
 
+  .profile-glass-panel {
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 40px -10px rgba(255, 0, 110, 0.5), 
+              0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
   .glass-card {
     background: rgba(47, 54, 61, 0.6);
     border: 1px solid rgba(88, 96, 105, 0.3);
@@ -317,6 +326,10 @@
   .glow-secondary {
     box-shadow: var(--shadow-glow-secondary);
   }
+
+  .animate-fade-in-up {
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
   /* 🌟 Cyberpunk Background Utilities */
   .cyberpunk-radial-bg {
@@ -607,6 +620,11 @@
     100% { transform: translateY(0rem); }
   }
 
+  @keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
   .animate-pong-paddle-left {
     animation: pong-paddle-left 8s linear infinite;
   }
@@ -686,10 +704,10 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(13, 17, 23, 0.8), rgba(9, 12, 18, 0.9));
+  background: linear-gradient(135deg, rgba(13, 17, 23, 0.95) 0%, rgba(20, 24, 32, 0.95) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  box-shadow: var(--shadow-glow-secondary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .game-stage__canvas canvas {
@@ -703,12 +721,77 @@
   grid-template-columns: repeat(3, minmax(120px, 1fr));
   align-items: center;
   justify-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, rgba(13, 17, 23, 0.95) 0%, rgba(27, 31, 35, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-scoreboard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(0, 179, 217, 0.05), transparent 70%),
+              radial-gradient(circle at 70% 50%, rgba(255, 0, 110, 0.05), transparent 70%);
+  pointer-events: none;
+}
+
+.game-scoreboard > div {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.game-scoreboard span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .game-scoreboard strong {
-  font-size: 2.25rem;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  tabular-nums: tabular-nums;
+}
+
+.game-scoreboard > div:first-child strong {
+  text-shadow: 0 2px 12px rgba(0, 179, 217, 0.3), 0 0 20px rgba(0, 179, 217, 0.1);
+}
+
+.game-scoreboard > div:last-child strong {
+  text-shadow: 0 2px 12px rgba(255, 0, 110, 0.3), 0 0 20px rgba(255, 0, 110, 0.1);
+}
+
+.game-scoreboard__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.game-scoreboard__status span {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.game-scoreboard__status small {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .game-page__grid {
