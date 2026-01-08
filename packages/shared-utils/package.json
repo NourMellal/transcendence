@@ -6,15 +6,13 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc",
-        "dev": "tsc --watch",
-        "test": "vitest"
+        "dev": "tsc --watch"
     },
     "dependencies": {
         "node-vault": "^0.10.9"
     },
     "devDependencies": {
         "@types/node-vault": "^0.9.13",
-        "typescript": "^5.3.3",
-        "vitest": "^3.2.4"
+        "typescript": "^5.3.3"
     }
 }

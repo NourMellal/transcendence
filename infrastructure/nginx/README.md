@@ -43,7 +43,7 @@ docker-compose up -d nginx
 - `modsec/modsecurity.conf` - Main ModSecurity rules + OWASP CRS
 - `modsec/modsec_enabled.conf` - Active when WAF is enabled
 - `modsec/modsec_disabled.conf` - Active when WAF is disabled
-- `WAF_INSTRUCTIONS.md` - Detailed WAF documentation
+- `../../docs/deployment/WAF-INTEGRATION-GUIDE.md` - Detailed WAF documentation
 
 ## Configuration
 
@@ -90,7 +90,7 @@ docker-compose exec nginx tail -f /var/log/modsec_audit.log
 
 ## Troubleshooting
 
-See [WAF_INSTRUCTIONS.md](WAF_INSTRUCTIONS.md) for:
+See [WAF-INTEGRATION-GUIDE.md](../../docs/deployment/WAF-INTEGRATION-GUIDE.md) for:
 - Detailed setup instructions
 - Troubleshooting common issues
 - Production recommendations
