@@ -81,6 +81,22 @@
   gap: 1rem;
 }
 
+.chat-page__header-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-page__header-profile:hover .chat-page__header-username {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .chat-page__header-avatar {
   width: 48px;
   height: 48px;
@@ -230,6 +246,14 @@
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.conversation-item__profile-link {
+  cursor: pointer;
+}
+
+.conversation-item__profile-link:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .conversation-item__avatar--game {

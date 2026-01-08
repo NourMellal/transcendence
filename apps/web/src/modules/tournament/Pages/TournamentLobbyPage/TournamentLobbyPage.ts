@@ -499,6 +499,74 @@ export default class TournamentLobbyPage extends Component<TournamentLobbyPagePr
     return fallback ?? 'Player';
   }
 
+  private resolveTournamentWinner(tournament: TournamentDetail): { id: string; name: string; handle?: string; avatar: string } | null {
+    if (tournament.status !== 'finished') {
+      return null;
+    }
+
+    const matches = tournament.matches ?? [];
+    if (!matches.length) {
+      return null;
+    }
+
+    const maxRound = Math.max(...matches.map((match) => match.round));
+    const finalMatch = matches
+      .filter((match) => match.round === maxRound)
+      .find((match) => match.winnerId) ?? null;
+    const winnerId = finalMatch?.winnerId;
+    if (!winnerId) {
+      return null;
+    }
+
+    const profile = this.state.participantProfiles[winnerId];
+    const participant = tournament.participants?.find((item) => item.userId === winnerId);
+    const name =
+      profile?.displayName ||
+      profile?.username ||
+      participant?.username ||
+      'Champion';
+    const handle =
+      profile?.username && profile.username !== name ? `@${profile.username}` : undefined;
+    const avatar = profile?.avatar || '/assets/images/ape.png';
+
+    return { id: winnerId, name, handle, avatar };
+  }
+
+  private renderWinnerCard(tournament: TournamentDetail): string {
+    const winner = this.resolveTournamentWinner(tournament);
+    if (!winner) {
+      return '';
+    }
+
+    const isCurrentUser = winner.id === this.currentUserId;
+    return `
+      <div class="glass-panel p-6 rounded-2xl" style="border: 1px solid rgba(124,242,200,0.35); background: rgba(124,242,200,0.08);">
+        <p class="text-xs uppercase tracking-widest text-white/60">Tournament Winner</p>
+        <div class="mt-4 flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full overflow-hidden border border-white/20" style="background: rgba(255,255,255,0.08);">
+            <img
+              src="${winner.avatar}"
+              alt="${winner.name}"
+              class="w-full h-full object-cover"
+              onerror="this.src='/assets/images/ape.png';"
+            />
+          </div>
+          <div>
+            <p class="text-lg font-semibold">${winner.name}</p>
+            <p class="text-xs text-white/60">${winner.handle ?? (isCurrentUser ? 'You took the crown!' : 'Champion')}</p>
+          </div>
+        </div>
+        <button
+          data-action="go-dashboard"
+          class="btn-touch w-full mt-5 py-3 rounded-xl text-sm touch-feedback"
+          style="background: rgba(255,255,255,0.12); color: white;"
+        >
+          Go to dashboard
+        </button>
+      </div>
+    `;
+  }
+
   private renderMatchCard(match: TournamentMatch): string {
     const player1Id = match.player1?.userId ?? null;
     const player2Id = match.player2?.userId ?? null;
@@ -742,6 +810,7 @@ export default class TournamentLobbyPage extends Component<TournamentLobbyPagePr
                 ${this.renderBracket(tournament)}
               </div>
               <div class="space-y-6">
+                ${this.renderWinnerCard(tournament)}
                 ${this.renderInfoCard(tournament)}
               </div>
             </div>
@@ -761,6 +830,13 @@ export default class TournamentLobbyPage extends Component<TournamentLobbyPagePr
       const handler = () => navigate('/tournament/list');
       backButton.addEventListener('click', handler);
       this.subscriptions.push(() => backButton.removeEventListener('click', handler));
+    }
+
+    const dashboardButton = this.element.querySelector<HTMLButtonElement>('[data-action="go-dashboard"]');
+    if (dashboardButton) {
+      const handler = () => navigate('/dashboard');
+      dashboardButton.addEventListener('click', handler);
+      this.subscriptions.push(() => dashboardButton.removeEventListener('click', handler));
     }
 
     const startButton = this.element.querySelector<HTMLButtonElement>('[data-action="start-tournament"]');

@@ -477,32 +477,32 @@ export default class ListTournamentsPage extends Component<Record<string, never>
             <div class="flex flex-col lg:flex-row lg:items-center gap-3">
               <div class="flex-1">
                 <label class="text-xs text-white/60" for="tournament-search-input">Search by name or access code</label>
-                <div class="mt-2 flex gap-2">
+                <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
                   <input
                     id="tournament-search-input"
                     type="text"
-                    class="glass-input w-full rounded-xl px-4 py-3 text-sm"
+                    class="glass-input w-full rounded-xl px-4 py-3 text-sm sm:flex-1"
                     style="background: var(--color-input-bg); border: 1px solid var(--color-input-border); color: var(--color-text-primary);"
                     placeholder="Try Neon Cup or A1B2C3"
                     value="${this.state.searchQuery}"
                   />
-                  <button
-                    data-action="search-tournaments"
-                    class="btn-touch px-4 py-2 rounded-xl text-sm"
-                    style="background: rgba(255,255,255,0.08); color: white;"
-                  >
-                    Search
-                  </button>
+                  <div class="flex gap-2">
+                    <button
+                      data-action="search-tournaments"
+                      class="btn-touch px-4 py-3 rounded-xl text-sm"
+                      style="background: rgba(255,255,255,0.08); color: white;"
+                    >
+                      Search
+                    </button>
+                    <button
+                      data-action="clear-search"
+                      class="btn-touch px-4 py-3 rounded-xl text-sm"
+                      style="background: rgba(255,255,255,0.08); color: white;"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div class="flex flex-col sm:flex-row gap-2">
-                <button
-                  data-action="clear-search"
-                  class="btn-touch px-4 py-2 rounded-xl text-sm"
-                  style="background: rgba(255,255,255,0.08); color: white;"
-                >
-                  Clear
-                </button>
               </div>
             </div>
             ${this.renderTournamentList()}
