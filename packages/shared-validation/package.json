@@ -6,14 +6,12 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc",
-        "dev": "tsc --watch",
-        "test": "vitest"
+        "dev": "tsc --watch"
     },
     "dependencies": {
         "zod": "^3.25.76"
     },
     "devDependencies": {
-        "typescript": "^5.9.3",
-        "vitest": "^3.2.4"
+        "typescript": "^5.9.3"
     }
 }

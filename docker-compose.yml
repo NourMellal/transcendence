@@ -1,5 +1,4 @@
 x-workspace-env: &workspace-env
-  PNPM_INSTALL_MARKER: .pnpm-installed
   CHOKIDAR_USEPOLLING: "1"
 
 networks:
@@ -28,94 +27,6 @@ services:
         - transcendence
       restart: unless-stopped
 
-  pnpm-install:
-    build:
-      context: .
-      dockerfile: services/user-service/Dockerfile
-      target: dev
-    entrypoint: ["/opt/entrypoints/pnpm-install.sh"]
-    command: []
-    restart: unless-stopped
-    volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
-      - logs-data:/workspace/data/logs
-    networks:
-      - transcendence
-
-  shared-logging:
-    build:
-      context: .
-      dockerfile: packages/shared-logging/Dockerfile
-      target: dev
-    restart: unless-stopped
-    depends_on:
-      - pnpm-install
-    environment:
-      <<: *workspace-env
-    volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
-      - logs-data:/workspace/data/logs
-    networks:
-      - transcendence
-
-  shared-utils:
-    build:
-      context: .
-      dockerfile: packages/shared-utils/Dockerfile
-      target: dev
-    restart: unless-stopped
-    depends_on:
-      - pnpm-install
-    environment:
-      <<: *workspace-env
-    volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
-      - logs-data:/workspace/data/logs
-    networks:
-      - transcendence
-
-  shared-validation:
-    build:
-      context: .
-      dockerfile: packages/shared-validation/Dockerfile
-      target: dev
-    restart: unless-stopped
-    depends_on:
-      - pnpm-install
-    environment:
-      <<: *workspace-env
-    volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
-      - logs-data:/workspace/data/logs
-    networks:
-      - transcendence
-
-  shared-messaging:
-    build:
-      context: .
-      dockerfile: packages/shared-messaging/Dockerfile
-      target: dev
-    restart: unless-stopped
-    depends_on:
-      - pnpm-install
-    environment:
-      <<: *workspace-env
-    volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
-      - logs-data:/workspace/data/logs
-    networks:
-      - transcendence
-
   user-service:
     build:
       context: .
@@ -134,16 +45,9 @@ services:
       # USER_SERVICE_URL: http://user-service:3001
       GAME_SERVICE_URL: http://game-service:3002
     depends_on:
-      - pnpm-install
       - rabbitmq
       - vault
-      - shared-logging
-      - shared-utils
-      - shared-validation
     volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
       - logs-data:/workspace/data/logs
       - user-service-data:/workspace/services/user-service/data
       - user-service-uploads:/workspace/services/user-service/uploads
@@ -166,16 +70,9 @@ services:
       GAME_SERVICE_URL: http://game-service:3002
       USER_SERVICE_URL: http://user-service:3001
     depends_on:
-      - pnpm-install
       - rabbitmq
       - redis
-      - shared-logging
-      - shared-utils
-      - shared-validation
     volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
       - logs-data:/workspace/data/logs
       - game-service-data:/workspace/services/game-service/data
     networks:
@@ -197,15 +94,8 @@ services:
       USER_SERVICE_URL: http://user-service:3001
       GAME_SERVICE_URL: http://game-service:3002
     depends_on:
-      - pnpm-install
       - rabbitmq
-      - shared-logging
-      - shared-utils
-      - shared-validation
     volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
       - logs-data:/workspace/data/logs
       - chat-service-data:/workspace/services/chat-service/data
     networks:
@@ -226,15 +116,8 @@ services:
       RABBITMQ_URL: amqp://transcendence:transcendence_dev@rabbitmq:5672
       GAME_SERVICE_URL: http://game-service:3002
     depends_on:
-      - pnpm-install
       - rabbitmq
-      - shared-logging
-      - shared-utils
-      - shared-validation
     volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
       - logs-data:/workspace/data/logs
       - tournament-service-data:/workspace/services/tournament-service/data
     networks:
@@ -258,15 +141,11 @@ services:
       TOURNAMENT_SERVICE_URL: http://tournament-service:3004
     depends_on:
       - vault
-      - pnpm-install
       - user-service
       - game-service
       - chat-service
       - tournament-service
     volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
       - logs-data:/workspace/data/logs
     ports:
       - "${GATEWAY_PORT:-3000}:3000"
@@ -286,12 +165,7 @@ services:
       VITE_API_PROXY_TARGET: https://nginx
       VITE_API_PROXY_WS_TARGET: wss://nginx
     depends_on:
-      - pnpm-install
       - api-gateway
-    volumes:
-      - .:/workspace
-      - workspace-node_modules:/workspace/node_modules
-      - pnpm-store:/root/.local/share/pnpm/store
     ports:
       - "5173:5173"
     networks:
@@ -417,8 +291,6 @@ services:
   #     - transcendence
 
 volumes:
-  workspace-node_modules:
-  pnpm-store:
   logs-data:
   user-service-data:
   user-service-uploads:

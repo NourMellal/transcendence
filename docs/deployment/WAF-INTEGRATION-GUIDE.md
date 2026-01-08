@@ -354,7 +354,6 @@ Before deploying to production:
 - ✅ `infrastructure/nginx/modsec/modsec_enabled.conf` - Enabled state
 - ✅ `infrastructure/nginx/modsec/modsec_disabled.conf` - Disabled state
 - ✅ `infrastructure/nginx/conf.d/api-proxy.conf` - Reverse proxy config
-- ✅ `infrastructure/nginx/WAF_INSTRUCTIONS.md` - Detailed WAF docs
 
 ## Next Steps
 
@@ -406,7 +405,7 @@ docker-compose exec nginx cat /usr/local/modsecurity/lib/pkgconfig/modsecurity.p
 
 ## Support
 
-- **WAF Instructions**: [infrastructure/nginx/WAF_INSTRUCTIONS.md](infrastructure/nginx/WAF_INSTRUCTIONS.md)
+- **WAF Guide**: `docs/deployment/WAF-INTEGRATION-GUIDE.md`
 - **Nginx README**: [infrastructure/nginx/README.md](infrastructure/nginx/README.md)
 - **ModSecurity Docs**: https://github.com/SpiderLabs/ModSecurity
 - **OWASP CRS Docs**: https://coreruleset.org/docs/
