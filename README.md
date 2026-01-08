@@ -84,7 +84,7 @@ pnpm dev:all
 docker compose up --build
 ```
 
-This command builds every workspace image, installs dependencies inside the `pnpm-install` helper container, and starts the API Gateway, frontend, shared packages, and infrastructure services on the `transcendence` Docker network. Source code is hot-reloaded through bind mounts, so editing files locally immediately refreshes the running containers.
+This command builds each service image with its dependencies baked in (no shared `node_modules` volume) and starts the API Gateway, frontend, and infrastructure services on the `transcendence` Docker network. Shared packages are compiled into each service image. Containers are self-contained; rebuild the images to pick up code changes.
 
 If `infrastructure/vault/.seed.env` is missing, copy `infrastructure/vault/.seed.env.example` and fill in `OAUTH_42_CLIENT_ID` and `OAUTH_42_CLIENT_SECRET` (optional `OAUTH_42_REDIRECT_URI` if you are not using the default). This file is gitignored by default.
 

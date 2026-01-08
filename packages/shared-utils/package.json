@@ -9,6 +9,7 @@
         "dev": "tsc --watch"
     },
     "dependencies": {
+        "dotenv": "^16.6.1",
         "node-vault": "^0.10.9"
     },
     "devDependencies": {

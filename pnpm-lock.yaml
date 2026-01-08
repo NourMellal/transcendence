@@ -122,6 +122,9 @@ importers:
 
   packages/shared-utils:
     dependencies:
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
       node-vault:
         specifier: ^0.10.9
         version: 0.10.9
