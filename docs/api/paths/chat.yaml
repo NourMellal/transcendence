@@ -98,6 +98,100 @@
       '401':
         description: Unauthorized - authentication required
 
+/chat/invites/{inviteId}/accept:
+  post:
+    tags: [Chat]
+    operationId: Chat_acceptInvite
+    summary: Accept a game invite
+    parameters:
+      - name: inviteId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Invite accepted and game created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteAcceptResponse'
+      '400':
+        description: Invalid request or game creation failed
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+      '401':
+        description: Unauthorized - authentication required
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+      '404':
+        description: Invite not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+      '409':
+        description: Invite already responded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+      '504':
+        description: Game creation timed out
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+
+/chat/invites/{inviteId}/decline:
+  post:
+    tags: [Chat]
+    operationId: Chat_declineInvite
+    summary: Decline a game invite
+    parameters:
+      - name: inviteId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Invite declined successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteDeclineResponse'
+      '400':
+        description: Invalid request
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+      '401':
+        description: Unauthorized - authentication required
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+      '404':
+        description: Invite not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+      '409':
+        description: Invite already responded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/chat.yaml#/ChatInviteErrorResponse'
+
 /chat/ws:
   get:
     tags: [Chat, WebSocket]

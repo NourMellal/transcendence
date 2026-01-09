@@ -46,6 +46,10 @@ components:
       $ref: './components/schemas/auth.yaml#/Enable2FARequest'
     UpdateUserRequest:
       $ref: './components/schemas/user.yaml#/UpdateUserRequest'
+    DeleteUserRequest:
+      $ref: './components/schemas/user.yaml#/DeleteUserRequest'
+    DeleteUserResponse:
+      $ref: './components/schemas/user.yaml#/DeleteUserResponse'
     
     # Game schemas
     Game:
@@ -64,6 +68,12 @@ components:
       $ref: './components/schemas/chat.yaml#/SendMessageRequest'
     Conversation:
       $ref: './components/schemas/chat.yaml#/Conversation'
+    ChatInviteAcceptResponse:
+      $ref: './components/schemas/chat.yaml#/ChatInviteAcceptResponse'
+    ChatInviteDeclineResponse:
+      $ref: './components/schemas/chat.yaml#/ChatInviteDeclineResponse'
+    ChatInviteErrorResponse:
+      $ref: './components/schemas/chat.yaml#/ChatInviteErrorResponse'
     
     # Tournament schemas
     TournamentSummary:
@@ -154,6 +164,8 @@ paths:
     $ref: './paths/games.yaml#/~1games~1{gameId}'
   /games/{gameId}/join:
     $ref: './paths/games.yaml#/~1games~1{gameId}~1join'
+  /games/{gameId}/ready:
+    $ref: './paths/games.yaml#/~1games~1{gameId}~1ready'
   /games/{gameId}/leave:
     $ref: './paths/games.yaml#/~1games~1{gameId}~1leave'
   /games/my-games:
@@ -166,6 +178,10 @@ paths:
     $ref: './paths/chat.yaml#/~1chat~1messages'
   /chat/conversations:
     $ref: './paths/chat.yaml#/~1chat~1conversations'
+  /chat/invites/{inviteId}/accept:
+    $ref: './paths/chat.yaml#/~1chat~1invites~1{inviteId}~1accept'
+  /chat/invites/{inviteId}/decline:
+    $ref: './paths/chat.yaml#/~1chat~1invites~1{inviteId}~1decline'
   /chat/ws:
     $ref: './paths/chat.yaml#/~1chat~1ws'
   

@@ -146,3 +146,46 @@ Conversation:
       minimum: 0
       example: 2
   required: [conversationId, type, participants]
+
+ChatInviteAcceptResponse:
+  type: object
+  description: Response returned when a chat invite is accepted
+  properties:
+    gameId:
+      type: string
+      format: uuid
+      description: ID of the game created from the invite
+    message:
+      $ref: '#/ChatMessage'
+  required: [gameId, message]
+
+ChatInviteDeclineResponse:
+  type: object
+  description: Response returned when a chat invite is declined
+  properties:
+    message:
+      $ref: '#/ChatMessage'
+  required: [message]
+
+ChatInviteErrorResponse:
+  type: object
+  description: Error response for invite actions
+  properties:
+    error:
+      type: string
+      example: "Invite already responded"
+    errorType:
+      type: string
+      enum:
+        - TIMEOUT
+        - GAME_CREATION_FAILED
+        - ALREADY_RESPONDED
+        - NOT_FOUND
+        - UNAUTHORIZED
+        - INVALID_REQUEST
+        - UNKNOWN
+    inviteId:
+      type: string
+      format: uuid
+      description: Invite identifier, when available
+  required: [error, errorType]
