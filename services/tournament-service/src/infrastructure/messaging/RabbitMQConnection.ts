@@ -8,15 +8,28 @@ export interface MessagingConnectionConfig {
 export class RabbitMQConnection {
     private connection?: ChannelModel;
     private channel?: Channel;
+    private isReconnecting = false;
 
     constructor(private readonly config: MessagingConnectionConfig) {}
 
     async getChannel(): Promise<Channel> {
         if (!this.connection) {
-            this.connection = await amqplib.connect(this.config.uri);
+            // Add heartbeat to detect dead connections
+            const uriWithHeartbeat = this.config.uri.includes('?') 
+                ? `${this.config.uri}&heartbeat=30`
+                : `${this.config.uri}?heartbeat=30`;
+            
+            this.connection = await amqplib.connect(uriWithHeartbeat);
+            
             this.connection.on('close', () => {
+                console.warn('⚠️ RabbitMQ connection closed');
                 this.connection = undefined;
                 this.channel = undefined;
+                this.scheduleReconnect();
+            });
+
+            this.connection.on('error', (err) => {
+                console.error('❌ RabbitMQ connection error:', err.message);
             });
         }
 
@@ -27,6 +40,24 @@ export class RabbitMQConnection {
         }
 
         return this.channel;
+    }
+
+    private scheduleReconnect(): void {
+        if (this.isReconnecting) return;
+        this.isReconnecting = true;
+
+        console.log('🔄 Attempting RabbitMQ reconnection in 5s...');
+        setTimeout(async () => {
+            try {
+                await this.getChannel();
+                console.log('✅ RabbitMQ reconnected');
+            } catch (err) {
+                console.error('❌ Reconnection failed, retrying...');
+                this.scheduleReconnect();
+            } finally {
+                this.isReconnecting = false;
+            }
+        }, 5000);
     }
 
     async close(): Promise<void> {
