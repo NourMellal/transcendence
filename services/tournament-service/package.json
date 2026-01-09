@@ -12,6 +12,7 @@
     "dependencies": {
         "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-messaging": "workspace:*",
+        "@transcendence/shared-rabbitmq": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
         "bcryptjs": "^2.4.3",

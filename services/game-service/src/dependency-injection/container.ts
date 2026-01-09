@@ -1,4 +1,4 @@
-import { GameServiceConfig } from '../infrastructure/config';
+import { GameServiceConfig, logger } from '../infrastructure/config';
 import { createDatabaseConnection, runMigrations, SQLiteGameRepository } from '../infrastructure/database';
 import { RabbitMQConnection, EventSerializer, RabbitMQGameEventPublisher } from '../infrastructure/messaging';
 import { UserServiceClient } from '../infrastructure/external/UserServiceClient';
@@ -62,9 +62,12 @@ export async function createContainer(config: GameServiceConfig): Promise<GameSe
 
     const repository = new SQLiteGameRepository(db);
     const messagingConnection = new RabbitMQConnection({
-        uri: config.messaging.uri, 
+        uri: config.messaging.uri,
         exchange: config.messaging.exchange,
+        readiness: config.messaging.readiness,
+        logger
     });
+    await messagingConnection.waitForReadiness();
     const serializer = new EventSerializer();
     const eventPublisher = new RabbitMQGameEventPublisher(messagingConnection, serializer, config.messaging.exchange);
     const userServiceClient = new UserServiceClient(config.userServiceBaseUrl, config.internalApiKey);

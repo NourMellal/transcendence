@@ -15,6 +15,7 @@
         "@fastify/cors": "^8.5.0",
         "@transcendence/shared-logging": "workspace:*",
         "@transcendence/shared-messaging": "workspace:*",
+        "@transcendence/shared-rabbitmq": "workspace:*",
         "@transcendence/shared-utils": "workspace:*",
         "@transcendence/shared-validation": "workspace:*",
         "amqplib": "^0.10.3",

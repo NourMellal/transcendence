@@ -83,7 +83,9 @@ export async function createContainer(
     const serializer = new EventSerializer();
     const messaging = new RabbitMQConnection({
         uri: messagingConfig.uri,
-        exchange: messagingConfig.exchange
+        exchange: messagingConfig.exchange,
+        readiness: messagingConfig.readiness,
+        logger
     });
     const publisher = new RabbitMQTournamentEventPublisher(messaging, serializer, messagingConfig.exchange);
 
@@ -166,15 +168,18 @@ export async function createContainer(
     const queueName = `${messagingConfig.queuePrefix}.game-finished`;
 
     try {
+        await messaging.waitForReadiness();
         const channel = await messaging.getChannel();
         consumer = new GameFinishedConsumer(channel, serializer, completeMatch);
         await consumer.start(queueName);
         logger.info('Tournament service messaging consumer started');
     } catch (error) {
-        logger.warn(
+        logger.error(
             { error: error instanceof Error ? error.message : 'unknown' },
-            'Messaging not available, continuing without RabbitMQ'
+            'Failed to initialize RabbitMQ for tournament service'
         );
+        await messaging.close();
+        throw error;
     }
 
     return {

@@ -8,7 +8,8 @@
       "@transcendence/shared-logging": ["../../packages/shared-logging/src"],
       "@transcendence/shared-utils": ["../../packages/shared-utils/src"],
       "@transcendence/shared-validation": ["../../packages/shared-validation/src"],
-      "@transcendence/shared-messaging": ["../../packages/shared-messaging/src"]
+      "@transcendence/shared-messaging": ["../../packages/shared-messaging/src"],
+      "@transcendence/shared-rabbitmq": ["../../packages/shared-rabbitmq/src"]
     }
   },
   "include": ["src/**/*"],
@@ -17,6 +18,7 @@
     { "path": "../../packages/shared-logging" },
     { "path": "../../packages/shared-utils" },
     { "path": "../../packages/shared-validation" },
-    { "path": "../../packages/shared-messaging" }
+    { "path": "../../packages/shared-messaging" },
+    { "path": "../../packages/shared-rabbitmq" }
   ]
 }

@@ -120,6 +120,19 @@ importers:
         specifier: ^5.3.3
         version: 5.9.2
 
+  packages/shared-rabbitmq:
+    dependencies:
+      amqplib:
+        specifier: ^0.10.3
+        version: 0.10.9
+    devDependencies:
+      '@types/amqplib':
+        specifier: ^0.10.1
+        version: 0.10.8
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
   packages/shared-utils:
     dependencies:
       dotenv:
@@ -154,6 +167,9 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
+      '@transcendence/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -206,6 +222,9 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
+      '@transcendence/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -261,6 +280,9 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
+      '@transcendence/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -325,6 +347,9 @@ importers:
       '@transcendence/shared-messaging':
         specifier: workspace:*
         version: link:../../packages/shared-messaging
+      '@transcendence/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       '@transcendence/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils
@@ -7695,7 +7720,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
-      '@types/node': 20.19.17
+      '@types/node': 20.19.26
       long: 5.3.2
 
   proxy-addr@2.0.7:
