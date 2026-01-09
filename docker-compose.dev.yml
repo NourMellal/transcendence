@@ -1,0 +1,37 @@
+services:
+  user-service:
+    environment:
+      OAUTH_42_SUCCESS_REDIRECT: http://localhost:5173/oauth/callback
+      OAUTH_42_FAILURE_REDIRECT: http://localhost:5173/oauth/error
+    volumes:
+      - ./services/user-service:/workspace/services/user-service
+
+  game-service:
+    volumes:
+      - ./services/game-service:/workspace/services/game-service
+
+  chat-service:
+    volumes:
+      - ./services/chat-service:/workspace/services/chat-service
+
+  tournament-service:
+    volumes:
+      - ./services/tournament-service:/workspace/services/tournament-service
+
+  api-gateway:
+    ports:
+      - "${GATEWAY_PORT:-3000}:3000"
+    volumes:
+      - ./infrastructure/api-gateway:/workspace/infrastructure/api-gateway
+      - ./docs:/workspace/docs
+
+  web:
+    build:
+      target: dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://api-gateway:3000
+      VITE_API_PROXY_WS_TARGET: ws://api-gateway:3000
+    volumes:
+      - ./apps/web:/workspace/apps/web

@@ -78,17 +78,37 @@ Note: `make dev-up` runs `make setup` automatically but does not run `make seed`
 pnpm dev:all
 ```
 
-### Run Everything in Docker
+### Run Everything in Docker (Evaluation)
 
 ```bash
-docker compose up --build
+make eval-up
 ```
 
-This command builds each service image with its dependencies baked in (no shared `node_modules` volume) and starts the API Gateway, frontend, and infrastructure services on the `transcendence` Docker network. Shared packages are compiled into each service image. Containers are self-contained; rebuild the images to pick up code changes.
+Or:
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
+This mode keeps containers self-contained (no source bind mounts) and exposes only Nginx. Access the app via HTTPS: `https://transcendence.42.demo` (or `https://localhost` if you map the host in your `/etc/hosts`).
+
+### Run Everything in Docker (Development)
+
+```bash
+make dev-up
+```
+
+Or:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+This mode bind-mounts service/frontend source so code changes do not require full image rebuilds.
 
 If `infrastructure/vault/.seed.env` is missing, copy `infrastructure/vault/.seed.env.example` and fill in `OAUTH_42_CLIENT_ID` and `OAUTH_42_CLIENT_SECRET` (optional `OAUTH_42_REDIRECT_URI` if you are not using the default). This file is gitignored by default.
 
-**Key endpoints when running inside Docker:**
+**Key endpoints (Development mode):**
 - 🌐 API Gateway: `http://localhost:3000`
 - 🖥️ Frontend SPA: `http://localhost:5173`
 - 🐰 RabbitMQ UI: `http://localhost:15672` (transcendence/transcendence_dev)
@@ -96,7 +116,7 @@ If `infrastructure/vault/.seed.env` is missing, copy `infrastructure/vault/.seed
 - 📈 Grafana: `http://localhost:3300`
 - 📊 Kibana: `http://localhost:5601`
 
-All backend services (user, game, chat, tournament) listen on their usual ports inside the `transcendence` Docker network (`http://user-service:3001`, etc.) and are routed publicly through the API Gateway.
+All backend services (user, game, chat, tournament) listen on their usual ports inside the `transcendence` Docker network (`http://user-service:3001`, etc.) and are routed publicly through Nginx + the API Gateway.
 
 ### Start Individual Services
 

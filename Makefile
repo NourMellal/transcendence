@@ -4,18 +4,29 @@ SEED_FILE := infrastructure/vault/.seed.env
 SEED_EXAMPLE := infrastructure/vault/.seed.env.example
 CERT_DIR := infrastructure/nginx/certs
 
-.PHONY: setup dev-up dev-down dev-restart seed certs
+.PHONY: setup dev-up dev-down dev-restart eval-up eval-down eval-restart seed certs
+
+COMPOSE_EVAL := docker compose -f docker-compose.yml
+COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
 setup:
 	bash scripts/setup-service.sh
 
 dev-up: setup
-	docker compose up -d --build
+	$(COMPOSE_DEV) up -d --build
 
 dev-down:
-	docker compose down
+	$(COMPOSE_DEV) down
 
 dev-restart: dev-down dev-up
+
+eval-up: setup
+	$(COMPOSE_EVAL) up -d --build
+
+eval-down:
+	$(COMPOSE_EVAL) down
+
+eval-restart: eval-down eval-up
 
 seed:
 	@if [ ! -f "$(SEED_FILE)" ]; then \
@@ -27,9 +38,9 @@ seed:
 			exit 1; \
 		fi; \
 	fi
-	docker compose up -d vault
+	$(COMPOSE_EVAL) up -d vault
 	@i=0; \
-	until docker compose exec -T vault /vault/health-check.sh >/dev/null 2>&1; do \
+	until $(COMPOSE_EVAL) exec -T vault /vault/health-check.sh >/dev/null 2>&1; do \
 		i=$$((i+1)); \
 		if [ $$i -ge 30 ]; then \
 			echo "Vault did not become ready in time."; \
@@ -37,7 +48,7 @@ seed:
 		fi; \
 		sleep 1; \
 	done
-	docker compose exec -T vault /vault/scripts/simple-setup.sh
+	$(COMPOSE_EVAL) exec -T vault /vault/scripts/simple-setup.sh
 
 certs:
 	@if [ ! -f "$(CERT_DIR)/fullchain.pem" ] || [ ! -f "$(CERT_DIR)/privkey.pem" ]; then \
