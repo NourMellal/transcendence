@@ -28,7 +28,7 @@ openssl req -x509 -nodes -days "$DAYS_VALID" -newkey rsa:2048 \
   -keyout "$CERT_DIR/privkey.pem" \
   -out "$CERT_DIR/fullchain.pem" \
   -subj "/C=US/ST=State/L=City/O=Development/CN=localhost" \
-  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+  -addext "subjectAltName=DNS:localhost,DNS:transcendence.42.demo,IP:127.0.0.1"
 
 # Set appropriate permissions
 chmod 600 "$CERT_DIR/privkey.pem"
