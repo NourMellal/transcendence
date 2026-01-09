@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { join } from 'path';
 
 // Load .env from project root
 dotenv.config({ path: join(__dirname, '../../../.env') });
@@ -11,7 +10,6 @@ import rateLimit from '@fastify/rate-limit';
 import proxy from '@fastify/http-proxy';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { readFileSync } from 'fs';
 import { initializeVaultJWTService } from './utils/vault-jwt.service';
 import { loadGatewayConfig } from './config/gateway-config';
 import { createLogger } from '@transcendence/shared-logging';
@@ -25,10 +23,8 @@ import { registerChatRoutes } from './routes/chat.routes';
 import { registerTournamentRoutes } from './routes/tournaments.routes';
 import { registerStatsRoutes } from './routes/stats.routes';
 
-// Load bundled OpenAPI specification
-const openApiSpec = JSON.parse(
-    readFileSync(join(__dirname, '../openapi.bundled.json'), 'utf-8')
-);
+const openApiSpecPath = join(__dirname, '../../../docs/api/openapi.yaml');
+const openApiSpecBaseDir = join(__dirname, '../../../docs/api');
 
 async function createGateway() {
     // Load configuration with Vault integration
@@ -107,7 +103,8 @@ async function createGateway() {
     await app.register(swagger, {
         mode: 'static',
         specification: {
-            document: openApiSpec
+            path: openApiSpecPath,
+            baseDir: openApiSpecBaseDir
         }
     });
 
