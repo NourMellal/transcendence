@@ -33,5 +33,6 @@ CMD ["pnpm", "--filter", "@transcendence/web", "dev", "--", "--host", "0.0.0.0",
 FROM nginx:1.27-alpine AS prod
 WORKDIR /usr/share/nginx/html
 COPY --from=build /workspace/apps/web/dist ./
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

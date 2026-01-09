@@ -117,6 +117,10 @@ export default class ConversationItem extends Component<ConversationItemProps, C
     const { conversation, isActive } = this.props;
     const activeClass = isActive ? 'conversation-item--active' : '';
     const unreadClass = conversation.unreadCount > 0 ? 'conversation-item--unread' : '';
+    const profileId =
+      conversation.type === 'DIRECT' ? conversation.recipientId : undefined;
+    const profileAttrs = profileId ? `data-profile-id="${profileId}"` : '';
+    const profileClass = profileId ? 'conversation-item__profile-link' : '';
 
     const displayName = conversation.type === 'GAME' 
       ? `Game ${conversation.gameId?.substring(0, 8)}` 
@@ -126,7 +130,7 @@ export default class ConversationItem extends Component<ConversationItemProps, C
       <div class="conversation-item ${activeClass} ${unreadClass}" data-conversation-id="${conversation.conversationId}">
         <div class="conversation-item__avatar-wrapper">
           ${conversation.type === 'DIRECT' ? `
-            <img src="${this.getAvatarUrl()}" alt="${displayName}" class="conversation-item__avatar" />
+            <img src="${this.getAvatarUrl()}" alt="${displayName}" class="conversation-item__avatar ${profileClass}" ${profileAttrs} />
             ${conversation.isOnline ? '<span class="conversation-item__online-badge"></span>' : ''}
           ` : `
             <div class="conversation-item__avatar conversation-item__avatar--game">
@@ -138,7 +142,7 @@ export default class ConversationItem extends Component<ConversationItemProps, C
         </div>
         <div class="conversation-item__content">
           <div class="conversation-item__header">
-            <span class="conversation-item__name">${displayName}</span>
+            <span class="conversation-item__name ${profileClass}" ${profileAttrs}>${displayName}</span>
             ${conversation.lastMessage ? `
               <span class="conversation-item__time">${this.formatTime(conversation.lastMessage.timestamp || conversation.lastMessage.sentAt)}</span>
             ` : ''}

@@ -506,10 +506,14 @@ export class ChatWebSocketService {
    * Get WebSocket URL from environment
    */
   private getWebSocketUrl(): string {
-    // Use the API base URL for WebSocket connection (gateway handles routing)
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-    // Remove /api suffix since we'll add it in the path
-    return apiBase.replace(/\/api\/?$/, '') || 'http://localhost:3000';
+    const apiBase = import.meta.env.VITE_API_BASE_URL?.trim();
+    if (apiBase && /^https?:\/\//i.test(apiBase)) {
+      return apiBase.replace(/\/?api\/?$/, '') || apiBase;
+    }
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return window.location.origin;
+    }
+    return 'http://api-gateway:3000';
   }
 
   /**

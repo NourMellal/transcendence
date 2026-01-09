@@ -122,8 +122,23 @@ export default class ChatPage extends Component<Record<string, never>, State> {
   }
 
   protected attachEventListeners(): void {
-    // Event listeners are handled by child components
-    // This method is required by Component base class
+    if (!this.element) return;
+
+    const profileLinks = this.element.querySelectorAll<HTMLElement>('[data-profile-id]');
+    profileLinks.forEach((link) => {
+      const handler = (event: Event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const profileId = link.dataset.profileId;
+        if (profileId) {
+          navigate(`/profile/${profileId}`);
+        }
+      };
+      link.addEventListener('click', handler);
+      this.subscriptions.push(() => {
+        link.removeEventListener('click', handler);
+      });
+    });
   }
 
   onUnmount(): void {
@@ -298,6 +313,15 @@ export default class ChatPage extends Component<Record<string, never>, State> {
       chatWebSocketService.onError((error: { message: string }) => {
         console.error('[ChatPage] WebSocket error:', error);
         chatStateHelpers.setError(error.message);
+      })
+    );
+
+    // Listen for message send errors (e.g., blocked or not friends)
+    this.unsubscribers.push(
+      chatWebSocketService.onMessageError((data: { error?: string }) => {
+        const message = data?.error || 'Failed to send message';
+        console.warn('[ChatPage] Message error:', message);
+        chatStateHelpers.setError(message);
       })
     );
 
@@ -1014,15 +1038,31 @@ export default class ChatPage extends Component<Record<string, never>, State> {
         }
       }
 
-      header.innerHTML = `
+      const profileId =
+        selectedConv?.type === 'DIRECT' ? selectedConv?.recipientId : undefined;
+      const headerContent = profileId
+        ? `
+        <button class="chat-page__header-profile" type="button" data-profile-id="${profileId}">
+          <img src="${avatarUrl}" alt="${displayName}" class="chat-page__header-avatar" />
+          <div class="chat-page__header-info">
+            <h2>${displayName}</h2>
+            <p class="chat-page__header-username">${username}</p>
+          </div>
+        </button>
+      `
+        : `
         <div class="chat-page__header-content">
           <img src="${avatarUrl}" alt="${displayName}" class="chat-page__header-avatar" />
           <div class="chat-page__header-info">
             <h2>${displayName}</h2>
             <p class="chat-page__header-username">${username}</p>
           </div>
-          ${onlineStatus}
         </div>
+      `;
+
+      header.innerHTML = `
+        ${headerContent}
+        ${onlineStatus}
       `;
       messagesPanel.appendChild(header);
 

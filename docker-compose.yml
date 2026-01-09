@@ -44,6 +44,8 @@ services:
       # GAME_SERVICE_URL: http://game-service:3002
       # USER_SERVICE_URL: http://user-service:3001
       GAME_SERVICE_URL: http://game-service:3002
+      OAUTH_42_SUCCESS_REDIRECT: https://transcendence.42.demo/oauth/callback
+      OAUTH_42_FAILURE_REDIRECT: https://transcendence.42.demo/oauth/error
     depends_on:
       - rabbitmq
       - vault
@@ -147,8 +149,6 @@ services:
       - tournament-service
     volumes:
       - logs-data:/workspace/data/logs
-    ports:
-      - "${GATEWAY_PORT:-3000}:3000"
     networks:
       - transcendence
 
@@ -156,7 +156,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      target: dev
+      target: prod
     env_file:
       - .env
       - apps/web/.env
@@ -166,8 +166,6 @@ services:
       VITE_API_PROXY_WS_TARGET: wss://nginx
     depends_on:
       - api-gateway
-    ports:
-      - "5173:5173"
     networks:
       - transcendence
 
@@ -208,6 +206,7 @@ services:
       WAF_ENABLED: ${WAF_ENABLED:-false}
     depends_on:
       - api-gateway
+      - web
     ports:
       - "80:80"
       - "443:443"
