@@ -49,3 +49,23 @@ UpdateUserRequest:
     password:
       type: string
       format: password
+
+DeleteUserRequest:
+  type: object
+  description: Optional metadata for account deletion
+  properties:
+    reason:
+      type: string
+      example: "No longer using the account"
+    initiatedBy:
+      type: string
+      example: "user"
+
+DeleteUserResponse:
+  type: object
+  description: Result of a user deletion request
+  properties:
+    success:
+      type: boolean
+      example: true
+  required: [success]

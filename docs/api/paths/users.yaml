@@ -96,6 +96,41 @@
       '404':
         description: User not found
 
+  delete:
+    tags: [Users]
+    operationId: Users_deleteById
+    summary: Delete a user account
+    security:
+      - jwtAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/user.yaml#/DeleteUserRequest'
+    responses:
+      '200':
+        description: User deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/user.yaml#/DeleteUserResponse'
+      '204':
+        description: User deleted successfully (no content)
+      '401':
+        description: Not authenticated
+      '403':
+        description: Forbidden
+      '404':
+        description: User not found
+
 /users/by-username/{username}:
   get:
     tags: [Users]
