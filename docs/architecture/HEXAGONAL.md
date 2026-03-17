@@ -8,6 +8,10 @@
 5. [Development Workflow](#development-workflow)
 6. [Team Collaboration](#team-collaboration)
 
+> **See also:** [WEBSOCKET-HEXAGONAL-DECISION.md](./WEBSOCKET-HEXAGONAL-DECISION.md) — detailed explanation
+> of how WebSocket broadcasting was fitted into the hexagonal architecture constraints using an
+> in-process Domain Event Bus (a recurring interview talking-point).
+
 ---
 
 ## Overview
